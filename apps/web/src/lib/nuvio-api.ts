@@ -236,6 +236,87 @@ export class NuvioApiClient {
     )
   }
 
+  // Deck Profiles (Xperience-style profile management)
+  async getDeckProfiles() {
+    return this.request<{ profiles: DeckProfile[] }>('/api/nuvio/deck-profiles')
+  }
+
+  async createDeckProfile(data: {
+    name: string
+    rowCount?: number
+    collectionCount?: number
+    avatarId?: string | null
+    avatarUrl?: string | null
+    badgeSetId?: string
+    configJson?: any
+  }) {
+    return this.request<{ success: boolean; profile: DeckProfile }>('/api/nuvio/deck-profiles', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateDeckProfile(id: string, updates: Partial<DeckProfile>) {
+    return this.request<{ success: boolean; profile: DeckProfile }>(
+      `/api/nuvio/deck-profiles/${id}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      }
+    )
+  }
+
+  async deleteDeckProfile(id: string) {
+    return this.request<{ success: boolean; message: string }>(
+      `/api/nuvio/deck-profiles/${id}`,
+      {
+        method: 'DELETE',
+      }
+    )
+  }
+
+  async importDeckProfile(data: any) {
+    return this.request<{ success: boolean; profile: DeckProfile }>(
+      '/api/nuvio/deck-profiles/import',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }
+    )
+  }
+
+  async deployDeckProfile(
+    id: string,
+    deployConfig: {
+      targets: { accountId: string; slots: number[] }[]
+      options: {
+        pushAvatar?: boolean
+        pushBadges?: boolean
+        pushCollections?: boolean
+        pushAddons?: boolean
+      }
+    }
+  ) {
+    return this.request<{
+      success: boolean
+      profileName: string
+      report: Array<{
+        accountId: string
+        accountEmail?: string
+        slot: number
+        status: 'success' | 'error'
+        error?: string
+      }>
+    }>(`/api/nuvio/deck-profiles/${id}/deploy`, {
+      method: 'POST',
+      body: JSON.stringify(deployConfig),
+    })
+  }
+
+  async getConnectedSessions() {
+    return this.request<{ sessions: any[] }>('/api/nuvio/auth/sessions')
+  }
+
   // Sync Overview & Health
   async getSyncOverview() {
     return this.request<{ overview: any }>('/api/nuvio/sync/overview')
@@ -246,6 +327,21 @@ export class NuvioApiClient {
       '/api/nuvio/sync/health'
     )
   }
+}
+
+export interface DeckProfile {
+  id: string
+  name: string
+  isActive: boolean
+  status: string
+  rowCount: number
+  collectionCount: number
+  avatarId?: string | null
+  avatarUrl?: string | null
+  badgeSetId?: string | null
+  configJson?: string | null
+  createdAt: string
+  updatedAt: string
 }
 
 export const nuvioApi = new NuvioApiClient()

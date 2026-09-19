@@ -16,7 +16,9 @@ export function SiteHeader({ title }: { title?: string }) {
       ? "Badges"
       : pathname === "/settings"
       ? "Settings"
-      : "Dashboard")
+      : pathname === "/dashboard"
+      ? "Profiles"
+      : "Profiles")
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
