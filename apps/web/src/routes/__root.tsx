@@ -12,9 +12,10 @@ function RootComponent() {
   })
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
   const isAvatars = pathname === '/avatars' || pathname.startsWith('/avatars/')
+  const isBadges = pathname === '/badges' || pathname.startsWith('/badges/')
   const isLanding = pathname === '/'
 
-  if (isDashboard || isAvatars || isLanding) {
+  if (isDashboard || isAvatars || isBadges || isLanding) {
     return (
       <div className="min-h-screen bg-background font-sans antialiased text-foreground">
         <Outlet />

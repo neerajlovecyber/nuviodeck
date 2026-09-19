@@ -51,9 +51,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
     {
       title: "Badges",
-      url: "/dashboard",
+      url: "/badges",
       icon: <Tag />,
-      isActive: false,
+      isActive: pathname === "/badges" || pathname.startsWith("/badges"),
     },
     {
       title: "Avatars",

@@ -12,6 +12,8 @@ export function SiteHeader({ title }: { title?: string }) {
     title ||
     (pathname === "/avatars" || pathname.startsWith("/avatars/")
       ? "Avatars"
+      : pathname === "/badges" || pathname.startsWith("/badges/")
+      ? "Badges"
       : pathname === "/settings"
       ? "Settings"
       : "Dashboard")
