@@ -1,6 +1,7 @@
 import { TmdbService } from './tmdb'
 import { MdbListService } from './mdblist'
 import { AiSearchService } from './ai-search'
+import { isMovieReleasedDigitally } from './release-filter'
 
 export interface CatalogResolveOptions {
   page?: number
@@ -12,6 +13,11 @@ export interface CatalogResolveOptions {
   rpdbKey?: string
   language?: string
   hideAdult?: boolean
+  excludeUnreleased?: boolean
+  moviesDigitalOnly?: boolean
+  ageRating?: string
+  region?: string
+  proxyUrl?: string
 }
 
 // Map popular streaming provider IDs in TMDB
@@ -62,6 +68,26 @@ const STUDIO_MAP: Record<string, number> = {
   blumhouse: 3172,
 }
 
+// Helper to convert friendly country name to ISO 3166-1 alpha-2 code
+function getCountryCode(regionName?: string): string {
+  if (!regionName) return 'US'
+  const map: Record<string, string> = {
+    'United States': 'US',
+    'United Kingdom': 'GB',
+    'India': 'IN',
+    'Brazil': 'BR',
+    'Canada': 'CA',
+    'Australia': 'AU',
+    'France': 'FR',
+    'Germany': 'DE',
+    'Spain': 'ES',
+    'Italy': 'IT',
+    'Netherlands': 'NL',
+    'Turkey': 'TR',
+  }
+  return map[regionName] || 'US'
+}
+
 export class CatalogResolver {
   async resolveCatalog(
     catalogId: string,
@@ -73,12 +99,32 @@ export class CatalogResolver {
       apiToken: options?.tmdbToken,
       language: options?.language,
       rpdbKey: options?.rpdbKey,
+      proxyUrl: options?.proxyUrl,
     })
     const mdblist = new MdbListService(options?.mdblistKey)
     const aiSearch = new AiSearchService(options?.geminiKey, tmdb)
 
     const isMovie = type === 'movie'
     const tmdbType = isMovie ? 'movie' : 'tv'
+    const countryCode = getCountryCode(options?.region)
+
+    // Build common discover params
+    const discoverParams: Record<string, any> = { page }
+    if (options?.hideAdult !== false) {
+      discoverParams.include_adult = false
+    }
+    if (options?.excludeUnreleased) {
+      const today = new Date().toISOString().split('T')[0]
+      if (isMovie) {
+        discoverParams['primary_release_date.lte'] = today
+      } else {
+        discoverParams['first_air_date.lte'] = today
+      }
+    }
+    if (options?.ageRating && options.ageRating !== 'NONE') {
+      discoverParams.certification_country = 'US'
+      discoverParams.certification = options.ageRating
+    }
 
     // 1. Search Query
     if (options?.search) {
@@ -108,75 +154,96 @@ export class CatalogResolver {
       if (items.length > 0) return items
     }
 
+    let rawResults: any[] = []
+
     // 3. Trending & Popular
     if (catalogId === 'trending_movies' || catalogId === 'trending_series' || catalogId.includes('trending')) {
       const trendingRes = await tmdb.getTrending(tmdbType, 'week', page)
-      return (trendingRes.results || []).map((item) =>
-        tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-      )
-    }
-
-    if (catalogId.includes('top_rated') || catalogId.includes('popular')) {
+      rawResults = trendingRes.results || []
+    } else if (catalogId.includes('top_rated') || catalogId.includes('popular')) {
       const res = isMovie
-        ? await tmdb.discoverMovie({ sort_by: 'vote_average.desc', 'vote_count.gte': 500, page })
-        : await tmdb.discoverTv({ sort_by: 'vote_average.desc', 'vote_count.gte': 300, page })
-      return (res.results || []).map((item) =>
-        tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-      )
-    }
+        ? await tmdb.discoverMovie({ ...discoverParams, sort_by: 'vote_average.desc', 'vote_count.gte': 500 })
+        : await tmdb.discoverTv({ ...discoverParams, sort_by: 'vote_average.desc', 'vote_count.gte': 300 })
+      rawResults = res.results || []
+    } else {
+      // 4. Studio / Label Catalogs
+      let handled = false
+      for (const [studioKey, companyId] of Object.entries(STUDIO_MAP)) {
+        if (catalogId.includes(studioKey)) {
+          const res = isMovie
+            ? await tmdb.discoverMovie({ ...discoverParams, with_companies: companyId })
+            : await tmdb.discoverTv({ ...discoverParams, with_companies: companyId })
+          rawResults = res.results || []
+          handled = true
+          break
+        }
+      }
 
-    // 4. Studio / Label Catalogs (e.g. studio_a24_movies, studio_marvel_movies)
-    for (const [studioKey, companyId] of Object.entries(STUDIO_MAP)) {
-      if (catalogId.includes(studioKey)) {
+      // 5. Streaming Providers
+      if (!handled) {
+        for (const [streamerKey, providerId] of Object.entries(STREAMING_PROVIDER_MAP)) {
+          if (catalogId.includes(streamerKey)) {
+            const res = isMovie
+              ? await tmdb.discoverMovie({
+                  ...discoverParams,
+                  with_watch_providers: providerId,
+                  watch_region: countryCode,
+                })
+              : await tmdb.discoverTv({
+                  ...discoverParams,
+                  with_watch_providers: providerId,
+                  watch_region: countryCode,
+                })
+            rawResults = res.results || []
+            handled = true
+            break
+          }
+        }
+      }
+
+      // 6. Genres
+      if (!handled) {
+        for (const [genreKey, genreId] of Object.entries(GENRE_MAP)) {
+          if (catalogId.includes(genreKey)) {
+            const res = isMovie
+              ? await tmdb.discoverMovie({ ...discoverParams, with_genres: genreId })
+              : await tmdb.discoverTv({ ...discoverParams, with_genres: genreId })
+            rawResults = res.results || []
+            handled = true
+            break
+          }
+        }
+      }
+
+      // 7. Anime Catalogs
+      if (!handled && catalogId.includes('anime')) {
         const res = isMovie
-          ? await tmdb.discoverMovie({ with_companies: companyId, page })
-          : await tmdb.discoverTv({ with_companies: companyId, page })
-        return (res.results || []).map((item) =>
-          tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-        )
+          ? await tmdb.discoverMovie({ ...discoverParams, with_genres: 16, with_original_language: 'ja' })
+          : await tmdb.discoverTv({ ...discoverParams, with_genres: 16, with_original_language: 'ja' })
+        rawResults = res.results || []
+        handled = true
+      }
+
+      // 8. Default Discover Fallback
+      if (!handled) {
+        const fallbackRes = isMovie
+          ? await tmdb.discoverMovie({ ...discoverParams, sort_by: 'popularity.desc' })
+          : await tmdb.discoverTv({ ...discoverParams, sort_by: 'popularity.desc' })
+        rawResults = fallbackRes.results || []
       }
     }
 
-    // 5. Streaming Providers (e.g. streaming_netflix_movies, snoak_netflix_top10)
-    for (const [streamerKey, providerId] of Object.entries(STREAMING_PROVIDER_MAP)) {
-      if (catalogId.includes(streamerKey)) {
-        const res = isMovie
-          ? await tmdb.discoverMovie({ with_watch_providers: providerId, watch_region: 'US', page })
-          : await tmdb.discoverTv({ with_watch_providers: providerId, watch_region: 'US', page })
-        return (res.results || []).map((item) =>
-          tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-        )
+    // Apply digital release filter if enabled for movies
+    if (isMovie && options?.moviesDigitalOnly && rawResults.length > 0) {
+      const filtered: any[] = []
+      for (const item of rawResults) {
+        const isDigital = await isMovieReleasedDigitally(item.id, options.tmdbToken, options.proxyUrl)
+        if (isDigital) filtered.push(item)
       }
+      rawResults = filtered
     }
 
-    // 6. Genres (e.g. genre_action_movies, genre_scifi_movies)
-    for (const [genreKey, genreId] of Object.entries(GENRE_MAP)) {
-      if (catalogId.includes(genreKey)) {
-        const res = isMovie
-          ? await tmdb.discoverMovie({ with_genres: genreId, page })
-          : await tmdb.discoverTv({ with_genres: genreId, page })
-        return (res.results || []).map((item) =>
-          tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-        )
-      }
-    }
-
-    // 7. Anime Catalogs
-    if (catalogId.includes('anime')) {
-      const res = isMovie
-        ? await tmdb.discoverMovie({ with_genres: 16, with_original_language: 'ja', page })
-        : await tmdb.discoverTv({ with_genres: 16, with_original_language: 'ja', page })
-      return (res.results || []).map((item) =>
-        tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
-      )
-    }
-
-    // 8. Default Discover Fallback
-    const fallbackRes = isMovie
-      ? await tmdb.discoverMovie({ sort_by: 'popularity.desc', page })
-      : await tmdb.discoverTv({ sort_by: 'popularity.desc', page })
-
-    return (fallbackRes.results || []).map((item) =>
+    return rawResults.map((item) =>
       tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
     )
   }

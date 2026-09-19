@@ -45,6 +45,11 @@ async function getProfileConfig(profileId?: string) {
         rpdbKey: cfg.posters?.rpdbKey,
         language: cfg.preferences?.language || 'en-US',
         hideAdult: cfg.preferences?.hideAdult ?? true,
+        excludeUnreleased: cfg.preferences?.excludeUnreleased ?? false,
+        moviesDigitalOnly: cfg.preferences?.moviesDigitalOnly ?? false,
+        ageRating: cfg.preferences?.ageRating || 'NONE',
+        region: cfg.preferences?.region || 'United States',
+        proxyUrl: cfg.preferences?.proxyUrl || cfg.integrations?.proxyUrl,
       },
     }
   } catch (err: any) {
@@ -212,6 +217,7 @@ async function handleMetaRequest(profileId: string | undefined, type: string, ra
       apiToken: options.tmdbToken,
       language: options.language,
       rpdbKey: options.rpdbKey,
+      proxyUrl: options.proxyUrl,
     })
 
     const isMovie = type === 'movie'

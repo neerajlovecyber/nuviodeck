@@ -39,6 +39,7 @@ import {
   Play,
   RotateCcw,
   Copy,
+  Globe,
 } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
@@ -66,6 +67,28 @@ import {
   XPERIENCE_PRESETS,
   getPresetRows,
 } from '@/data/catalog-data'
+import languagesData from '@/data/languages.json'
+import { AGE_RATINGS } from '@/data/age-ratings'
+import { STREAMING_REGIONS } from '@/data/streamings'
+
+const POPULAR_LANGUAGES = [
+  { code: 'en-US', name: 'English (United States)' },
+  { code: 'en-GB', name: 'English (United Kingdom)' },
+  { code: 'es-ES', name: 'Spanish (Spain)' },
+  { code: 'es-MX', name: 'Spanish (Latin America)' },
+  { code: 'fr-FR', name: 'French (France)' },
+  { code: 'de-DE', name: 'German (Germany)' },
+  { code: 'it-IT', name: 'Italian (Italy)' },
+  { code: 'pt-BR', name: 'Portuguese (Brazil)' },
+  { code: 'hi-IN', name: 'Hindi (India)' },
+  { code: 'ja-JP', name: 'Japanese (Japan)' },
+  { code: 'ko-KR', name: 'Korean (South Korea)' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)' },
+  { code: 'ru-RU', name: 'Russian' },
+  { code: 'tr-TR', name: 'Turkish' },
+  { code: 'ar-SA', name: 'Arabic' },
+  { code: 'nl-NL', name: 'Dutch' },
+]
 
 export const Route = createFileRoute('/wizard/$profileId')({
   component: ProfileWizardPage,
@@ -114,6 +137,10 @@ function ProfileWizardPage() {
   const [moviesDigitalOnly, setMoviesDigitalOnly] = React.useState(false)
   const [hideWatched, setHideWatched] = React.useState(false)
   const [hideCaughtUp, setHideCaughtUp] = React.useState(false)
+  const [language, setLanguage] = React.useState('en-US')
+  const [ageRating, setAgeRating] = React.useState('NONE')
+  const [selectedRegion, setSelectedRegion] = React.useState('United States')
+  const [proxyUrl, setProxyUrl] = React.useState('')
   const [excludedGenres, setExcludedGenres] = React.useState<string[]>([])
   const [animeEpisodeOrdering, setAnimeEpisodeOrdering] = React.useState('TheTVDB')
 
@@ -179,6 +206,18 @@ function ProfileWizardPage() {
               else if (cfg.selectedRows && Array.isArray(cfg.selectedRows) && cfg.selectedRows.length > 0) setSelectedRows(cfg.selectedRows)
               else if (cfg.initialPresetId) setSelectedRows(getPresetRows(cfg.initialPresetId))
               if (cfg.collections) setCollections(cfg.collections)
+              if (cfg.preferences) {
+                if (cfg.preferences.language) setLanguage(cfg.preferences.language)
+                if (cfg.preferences.ageRating) setAgeRating(cfg.preferences.ageRating)
+                if (cfg.preferences.region) setSelectedRegion(cfg.preferences.region)
+                if (cfg.preferences.proxyUrl) setProxyUrl(cfg.preferences.proxyUrl)
+                if (cfg.preferences.excludeUnreleased !== undefined) setExcludeUnreleased(cfg.preferences.excludeUnreleased)
+                if (cfg.preferences.moviesDigitalOnly !== undefined) setMoviesDigitalOnly(cfg.preferences.moviesDigitalOnly)
+                if (cfg.preferences.hideAdult !== undefined) setHideAdult(cfg.preferences.hideAdult)
+              }
+              if (cfg.integrations?.proxyUrl && !cfg.preferences?.proxyUrl) {
+                setProxyUrl(cfg.integrations.proxyUrl)
+              }
             } catch {
               // ignore json error
             }
@@ -223,6 +262,7 @@ function ProfileWizardPage() {
           mdbListKey,
           scrobbleMdbList,
           tmdbToken,
+          proxyUrl,
           scrobbleTrakt,
           scrobbleSimkl,
           scrobbleAniList,
@@ -252,6 +292,10 @@ function ProfileWizardPage() {
           ratingBadgedStills,
         },
         preferences: {
+          language,
+          ageRating,
+          region: selectedRegion,
+          proxyUrl,
           hideAdult,
           excludeUnreleased,
           moviesDigitalOnly,
@@ -521,6 +565,23 @@ function ProfileWizardPage() {
                         <p className="text-[11px] text-muted-foreground">
                           On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ", not the short API key.
                         </p>
+
+                        {/* TMDB Reverse Proxy / Mirror URL */}
+                        <div className="space-y-1.5 pt-3 border-t border-border/40">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-foreground text-xs">TMDB Reverse Proxy / Mirror (Optional)</span>
+                            <span className="text-[10px] text-muted-foreground">ISP bypass</span>
+                          </div>
+                          <Input
+                            value={proxyUrl}
+                            onChange={(e) => setProxyUrl(e.target.value)}
+                            placeholder="https://tmdb-proxy.example.com/3 (optional)"
+                            className="font-mono text-xs"
+                          />
+                          <p className="text-[11px] text-muted-foreground">
+                            Optional proxy URL to bypass regional blocks (e.g., in India or restricted networks).
+                          </p>
+                        </div>
                       </div>
 
                       {/* Connected Trackers */}
@@ -870,7 +931,9 @@ function ProfileWizardPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold text-foreground">Preferences</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">English · Automatic (source air date)</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {POPULAR_LANGUAGES.find((l) => l.code === language)?.name || language} · {selectedRegion} · {ageRating === 'NONE' ? 'All Ratings' : ageRating}
+                        </p>
                       </div>
                     </div>
                     <ChevronDown
@@ -881,8 +944,97 @@ function ProfileWizardPage() {
                   </div>
 
                   {openSection === 'preferences' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-4 text-xs">
-                      <div className="space-y-2.5">
+                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-5 text-xs">
+                      {/* Metadata Language */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                            <Globe className="size-3.5 text-primary" />
+                            Metadata Language
+                          </Label>
+                          <span className="text-[11px] font-mono text-muted-foreground">{language}</span>
+                        </div>
+                        <select
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        >
+                          <optgroup label="Popular Languages">
+                            {POPULAR_LANGUAGES.map((l) => (
+                              <option key={l.code} value={l.code}>
+                                {l.name} ({l.code})
+                              </option>
+                            ))}
+                          </optgroup>
+                          <optgroup label="All Supported Locales (280+)">
+                            {(languagesData as any[]).map((l) => (
+                              <option key={l.iso_639_1} value={l.iso_639_1}>
+                                {l.name} ({l.iso_639_1})
+                              </option>
+                            ))}
+                          </optgroup>
+                        </select>
+                        <p className="text-[11px] text-muted-foreground">
+                          Fetches titles, descriptions, and episode names in your preferred language.
+                        </p>
+                      </div>
+
+                      {/* Age Rating / Content Restriction */}
+                      <div className="space-y-2 border-t border-border/40 pt-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold text-foreground">Content Age Rating</Label>
+                          <span className="text-[11px] text-muted-foreground font-medium">
+                            {AGE_RATINGS.find((r) => r.id === ageRating)?.name || 'No Restriction'}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                          {AGE_RATINGS.map((r) => {
+                            const isSelected = ageRating === r.id
+                            return (
+                              <button
+                                key={r.id}
+                                type="button"
+                                onClick={() => setAgeRating(r.id)}
+                                className={`px-2 py-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                                  isSelected
+                                    ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
+                                    : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                <div className="font-bold">{r.badge.text}</div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {AGE_RATINGS.find((r) => r.id === ageRating)?.description}
+                        </p>
+                      </div>
+
+                      {/* Streaming Region */}
+                      <div className="space-y-1.5 border-t border-border/40 pt-4">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold text-foreground">Streaming Region</Label>
+                          <span className="text-[11px] text-muted-foreground">{selectedRegion}</span>
+                        </div>
+                        <select
+                          value={selectedRegion}
+                          onChange={(e) => setSelectedRegion(e.target.value)}
+                          className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                        >
+                          {Object.keys(STREAMING_REGIONS).map((reg) => (
+                            <option key={reg} value={reg}>
+                              {reg}
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[11px] text-muted-foreground">
+                          Adapts streaming provider catalogs (Netflix, Disney+, Prime, etc.) to show titles available in this region.
+                        </p>
+                      </div>
+
+                      {/* Checkbox Preferences */}
+                      <div className="space-y-2.5 border-t border-border/40 pt-4">
                         <label className="flex items-center gap-2 text-foreground cursor-pointer">
                           <Checkbox checked={hideAdult} onCheckedChange={(c) => setHideAdult(!!c)} />
                           <span>Hide adult content (pornographic & hentai titles)</span>

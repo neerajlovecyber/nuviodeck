@@ -1,5 +1,8 @@
 import { config } from '../config'
 import { getPosterUrl, getBackdropUrl } from './posters'
+import { getMediaLogo } from './logos'
+import { getCustomEpisodeGroup, getCustomImdbId, fetchEpisodeGroup } from './episode-groups'
+import { isMovieReleasedDigitally } from './release-filter'
 
 export interface TmdbClientOptions {
   apiToken?: string
@@ -28,7 +31,6 @@ function getCached<T>(key: string): T | null {
 }
 
 function setCached(key: string, data: any, ttlMs = CACHE_TTL_MS) {
-  // Prune old entries if map grows over 1000
   if (cache.size > 1000) {
     const now = Date.now()
     for (const [k, v] of cache.entries()) {
@@ -136,20 +138,20 @@ export class TmdbService {
   async getMovieDetails(id: number | string, language?: string) {
     return this.request<any>(`movie/${id}`, {
       append_to_response: 'credits,videos,release_dates,external_ids',
-      language,
+      language: language || this.defaultLanguage,
     })
   }
 
   async getTvDetails(id: number | string, language?: string) {
     return this.request<any>(`tv/${id}`, {
       append_to_response: 'credits,videos,content_ratings,external_ids',
-      language,
+      language: language || this.defaultLanguage,
     })
   }
 
   async getTvSeason(id: number | string, seasonNumber: number, language?: string) {
     return this.request<any>(`tv/${id}/season/${seasonNumber}`, {
-      language,
+      language: language || this.defaultLanguage,
     })
   }
 
@@ -177,7 +179,8 @@ export class TmdbService {
     const releaseDate = item.release_date || item.first_air_date || ''
     const year = releaseDate ? releaseDate.split('-')[0] : ''
     const tmdbId = item.id
-    const imdbId = item.imdb_id || item.external_ids?.imdb_id
+    const customImdbId = getCustomImdbId(tmdbId)
+    const imdbId = customImdbId || item.imdb_id || item.external_ids?.imdb_id
 
     const id = imdbId || `tmdb:${tmdbId}`
     const poster = getPosterUrl(item.poster_path, {
@@ -206,7 +209,8 @@ export class TmdbService {
     const releaseDate = details.release_date || details.first_air_date || ''
     const year = releaseDate ? releaseDate.split('-')[0] : ''
     const tmdbId = details.id
-    const imdbId = details.external_ids?.imdb_id || details.imdb_id
+    const customImdbId = getCustomImdbId(tmdbId)
+    const imdbId = customImdbId || details.external_ids?.imdb_id || details.imdb_id
 
     const genres = details.genres?.map((g: any) => g.name) || []
     const cast = details.credits?.cast?.slice(0, 10).map((c: any) => c.name) || []
@@ -228,6 +232,16 @@ export class TmdbService {
         type: 'Trailer',
       }))
 
+    // Fetch High-Res Transparent ClearLogo
+    const logo = await getMediaLogo(
+      type,
+      tmdbId,
+      this.defaultLanguage,
+      details.original_language,
+      this.apiToken || this.apiKey,
+      this.proxyUrl
+    ).catch(() => '')
+
     const meta: any = {
       id,
       imdb_id: imdbId,
@@ -237,6 +251,7 @@ export class TmdbService {
       poster,
       posterShape: 'poster',
       background: getBackdropUrl(details.backdrop_path, 'original'),
+      logo: logo || undefined,
       description: details.overview || '',
       releaseInfo: year,
       runtime: isMovie && details.runtime ? `${details.runtime} min` : undefined,
@@ -246,15 +261,22 @@ export class TmdbService {
       trailers,
     }
 
-    // Series episodes
-    if (!isMovie && details.seasons) {
+    // Series episodes (with Episode Group ordering fix for anime & multi-part shows)
+    if (!isMovie) {
       const episodes: any[] = []
-      for (const season of details.seasons) {
-        if (season.season_number === 0 && season.episode_count === 0) continue
-        try {
-          const seasonData = await this.getTvSeason(tmdbId, season.season_number, this.defaultLanguage)
-          if (seasonData.episodes) {
-            for (const ep of seasonData.episodes) {
+      const customGroup = getCustomEpisodeGroup(tmdbId)
+
+      if (customGroup?.episodeGroupId) {
+        // Fetch customized episode groups (e.g. One Piece, Money Heist, Star Wars Clone Wars)
+        const groupData = await fetchEpisodeGroup(
+          customGroup.episodeGroupId,
+          this.apiToken || this.apiKey,
+          this.proxyUrl
+        ).catch(() => null)
+
+        if (groupData?.groups) {
+          for (const grp of groupData.groups) {
+            for (const ep of grp.episodes) {
               episodes.push({
                 id: `${id}:${ep.season_number}:${ep.episode_number}`,
                 title: ep.name || `Episode ${ep.episode_number}`,
@@ -267,10 +289,35 @@ export class TmdbService {
               })
             }
           }
-        } catch {
-          // ignore individual season fetch errors
         }
       }
+
+      // Fallback to standard TMDB seasons if no custom group or group fetch failed
+      if (episodes.length === 0 && details.seasons) {
+        for (const season of details.seasons) {
+          if (season.season_number === 0 && season.episode_count === 0) continue
+          try {
+            const seasonData = await this.getTvSeason(tmdbId, season.season_number, this.defaultLanguage)
+            if (seasonData.episodes) {
+              for (const ep of seasonData.episodes) {
+                episodes.push({
+                  id: `${id}:${ep.season_number}:${ep.episode_number}`,
+                  title: ep.name || `Episode ${ep.episode_number}`,
+                  season: ep.season_number,
+                  number: ep.episode_number,
+                  episode: ep.episode_number,
+                  released: ep.air_date ? new Date(ep.air_date).toISOString() : undefined,
+                  overview: ep.overview,
+                  thumbnail: getBackdropUrl(ep.still_path, 'w780'),
+                })
+              }
+            }
+          } catch {
+            // ignore individual season fetch errors
+          }
+        }
+      }
+
       meta.videos = episodes
     }
 
