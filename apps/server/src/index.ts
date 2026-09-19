@@ -1,16 +1,119 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { logger } from 'hono/logger'
+import { secureHeaders } from 'hono/secure-headers'
+import { timing } from 'hono/timing'
+import { etag } from 'hono/etag'
+import { compress } from 'hono/compress'
+import { trimTrailingSlash } from 'hono/trailing-slash'
+import { prettyJSON } from 'hono/pretty-json'
+import { bodyLimit } from 'hono/body-limit'
+import { requestId } from 'hono/request-id'
+
+import { config } from './config'
 import { db } from './db'
 import { users } from './db/schema'
 
+// Modular Domain Routers
+import { nuvioRouter } from './routes/nuvio'
+import { badgesRouter } from './routes/badges'
+import { metadataRouter } from './routes/metadata'
+import { catalogsRouter } from './routes/catalogs'
+import { debridRouter } from './routes/debrid'
+import { postersRouter } from './routes/posters'
+
 const app = new Hono()
 
-app.use('*', cors())
+// --- Core Hono Middleware Suite ---
+// 1. Request Tracing
+app.use('*', requestId())
 
+// 2. Performance & Timing Metrics
+app.use('*', timing())
+
+// 3. Structured Logging
+app.use('*', logger())
+
+// 4. Security Headers (CSP, HSTS, no-sniff, etc.)
+app.use('*', secureHeaders())
+
+// 5. Cross-Origin Resource Sharing
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization', 'apikey', 'X-Requested-With'],
+    exposeHeaders: ['Server-Timing', 'X-Request-Id', 'ETag', 'Content-Length'],
+  })
+)
+
+// 6. Trailing slash normalization (/api/nuvio/profiles/ -> /api/nuvio/profiles)
+app.use('*', trimTrailingSlash())
+
+// 7. Pretty JSON formatting with ?pretty query flag
+app.use('*', prettyJSON())
+
+// 8. Automatic ETag generation for cacheable responses (manifests, catalogs, badges)
+app.use('*', etag())
+
+// 9. Response compression (gzip/deflate for large catalog arrays & badge sets)
+app.use('*', compress())
+
+// 10. Payload size safety limit (10MB)
+app.use(
+  '*',
+  bodyLimit({
+    maxSize: 10 * 1024 * 1024,
+    onError: (c) => c.json({ error: 'Payload size exceeded 10MB limit' }, 413),
+  })
+)
+
+// --- Server Health & Diagnostics ---
 app.get('/api/health', (c) => {
-  return c.json({ status: 'ok', timestamp: new Date().toISOString() })
+  return c.json({
+    status: 'ok',
+    name: 'Nuviodeck Core Engine',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    hono: {
+      timing: true,
+      compression: true,
+      etag: true,
+      secureHeaders: true,
+      requestId: c.get('requestId'),
+    },
+    domains: {
+      nuvio: '/api/nuvio',
+      badges: '/api/badges',
+      metadata: '/api/metadata',
+      catalogs: '/api/catalogs',
+      debrid: '/api/debrid',
+      posters: '/api/posters',
+    },
+  })
 })
 
+// --- Clean Isolated Domain Mounts ---
+// 1. Nuvio Ecosystem (Auth, Profiles, Addons, Collections, Sync)
+app.route('/api/nuvio', nuvioRouter)
+
+// 2. Badges & Xperience Signature Packs
+app.route('/api/badges', badgesRouter)
+
+// 3. Metadata & Scrapers (TMDB, IMDb, Trakt)
+app.route('/api/metadata', metadataRouter)
+
+// 4. Catalogs & Stremio/Nuvio Manifest Engine
+app.route('/api/catalogs', catalogsRouter)
+
+// 5. Debrid & Streams (Real-Debrid, Torbox, etc.)
+app.route('/api/debrid', debridRouter)
+
+// 6. Posters & Visual Art Overlays
+app.route('/api/posters', postersRouter)
+
+// Legacy / Users table endpoints
 app.get('/api/users', async (c) => {
   try {
     const allUsers = await db.select().from(users)
@@ -44,8 +147,35 @@ app.post('/api/users', async (c) => {
   }
 })
 
+// Global 404 Handler
+app.notFound((c) => {
+  return c.json(
+    {
+      error: 'Not Found',
+      path: c.req.path,
+      method: c.req.method,
+      requestId: c.get('requestId'),
+    },
+    404
+  )
+})
+
+// Global Error Handler
+app.onError((err, c) => {
+  console.error(`[Unhandled Error] ${c.req.method} ${c.req.path}:`, err)
+  const status = (err as any).status || 500
+  return c.json(
+    {
+      error: err.message || 'Internal Server Error',
+      requestId: c.get('requestId'),
+      details: (err as any).details || undefined,
+    },
+    status
+  )
+})
+
 export default {
-  port: 3001,
+  port: config.port,
   fetch: app.fetch,
 }
 

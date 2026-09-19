@@ -19,6 +19,8 @@ import {
   useSidebar,
 } from "@workspace/ui/components/sidebar"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { useAppStore } from "@/store/useStore"
+import { toast } from "sonner"
 
 export function NavUser({
   user,
@@ -30,6 +32,18 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar()
+  const { setUser } = useAppStore()
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/nuvio/auth/logout", { method: "POST" })
+      setUser(null)
+      toast.success("Logged out successfully")
+    } catch {
+      toast.error("Logout failed")
+    }
+  }
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -76,25 +90,21 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
-                <CircleUserRoundIcon
-                />
+                <CircleUserRoundIcon />
                 Account
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <CreditCardIcon
-                />
+                <CreditCardIcon />
                 Billing
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <BellIcon
-                />
+                <BellIcon />
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <LogOutIcon
-              />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive cursor-pointer">
+              <LogOutIcon />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>
