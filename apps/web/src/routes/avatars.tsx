@@ -47,36 +47,38 @@ interface AvatarItem {
 
 const avatarsData = rawAvatars as AvatarItem[]
 
-// Extract unique categories and collections
+// Extract actual categories present in data
+const existingCategories = Array.from(
+  new Set(avatarsData.map((a) => a.category).filter(Boolean))
+)
+
+// Preferred order for top categories (only include if they actually exist in avatarsData)
+const preferredOrder = [
+  "Marvel",
+  "Disney",
+  "Star Wars",
+  "Pixar",
+  "Bluey",
+  "SpongeBob SquarePants",
+  "Stranger Things",
+  "Cobra Kai",
+  "Sonic Prime",
+  "Justice League Unlimited",
+  "Footballers",
+  "The Classics",
+]
+
+const quickFilterCategories = [
+  "All",
+  ...preferredOrder.filter((cat) => existingCategories.includes(cat)),
+]
+
 const allCategories = [
   "All",
-  "Nuvio Heroes",
-  "Stranger Things",
-  "Anime & Animation",
-  "Gaming",
-  "Iconic Characters",
-  "Money Heist",
-  "Black Mirror",
-  "Bojack Horseman",
-  "The Classics",
-  "The Dragon Prince",
-  "Aggretsuko",
-  ...Array.from(new Set(avatarsData.map((a) => a.category))).filter(
-    (c) =>
-      ![
-        "Stranger Things",
-        "Anime & Animation",
-        "Gaming",
-        "Iconic Characters",
-        "Money Heist",
-        "Black Mirror",
-        "Bojack Horseman",
-        "The Classics",
-        "The Dragon Prince",
-        "Aggretsuko",
-        "Nuvio Heroes",
-      ].includes(c)
-  ),
+  ...preferredOrder.filter((cat) => existingCategories.includes(cat)),
+  ...existingCategories
+    .filter((cat) => !preferredOrder.includes(cat))
+    .sort((a, b) => a.localeCompare(b)),
 ]
 
 function AvatarsPage() {
@@ -92,8 +94,7 @@ function AvatarsPage() {
     return avatarsData.filter((item) => {
       const matchesCategory =
         selectedCategory === "All" ||
-        item.category.toLowerCase() === selectedCategory.toLowerCase() ||
-        (selectedCategory === "Nuvio Heroes" && item.collection === "Nuvio Heroes")
+        item.category.toLowerCase() === selectedCategory.toLowerCase()
 
       if (!matchesCategory) return false
       if (!q) return true
@@ -236,22 +237,20 @@ function AvatarsPage() {
 
               {/* Quick Filter Pills for popular shows */}
               <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 no-scrollbar text-xs">
-                {["All", "Nuvio Heroes", "Stranger Things", "Anime & Animation", "Gaming", "Money Heist", "Black Mirror", "Bojack Horseman", "The Classics"].map(
-                  (cat) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => setSelectedCategory(cat)}
-                      className={`px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap transition-all ${
-                        selectedCategory === cat
-                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
-                          : "bg-card/70 border-border/70 text-muted-foreground hover:text-foreground hover:bg-card"
-                      }`}
-                    >
-                      {cat}
-                    </button>
-                  )
-                )}
+                {quickFilterCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap transition-all ${
+                      selectedCategory === cat
+                        ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                        : "bg-card/70 border-border/70 text-muted-foreground hover:text-foreground hover:bg-card"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
             </div>
 
