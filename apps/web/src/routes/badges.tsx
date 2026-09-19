@@ -9,13 +9,6 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Badge } from "@workspace/ui/components/badge"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@workspace/ui/components/dialog"
 import { toast } from "sonner"
 import signatureSetsData from "@/data/badge-sets-signature.json"
 import {
@@ -28,8 +21,6 @@ import {
   Smartphone,
   Play,
   Search,
-  Layers,
-  Eye,
   Info,
 } from "lucide-react"
 
@@ -75,28 +66,6 @@ export interface BadgeSet {
 
 const DEFAULT_PRESET_FILENAME =
   "Example.Movie.2026.2160p.WEB-DL.REMUX.DV.HDR10Plus.Atmos.TrueHD.7.1.NFLX.HMAX.x265"
-
-const SAMPLE_PRESETS = [
-  {
-    label: "4K Remux DV Atmos",
-    filename:
-      "Avatar.The.Way.of.Water.2022.2160p.UHD.Remux.DV.HDR10Plus.TrueHD.Atmos.7.1.NFLX",
-  },
-  {
-    label: "Oppenheimer IMAX",
-    filename:
-      "Oppenheimer.2023.IMAX.Enhanced.2160p.UHD.HDR.DTS-HD.MA.5.1.H265",
-  },
-  {
-    label: "1080p WebDL SDR",
-    filename: "The.Office.US.S04.1080p.WEB-DL.AAC2.0.H.264.AMZN",
-  },
-  {
-    label: "Spider-Man Disney+",
-    filename:
-      "Spider.Man.No.Way.Home.2021.2160p.DSNP.WEB-DL.DDP5.1.Atmos.DV.HEVC.H265",
-  },
-]
 
 // Safe regex test utility handling (?i)
 function testBadgePattern(pattern?: string, filename?: string): boolean {
@@ -296,15 +265,13 @@ function BadgesPage() {
   const [allSets, setAllSets] = React.useState<BadgeSet[]>(
     signatureSetsData as BadgeSet[]
   )
-  const [activeSetId, setActiveSetId] = React.useState<string>("xp_aurora")
+  const [activeSetId, setActiveSetId] = React.useState<string>("xp_spectrum")
   const [testFilename, setTestFilename] = React.useState<string>(
     DEFAULT_PRESET_FILENAME
   )
   const [searchQuery, setSearchQuery] = React.useState<string>("")
   const [activeCategoryFilter, setActiveCategoryFilter] =
     React.useState<string>("all")
-  const [inspectModalOpen, setInspectModalOpen] = React.useState<boolean>(false)
-  const [inspectingSet, setInspectingSet] = React.useState<BadgeSet | null>(null)
   const [copiedUrl, setCopiedUrl] = React.useState<boolean>(false)
 
   // Synchronize card preview badges using official curated samples, sized perfectly so nothing gets cut off
@@ -354,19 +321,10 @@ function BadgesPage() {
     )
   }, [activeSet, testFilename])
 
-  // Filter sets into Signature and Community
-  const signatureSets = React.useMemo(() => {
-    return allSets.filter((s) => s.signature)
-  }, [allSets])
-
-  const communitySets = React.useMemo(() => {
-    return allSets.filter((s) => !s.signature)
-  }, [allSets])
-
-  // Filtered sets based on search query and category
-  const filteredCommunitySets = React.useMemo(() => {
+  // Filter all sets into one combined list
+  const filteredSets = React.useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
-    return communitySets.filter((s) => {
+    return allSets.filter((s) => {
       const matchesSearch =
         !q ||
         s.label.toLowerCase().includes(q) ||
@@ -377,16 +335,22 @@ function BadgesPage() {
 
       if (activeCategoryFilter === "favorites") return s.favorite
       if (activeCategoryFilter === "image")
-        return s.style.toLowerCase().includes("logo") || s.style.toLowerCase().includes("image")
+        return (
+          s.style.toLowerCase().includes("logo") ||
+          s.style.toLowerCase().includes("image")
+        )
       if (activeCategoryFilter === "text")
-        return s.style.toLowerCase().includes("text") || s.style.toLowerCase().includes("minimal")
+        return (
+          s.style.toLowerCase().includes("text") ||
+          s.style.toLowerCase().includes("minimal")
+        )
       return true
     })
-  }, [communitySets, searchQuery, activeCategoryFilter])
+  }, [allSets, searchQuery, activeCategoryFilter])
 
   // Published badge URL for Nuvio
   const publishedUrl = React.useMemo(() => {
-    if (!activeSet) return "https://cdn.xperience-app.com/badges/xp_aurora"
+    if (!activeSet) return "https://cdn.xperience-app.com/badges/xp_spectrum"
     return `https://cdn.xperience-app.com/badges/${activeSet.id}`
   }, [activeSet])
 
@@ -400,9 +364,13 @@ function BadgesPage() {
     setTimeout(() => setCopiedUrl(false), 2000)
   }
 
-  const openInspector = (set: BadgeSet) => {
-    setInspectingSet(set)
-    setInspectModalOpen(true)
+  const handlePushToNuvio = () => {
+    navigator.clipboard.writeText(publishedUrl)
+    setCopiedUrl(true)
+    toast.success("Pushed to Nuvio!", {
+      description: `Active pack "${activeSet?.label}" URL copied. Ready to sync with your Nuvio devices.`,
+    })
+    setTimeout(() => setCopiedUrl(false), 2000)
   }
 
   return (
@@ -413,44 +381,18 @@ function BadgesPage() {
         <div className="flex-1 overflow-y-auto">
           <main className="container max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-8">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-6">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
-                    <Tag className="size-5" />
-                  </div>
-                  <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
-                    Badges
-                  </h1>
+            <div className="border-b pb-6 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
+                  <Tag className="size-5" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1.5 max-w-2xl">
-                  Build a custom Nuvio stream-badge pack from curated sets, test stream title patterns in real time, and publish a link to paste into Nuvio.
-                </p>
+                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight text-foreground">
+                  Badges
+                </h1>
               </div>
-
-              <div className="flex items-center gap-2.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => activeSet && openInspector(activeSet)}
-                  className="rounded-lg h-9 gap-1.5 text-xs font-medium"
-                >
-                  <Eye className="size-3.5" />
-                  <span>Inspect Pack ({activeSet?.badges?.length || 0})</span>
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handleCopyUrl()}
-                  className="rounded-lg h-9 gap-1.5 text-xs font-medium shadow-xs"
-                >
-                  {copiedUrl ? (
-                    <Check className="size-3.5 text-primary-foreground" />
-                  ) : (
-                    <Copy className="size-3.5" />
-                  )}
-                  <span>Copy Nuvio URL</span>
-                </Button>
-              </div>
+              <p className="text-sm text-muted-foreground max-w-2xl">
+                Build a custom Nuvio stream-badge pack from curated sets, test stream title patterns in real time, and publish a link to paste into Nuvio.
+              </p>
             </div>
 
             {/* Main Content Layout: Live Preview & Badge Sets on Left (8 Cols), Studio / Publish on Right (4 Cols) */}
@@ -489,23 +431,6 @@ function BadgesPage() {
                     />
                   </div>
 
-                  {/* Quick Sample Presets */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar text-xs">
-                    <span className="text-[11px] text-muted-foreground whitespace-nowrap mr-1">
-                      Presets:
-                    </span>
-                    {SAMPLE_PRESETS.map((p) => (
-                      <button
-                        key={p.label}
-                        type="button"
-                        onClick={() => setTestFilename(p.filename)}
-                        className="px-2 py-0.5 rounded-md bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] font-medium whitespace-nowrap transition-colors"
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-
                   {/* Live Rendered Badge Row */}
                   <div className="p-1.5 sm:p-2 rounded-xl bg-neutral-950 border border-neutral-800 flex items-center min-h-[42px] overflow-hidden">
                     {matchedBadges.length === 0 ? (
@@ -535,91 +460,16 @@ function BadgesPage() {
                   </div>
                 </div>
 
-                {/* Section: Xperience Signature */}
+                {/* Unified Badge Sets Section */}
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <Sparkles className="size-4 text-primary" />
                       <h2 className="text-base font-semibold tracking-tight text-foreground">
-                        Xperience Signature
-                      </h2>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      Pick a set to start from
-                    </span>
-                  </div>
-
-                  {/* Signature Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-                    {signatureSets.map((s) => {
-                      const isActive = s.id === activeSetId
-                      const sampleBadges = getCardBadges(s)
-
-                      return (
-                        <div
-                          key={s.id}
-                          onClick={() => {
-                            setActiveSetId(s.id)
-                            toast.success(`Switched to "${s.label}" badge set`)
-                          }}
-                          className={`group relative flex flex-col justify-between p-3.5 rounded-xl border cursor-pointer transition-all duration-200 ${
-                            isActive
-                              ? "bg-primary/10 border-primary/60 shadow-md ring-1 ring-primary/40"
-                              : "bg-card/70 border-border/70 hover:border-border hover:bg-card/90"
-                          }`}
-                        >
-                          {/* Card Header */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-sm font-semibold text-foreground">
-                                {s.label}
-                              </span>
-                              <Sparkles className="size-3 text-primary/70" />
-                            </div>
-                            {isActive && (
-                              <Badge className="h-5 px-1.5 text-[10px] font-semibold bg-primary text-primary-foreground">
-                                Active
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Badge Previews Container */}
-                          <div className="my-2 py-1 px-1.5 rounded-lg bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-1 min-h-[36px] shadow-inner">
-                            <div className="flex items-center gap-1 overflow-hidden">
-                              {sampleBadges.map((b) => (
-                                <BadgeChip key={b.id} badge={b} size="sm" />
-                              ))}
-                            </div>
-                            <span className="text-[10px] font-mono text-muted-foreground shrink-0 pl-0.5 pr-0.5">
-                              +{s.badges.length - sampleBadges.length}
-                            </span>
-                          </div>
-
-                          {/* Card Footer tags */}
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="px-2 py-0.5 rounded-md bg-muted/60 text-foreground/80 font-medium">
-                              {s.creator}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-muted/40 font-normal">
-                              {s.style}
-                            </span>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Section: Community Sets */}
-                <div className="space-y-4 pt-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <Layers className="size-4 text-muted-foreground" />
-                      <h2 className="text-base font-semibold tracking-tight text-foreground">
-                        Community Sets
+                        Badge Sets
                       </h2>
                       <Badge variant="secondary" className="rounded-full text-[11px] px-2 py-0">
-                        {filteredCommunitySets.length}
+                        {filteredSets.length}
                       </Badge>
                     </div>
 
@@ -630,7 +480,7 @@ function BadgesPage() {
                         <Input
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          placeholder="Search community sets..."
+                          placeholder="Search badge sets..."
                           className="h-8 pl-8 text-xs rounded-lg"
                         />
                       </div>
@@ -653,9 +503,9 @@ function BadgesPage() {
                     </div>
                   </div>
 
-                  {/* Community Grid */}
+                  {/* Unified Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-                    {filteredCommunitySets.map((s) => {
+                    {filteredSets.map((s) => {
                       const isActive = s.id === activeSetId
                       const sampleBadges = getCardBadges(s)
 
@@ -673,20 +523,25 @@ function BadgesPage() {
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-semibold text-foreground line-clamp-1">
-                              {s.label}
-                            </span>
-                            {isActive ? (
-                              <Badge className="h-5 px-1.5 text-[10px] font-semibold bg-primary text-primary-foreground">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm font-semibold text-foreground truncate">
+                                {s.label}
+                              </span>
+                              {s.signature ? (
+                                <Sparkles className="size-3 text-primary/70 shrink-0" />
+                              ) : s.favorite ? (
+                                <span className="text-amber-400 text-xs shrink-0">★</span>
+                              ) : null}
+                            </div>
+                            {isActive && (
+                              <Badge className="h-5 px-1.5 text-[10px] font-semibold bg-primary text-primary-foreground shrink-0">
                                 Active
                               </Badge>
-                            ) : s.favorite ? (
-                              <span className="text-amber-400 text-xs">★</span>
-                            ) : null}
+                            )}
                           </div>
 
                           {/* Previews */}
-                          <div className="my-2 py-1 px-1.5 rounded-lg bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-1 min-h-[36px] shadow-inner">
+                          <div className="mt-2.5 py-1 px-1.5 rounded-lg bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-1 min-h-[36px] shadow-inner">
                             <div className="flex items-center gap-1 overflow-hidden">
                               {sampleBadges.map((b) => (
                                 <BadgeChip key={b.id} badge={b} size="sm" />
@@ -694,15 +549,6 @@ function BadgesPage() {
                             </div>
                             <span className="text-[10px] font-mono text-muted-foreground shrink-0 pl-0.5 pr-0.5">
                               +{s.badges.length - sampleBadges.length}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="px-2 py-0.5 rounded-md bg-muted/60 text-foreground/80 font-medium">
-                              {s.creator}
-                            </span>
-                            <span className="px-2 py-0.5 rounded-md bg-muted/40 font-normal line-clamp-1">
-                              {s.style}
                             </span>
                           </div>
                         </div>
@@ -716,23 +562,16 @@ function BadgesPage() {
               <div className="lg:col-span-4 space-y-6">
                 {/* Nuvio Badge URL Card */}
                 <div className="rounded-2xl border border-border/80 bg-card/60 backdrop-blur-sm p-5 space-y-4 shadow-sm">
-                  <div className="space-y-1.5">
-                    <Button
-                      onClick={() => handleCopyUrl()}
-                      className="w-full h-10 rounded-xl font-medium shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      Update published link
-                    </Button>
-                    <span className="block text-[11px] text-muted-foreground text-center">
-                      Current active pack:{" "}
-                      <strong className="text-foreground">{activeSet?.label}</strong>
-                    </span>
-                  </div>
-
+                  {/* Your Nuvio badge URL */}
                   <div className="space-y-2">
-                    <span className="text-xs font-semibold text-foreground">
-                      Your Nuvio badge URL
-                    </span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-foreground">
+                        Your Nuvio badge URL
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Active: <strong className="text-foreground font-medium">{activeSet?.label}</strong>
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <Input
                         readOnly
@@ -787,6 +626,21 @@ function BadgesPage() {
                       Paste the URL, choose Import, then Save. Set the badge position (top or bottom) in the same section.
                     </p>
                   </div>
+
+                  {/* Push to Nuvio Action at bottom of card */}
+                  <div className="pt-3 border-t border-border/60 space-y-1.5">
+                    <Button
+                      onClick={() => handlePushToNuvio()}
+                      className="w-full h-10 rounded-xl font-medium shadow-sm bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                    >
+                      <Sparkles className="size-4" />
+                      <span>Push to Nuvio</span>
+                    </Button>
+                    <span className="block text-[11px] text-muted-foreground text-center">
+                      Publish pack:{" "}
+                      <strong className="text-foreground">{activeSet?.label}</strong>
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -794,48 +648,6 @@ function BadgesPage() {
         </div>
       </SidebarInset>
 
-      {/* Detail Inspector Modal */}
-      <Dialog open={inspectModalOpen} onOpenChange={setInspectModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto rounded-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Tag className="size-5 text-primary" />
-              <span>{inspectingSet?.label} Badges Catalog</span>
-              <Badge variant="secondary" className="rounded-full text-xs">
-                {inspectingSet?.badges?.length || 0} badges
-              </Badge>
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
-              Style: {inspectingSet?.style} • Creator: {inspectingSet?.creator} • Click any badge to copy its image URL.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-4">
-            {inspectingSet?.badges?.map((b) => (
-              <div
-                key={b.id}
-                onClick={() => {
-                  navigator.clipboard.writeText(b.imageURL)
-                  toast.success(`Copied "${b.name}" image URL!`)
-                }}
-                className="group p-3 rounded-xl border border-border/80 bg-neutral-950 hover:border-primary/50 flex flex-col items-center justify-between text-center cursor-pointer transition-all hover:scale-[1.02] shadow-inner"
-              >
-                <div className="h-10 flex items-center justify-center my-2">
-                  <BadgeChip badge={b} size="md" />
-                </div>
-                <div className="w-full pt-2 border-t border-border/40">
-                  <span className="block text-xs font-semibold text-foreground line-clamp-1">
-                    {b.name}
-                  </span>
-                  <span className="block text-[10px] text-muted-foreground font-mono truncate">
-                    {b.id}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </SidebarProvider>
   )
 }
