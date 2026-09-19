@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { Hero11 } from '@/components/hero-11'
-import { Card, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card'
+import { StreamingBento } from '@/components/streaming-bento'
+import { Footer15 } from '@/components/footer-15'
 import { buttonVariants } from '@workspace/ui/components/button'
-import { Film, Zap, Layers, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
@@ -22,59 +23,11 @@ function LandingPage() {
         ctaHref="/dashboard"
       />
 
-      {/* Catalog & Features Showcase Section */}
-      <div className="max-w-6xl mx-auto px-6 py-20 space-y-16" id="features">
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-amber-400">
-            Cinema Architecture
-          </p>
-          <h2 className="text-3xl md:text-4xl font-serif font-normal tracking-tight text-foreground">
-            Bespoke Catalogs & Debrid Integration
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Connect your streaming accounts and configure high-bitrate media manifests in seconds.
-          </p>
-        </div>
+      {/* Streaming Bento Showcase */}
+      <StreamingBento />
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
-            <CardHeader>
-              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
-                <Film className="size-5" />
-              </div>
-              <CardTitle className="text-lg font-serif">1,000+ Curated Catalogs</CardTitle>
-              <CardDescription>
-                Discover collections across 29+ categories, from Criterion classics and director retrospectives to trending 4K HDR releases.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
-            <CardHeader>
-              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
-                <Zap className="size-5" />
-              </div>
-              <CardTitle className="text-lg font-serif">Bring Your Own Debrid</CardTitle>
-              <CardDescription>
-                Seamlessly connect Real-Debrid, AllDebrid, TorBox, or Premiumize with smart resolution filtering and audio track selection.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
-            <CardHeader>
-              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
-                <Layers className="size-5" />
-              </div>
-              <CardTitle className="text-lg font-serif">Signed Manifest URLs</CardTitle>
-              <CardDescription>
-                One dynamic link compatible with Stremio, Kodi, and web players. Rotate tokens or manage family profiles with a click.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Call to action card */}
+      {/* Call to action card */}
+      <div className="max-w-6xl mx-auto px-6 pb-24">
         <div className="rounded-3xl border bg-card/80 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
           <div className="space-y-2 text-center md:text-left">
             <h3 className="text-2xl font-serif font-normal">Ready to experience your collection?</h3>
@@ -94,6 +47,9 @@ function LandingPage() {
           </Link>
         </div>
       </div>
+
+      {/* Footer 15 */}
+      <Footer15 />
     </div>
   )
 }
