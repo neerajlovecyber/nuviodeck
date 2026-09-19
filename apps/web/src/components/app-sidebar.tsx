@@ -1,5 +1,6 @@
 import * as React from "react"
-
+import { useRouterState } from "@tanstack/react-router"
+import { useAppStore } from "@/store/useStore"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
@@ -23,54 +24,63 @@ import {
   VenetianMask,
 } from "lucide-react"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const pathname = useRouterState({
+    select: (s) => s.location.pathname,
+  })
+  const { user } = useAppStore()
+
+  const currentUser = {
+    name: user?.name || "Developer",
+    email: user?.email || "dev@nuviodeck.com",
+    avatar: user?.avatar || "/avatars/nuvio/avatar_gojo_1772826847969.png",
+  }
+
+  const navMain = [
     {
       title: "Profiles",
-      url: "#",
+      url: "/dashboard",
       icon: <Home />,
-      isActive: true,
+      isActive: pathname === "/dashboard",
     },
     {
       title: "Wizard",
-      url: "#",
+      url: "/dashboard",
       icon: <Wand2 />,
+      isActive: false,
     },
     {
       title: "Badges",
-      url: "#",
+      url: "/dashboard",
       icon: <Tag />,
+      isActive: false,
     },
     {
       title: "Avatars",
-      url: "#",
+      url: "/avatars",
       icon: <VenetianMask />,
+      isActive: pathname === "/avatars" || pathname.startsWith("/avatars"),
     },
-  ],
-  navSecondary: [
+  ]
+
+  const navSecondary = [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: <Settings2Icon />,
     },
     {
       title: "Get Help",
-      url: "#",
+      url: "/dashboard",
       icon: <CircleHelpIcon />,
     },
     {
       title: "Search",
-      url: "#",
+      url: "/avatars",
       icon: <SearchIcon />,
     },
-  ],
-}
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  ]
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -78,20 +88,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               className="data-[slot=sidebar-menu-button]:p-1.5!"
-              render={<a href="#" />}
+              render={<a href="/dashboard" />}
             >
               <CommandIcon className="size-5!" />
-              <span className="text-base font-semibold">Acme Inc.</span>
+              <span className="text-base font-semibold">Nuviodeck</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navMain} />
+        <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={currentUser} />
       </SidebarFooter>
     </Sidebar>
   )

@@ -1,5 +1,6 @@
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Toaster } from '@workspace/ui/components/sonner'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -10,12 +11,14 @@ function RootComponent() {
     select: (s) => s.location.pathname,
   })
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+  const isAvatars = pathname === '/avatars' || pathname.startsWith('/avatars/')
   const isLanding = pathname === '/'
 
-  if (isDashboard || isLanding) {
+  if (isDashboard || isAvatars || isLanding) {
     return (
       <div className="min-h-screen bg-background font-sans antialiased text-foreground">
         <Outlet />
+        <Toaster richColors position="bottom-right" />
       </div>
     )
   }
@@ -50,6 +53,7 @@ function RootComponent() {
       <main className="container mx-auto p-6">
         <Outlet />
       </main>
+      <Toaster richColors position="bottom-right" />
     </div>
   )
 }

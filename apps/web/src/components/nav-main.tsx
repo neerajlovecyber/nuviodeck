@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router"
 import { Button } from "@workspace/ui/components/button"
 import {
   SidebarGroup,
@@ -46,6 +47,7 @@ export function NavMain({
               <SidebarMenuButton
                 tooltip={item.title}
                 isActive={item.isActive}
+                render={<Link to={item.url} />}
                 className={
                   item.isActive
                     ? "bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary/90 data-active:hover:text-primary-foreground font-medium rounded-4xl [&>svg]:text-primary-foreground data-active:[&>svg]:text-primary-foreground"
