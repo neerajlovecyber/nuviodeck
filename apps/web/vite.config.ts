@@ -9,7 +9,8 @@ export default defineConfig({
   plugins: [TanStackRouterVite(), react(), tailwindcss()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src"),
     },
+    dedupe: ["react", "react-dom"],
   },
 })

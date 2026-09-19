@@ -1,33 +1,51 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build and Output directories
+dist/
+build/
+out/
+.next/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Environmental variables
+.env
+.env.*
+!.env.example
+
 # Logs
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-lerna-debug.log*
+pnpm-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# turbo
-.turbo
-
-# Editor directories and files
+# IDE and Editor files
+.idea/
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+!.vscode/settings.json
+!.vscode/tasks.json
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
-# typescript
-*.tsbuildinfo
+# Database / Local storage
+*.sqlite
+*.sqlite3
+*.db
