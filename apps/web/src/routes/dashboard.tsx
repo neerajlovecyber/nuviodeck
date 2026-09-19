@@ -350,7 +350,7 @@ function DashboardPage() {
       <SidebarInset>
         <SiteHeader />
         
-        <div className="flex-1 px-6 py-8 md:px-10 lg:px-12 max-w-7xl">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 md:px-10 lg:px-12">
           {/* Top Header matching Xperience screenshot */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-8">
             <div>
@@ -374,7 +374,7 @@ function DashboardPage() {
 
               <Button
                 onClick={() => setNewProfileOpen(true)}
-                className="h-9 px-4 text-sm font-medium bg-[#6366f1] hover:bg-[#5558e6] text-white rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5"
+                className="h-9 px-4 text-sm font-medium rounded-lg shadow-xs transition-colors inline-flex items-center gap-1.5"
               >
                 <Plus className="h-4 w-4" />
                 New profile
@@ -403,7 +403,7 @@ function DashboardPage() {
                 </Button>
                 <Button
                   onClick={() => setNewProfileOpen(true)}
-                  className="h-9 px-4 text-sm font-medium bg-[#6366f1] hover:bg-[#5558e6] text-white rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5"
+                  className="h-9 px-4 text-sm font-medium rounded-lg shadow-xs transition-colors inline-flex items-center gap-1.5"
                 >
                   <Plus className="h-4 w-4" />
                   New profile
@@ -425,22 +425,24 @@ function DashboardPage() {
                       </h3>
 
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
-                          >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Profile actions</span>
-                          </Button>
-                        </DropdownMenuTrigger>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Profile actions</span>
+                            </Button>
+                          }
+                        />
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => handleOpenDeploy(profile)}
-                            className="font-medium text-[#6366f1] focus:text-[#6366f1]"
+                            className="font-medium text-foreground focus:text-foreground"
                           >
-                            <Send className="mr-2 h-4 w-4 text-[#6366f1]" />
+                            <Send className="mr-2 h-4 w-4 text-foreground" />
                             Deploy to Nuvio...
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -480,7 +482,7 @@ function DashboardPage() {
                     {/* Status Badges */}
                     <div className="flex items-center gap-1.5 mt-2.5 mb-5">
                       {profile.isActive && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#818cf8]/15 text-[#6366f1] dark:bg-[#818cf8]/20 dark:text-[#a5b4fc]">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary dark:bg-primary/20">
                           Active
                         </span>
                       )}
@@ -519,7 +521,7 @@ function DashboardPage() {
           <DialogContent className="sm:max-w-[540px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-lg">
-                <Send className="h-5 w-5 text-[#6366f1]" />
+                <Send className="h-5 w-5 text-primary" />
                 Deploy "{deployProfile?.name}" to Nuvio
               </DialogTitle>
               <DialogDescription>
@@ -613,7 +615,7 @@ function DashboardPage() {
                         }}
                         className={`py-2 text-center rounded-lg border text-sm font-medium transition-all ${
                           isSlotSelected
-                            ? 'border-[#6366f1] bg-[#6366f1] text-white shadow-xs'
+                            ? 'border-primary bg-primary text-primary-foreground shadow-xs'
                             : 'border-border hover:border-border/80 text-muted-foreground hover:text-foreground'
                         }`}
                       >
@@ -693,7 +695,6 @@ function DashboardPage() {
               <Button
                 onClick={handleExecuteDeploy}
                 disabled={isDeploying || deployTargetAccounts.length === 0 || deploySelectedSlots.length === 0}
-                className="bg-[#6366f1] hover:bg-[#5558e6] text-white"
               >
                 {isDeploying ? (
                   <>

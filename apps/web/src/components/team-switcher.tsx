@@ -272,24 +272,26 @@ export function TeamSwitcher({
       <SidebarMenu className="w-full">
         <SidebarMenuItem className="w-full">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarMenuButton
-                size="lg"
-                className="w-full flex items-center justify-between data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-              >
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
-                  {activeAccount ? <Tv className="size-4" /> : <LogIn className="size-4" />}
-                </div>
-                <div className="grid flex-1 min-w-0 text-left text-sm leading-tight ml-2">
-                  <span className="truncate font-semibold">
-                    {activeAccount ? activeAccount.name : "Nuviodeck"}
-                  </span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    {activeAccount ? activeAccount.email : "Connect Nuvio Account"}
-                  </span>
-                </div>
-                <ChevronsUpDown className="ml-auto size-4 text-muted-foreground shrink-0" />
-              </SidebarMenuButton>
+            <DropdownMenuTrigger
+              render={
+                <SidebarMenuButton
+                  size="lg"
+                  className="w-full flex items-center justify-between data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                />
+              }
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
+                {activeAccount ? <Tv className="size-4" /> : <LogIn className="size-4" />}
+              </div>
+              <div className="grid flex-1 min-w-0 text-left text-sm leading-tight ml-2">
+                <span className="truncate font-semibold">
+                  {activeAccount ? activeAccount.name : "Nuviodeck"}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {activeAccount ? activeAccount.email : "Connect Nuvio Account"}
+                </span>
+              </div>
+              <ChevronsUpDown className="ml-auto size-4 text-muted-foreground shrink-0" />
             </DropdownMenuTrigger>
             <DropdownMenuContent
               className="w-(--anchor-width) min-w-[240px] rounded-xl p-1.5 shadow-lg"
@@ -331,16 +333,18 @@ export function TeamSwitcher({
 
                     {/* 3 Dots Menu for this specific account */}
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button
-                          type="button"
-                          className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-70 group-hover:opacity-100 shrink-0"
-                          title="Account options"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="size-3.5" />
-                        </button>
-                      </DropdownMenuTrigger>
+                      <DropdownMenuTrigger
+                        render={
+                          <button
+                            type="button"
+                            className="size-7 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-70 group-hover:opacity-100 shrink-0"
+                            title="Account options"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="size-3.5" />
+                          </button>
+                        }
+                      />
                       <DropdownMenuContent
                         align="end"
                         side="right"
