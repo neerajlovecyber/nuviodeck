@@ -1,7 +1,19 @@
 "use client"
 
 import * as React from "react"
-import { ChevronsUpDown, Plus, Tv, User, Loader2, LogIn, UserPlus, Check, Sparkles, LogOut, Trash2, MoreHorizontal } from "lucide-react"
+import {
+  ChevronsUpDown,
+  Plus,
+  Tv,
+  User,
+  Loader2,
+  LogIn,
+  UserPlus,
+  Check,
+  Sparkles,
+  LogOut,
+  MoreHorizontal,
+} from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +45,7 @@ import {
 import { Button } from "@workspace/ui/components/button"
 import { Input } from "@workspace/ui/components/input"
 import { Label } from "@workspace/ui/components/label"
+import { useAppStore } from "@/store/useStore"
 import { toast } from "sonner"
 
 export interface ConnectedAccount {
@@ -40,7 +53,6 @@ export interface ConnectedAccount {
   name: string
   email: string
   plan: string
-  icon?: React.ElementType
 }
 
 export function TeamSwitcher({
@@ -49,23 +61,14 @@ export function TeamSwitcher({
   initialAccounts?: ConnectedAccount[]
 }) {
   const { isMobile } = useSidebar()
+  const { setUser } = useAppStore()
 
-  // Default accounts or demo state
   const [accounts, setAccounts] = React.useState<ConnectedAccount[]>(
-    initialAccounts && initialAccounts.length > 0
-      ? initialAccounts
-      : [
-          {
-            id: "default-dev",
-            name: "Nuvio Primary",
-            email: "dev@nuviodeck.com",
-            plan: "6 Profiles Active",
-          },
-        ]
+    initialAccounts || []
   )
 
-  const [activeAccount, setActiveAccount] = React.useState<ConnectedAccount>(
-    accounts[0]
+  const [activeAccount, setActiveAccount] = React.useState<ConnectedAccount | null>(
+    accounts[0] || null
   )
 
   // Dialog state for adding a new Nuvio account
@@ -89,23 +92,38 @@ export function TeamSwitcher({
       const res = await fetch("/api/nuvio/auth/sessions")
       if (res.ok) {
         const data = await res.json()
-        if (data.sessions && data.sessions.length > 0) {
-          const mapped: ConnectedAccount[] = data.sessions.map((s: any) => ({
-            id: s.id,
-            name: s.email.split("@")[0].toUpperCase(),
-            email: s.email,
-            plan: `Profile ${s.activeProfileIndex || 1} Active`,
-          }))
-          setAccounts(mapped)
-          if (!mapped.some((a) => a.id === activeAccount?.id)) {
-            setActiveAccount(mapped[0])
+        const rawSessions: any[] = Array.isArray(data.sessions) ? data.sessions : []
+
+        const mapped: ConnectedAccount[] = rawSessions.map((s: any) => ({
+          id: s.id,
+          name: (s.email?.split("@")[0] || "USER").toUpperCase(),
+          email: s.email,
+          plan: `Profile ${s.activeProfileIndex || 1} Active`,
+        }))
+
+        setAccounts(mapped)
+
+        setActiveAccount((curr) => {
+          if (curr && mapped.some((a) => a.id === curr.id)) {
+            return mapped.find((a) => a.id === curr.id) || mapped[0] || null
           }
-        }
+          const next = mapped[0] || null
+          if (next) {
+            setUser({
+              name: next.name,
+              email: next.email,
+              avatar: "/avatars/nuvio/avatar_gojo_1772826847969.png",
+            })
+          } else {
+            setUser(null)
+          }
+          return next
+        })
       }
     } catch {
-      // Offline / fallback to local
+      // Offline / fallback
     }
-  }, [activeAccount?.id])
+  }, [setUser])
 
   React.useEffect(() => {
     refreshAccounts()
@@ -114,6 +132,12 @@ export function TeamSwitcher({
   // Handle switching accounts
   const handleSelectAccount = async (account: ConnectedAccount) => {
     setActiveAccount(account)
+    setUser({
+      name: account.name,
+      email: account.email,
+      avatar: "/avatars/nuvio/avatar_gojo_1772826847969.png",
+    })
+
     try {
       await fetch(`/api/nuvio/auth/sessions/${account.id}/select`, {
         method: "POST",
@@ -127,12 +151,40 @@ export function TeamSwitcher({
   // Handle disconnecting / removing an account
   const handleDisconnectAccount = async (accountId: string, e?: React.MouseEvent) => {
     e?.stopPropagation()
+
+    // Optimistically update UI immediately
+    setAccounts((prev) => {
+      const remaining = prev.filter((a) => a.id !== accountId)
+      setActiveAccount((curr) => {
+        if (curr?.id === accountId) {
+          const next = remaining[0] || null
+          if (next) {
+            setUser({
+              name: next.name,
+              email: next.email,
+              avatar: "/avatars/nuvio/avatar_gojo_1772826847969.png",
+            })
+          } else {
+            setUser(null)
+          }
+          return next
+        }
+        return curr
+      })
+      return remaining
+    })
+
     try {
-      await fetch(`/api/nuvio/auth/sessions/${accountId}`, { method: "DELETE" })
+      const res = await fetch(`/api/nuvio/auth/sessions/${accountId}`, {
+        method: "DELETE",
+      })
+      if (!res.ok) {
+        throw new Error("Failed to delete from server")
+      }
       toast.success("Account disconnected")
       await refreshAccounts()
-    } catch {
-      toast.error("Failed to disconnect account")
+    } catch (err: any) {
+      toast.error(err.message || "Failed to disconnect account")
     }
   }
 
@@ -215,10 +267,6 @@ export function TeamSwitcher({
     }
   }
 
-  if (!activeAccount) {
-    return null
-  }
-
   return (
     <>
       <SidebarMenu className="w-full">
@@ -230,12 +278,14 @@ export function TeamSwitcher({
                 className="w-full flex items-center justify-between data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
               >
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-xs shrink-0">
-                  <Tv className="size-4" />
+                  {activeAccount ? <Tv className="size-4" /> : <LogIn className="size-4" />}
                 </div>
                 <div className="grid flex-1 min-w-0 text-left text-sm leading-tight ml-2">
-                  <span className="truncate font-semibold">{activeAccount.name}</span>
+                  <span className="truncate font-semibold">
+                    {activeAccount ? activeAccount.name : "Nuviodeck"}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {activeAccount.email}
+                    {activeAccount ? activeAccount.email : "Connect Nuvio Account"}
                   </span>
                 </div>
                 <ChevronsUpDown className="ml-auto size-4 text-muted-foreground shrink-0" />
@@ -248,10 +298,11 @@ export function TeamSwitcher({
               sideOffset={4}
             >
               <DropdownMenuLabel className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase px-2 py-1.5">
-                Connected Nuvio Accounts
+                {accounts.length > 0 ? "Connected Accounts" : "Nuvio Integration"}
               </DropdownMenuLabel>
+
               {accounts.map((acc) => {
-                const isSelected = acc.id === activeAccount.id
+                const isSelected = activeAccount && acc.id === activeAccount.id
                 return (
                   <div
                     key={acc.id}
@@ -300,7 +351,7 @@ export function TeamSwitcher({
                           className="text-destructive focus:text-destructive gap-2 text-xs cursor-pointer p-1.5 rounded-lg"
                         >
                           <LogOut className="size-3.5" />
-                          <span>Log out account</span>
+                          <span>Disconnect</span>
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -308,7 +359,7 @@ export function TeamSwitcher({
                 )
               })}
 
-              <DropdownMenuSeparator className="my-1.5" />
+              {accounts.length > 0 && <DropdownMenuSeparator className="my-1.5" />}
 
               <DropdownMenuItem
                 onClick={() => {
