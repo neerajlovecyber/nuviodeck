@@ -1,0 +1,22 @@
+{
+  "skills": [
+    {
+      "source": "anthropics/skills",
+      "skills": [
+        "frontend-design"
+      ]
+    },
+    {
+      "source": "mattpocock/skills",
+      "skills": [
+        "improve-codebase-architecture"
+      ]
+    },
+    {
+      "source": "vercel-labs/agent-skills",
+      "skills": [
+        "web-design-guidelines"
+      ]
+    }
+  ]
+}
