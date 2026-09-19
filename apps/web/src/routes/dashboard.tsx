@@ -91,31 +91,8 @@ function formatTimeAgo(isoString: string): string {
 
 function DashboardPage() {
   // Profiles state
-  const [profiles, setProfiles] = React.useState<DeckProfile[]>([
-    {
-      id: 'prof-indian',
-      name: 'Indian',
-      isActive: true,
-      status: 'Ready',
-      rowCount: 31,
-      collectionCount: 1,
-      badgeSetId: 'xp_aurora',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'prof-new',
-      name: 'new',
-      isActive: false,
-      status: 'Ready',
-      rowCount: 24,
-      collectionCount: 3,
-      badgeSetId: 'xp_onyx',
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      updatedAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ])
-  const [loading, setLoading] = React.useState(false)
+  const [profiles, setProfiles] = React.useState<DeckProfile[]>([])
+  const [loading, setLoading] = React.useState(true)
 
   // Connected accounts
   const [sessions, setSessions] = React.useState<any[]>([])
@@ -153,7 +130,7 @@ function DashboardPage() {
     try {
       setLoading(true)
       const res = await nuvioApi.getDeckProfiles()
-      if (res.profiles && res.profiles.length > 0) {
+      if (res.profiles) {
         setProfiles(res.profiles)
       }
     } catch (err: any) {
@@ -405,107 +382,136 @@ function DashboardPage() {
             </div>
           </div>
 
-          {/* Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {profiles.map((profile) => (
-              <div
-                key={profile.id}
-                className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md hover:border-border transition-all flex flex-col justify-between"
-              >
-                <div>
-                  {/* Card Header: Title & 3-Dots */}
-                  <div className="flex items-center justify-between gap-2">
-                    <h3 className="text-base font-semibold text-foreground truncate">
-                      {profile.name}
-                    </h3>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Profile actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                          onClick={() => handleOpenDeploy(profile)}
-                          className="font-medium text-[#6366f1] focus:text-[#6366f1]"
-                        >
-                          <Send className="mr-2 h-4 w-4 text-[#6366f1]" />
-                          Deploy to Nuvio...
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {!profile.isActive && (
-                          <DropdownMenuItem onClick={() => handleSetActive(profile)}>
-                            <Sparkles className="mr-2 h-4 w-4" />
-                            Set as Active
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setEditProfile(profile)
-                            setEditName(profile.name)
-                            setEditRows(String(profile.rowCount || 24))
-                            setEditCollections(String(profile.collectionCount || 1))
-                          }}
-                        >
-                          <Pencil className="mr-2 h-4 w-4" />
-                          Edit details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleExportConfig(profile)}>
-                          <FileJson className="mr-2 h-4 w-4" />
-                          Export config
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => setDeleteProfile(profile)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete profile
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-
-                  {/* Status Badges */}
-                  <div className="flex items-center gap-1.5 mt-2.5 mb-5">
-                    {profile.isActive && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#818cf8]/15 text-[#6366f1] dark:bg-[#818cf8]/20 dark:text-[#a5b4fc]">
-                        Active
-                      </span>
-                    )}
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#10b981]/15 text-[#059669] dark:bg-[#10b981]/20 dark:text-[#34d399]">
-                      Ready
-                    </span>
-                  </div>
-                </div>
-
-                {/* Bottom Metadata stats row */}
-                <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/40">
-                  <div className="flex items-center gap-1.5">
-                    <Layers className="h-3.5 w-3.5 text-muted-foreground/80" />
-                    <span>{profile.rowCount || 24} rows</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Folder className="h-3.5 w-3.5 text-muted-foreground/80" />
-                    <span>
-                      {profile.collectionCount || 1} collection
-                      {profile.collectionCount !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
-                    <span>{formatTimeAgo(profile.updatedAt)}</span>
-                  </div>
-                </div>
+          {/* Cards Grid or Empty State */}
+          {profiles.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 p-12 text-center my-4 bg-card/30">
+              <div className="h-12 w-12 rounded-full bg-accent/60 flex items-center justify-center text-muted-foreground mb-4">
+                <Folder className="h-6 w-6" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-semibold text-foreground">No profiles yet</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-6">
+                You haven't created any profile configurations. Create your first profile or import an existing configuration.
+              </p>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setImportOpen(true)}
+                  className="h-9 px-4 text-sm font-medium border-border/80 rounded-lg hover:bg-accent/60 transition-colors inline-flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Import config
+                </Button>
+                <Button
+                  onClick={() => setNewProfileOpen(true)}
+                  className="h-9 px-4 text-sm font-medium bg-[#6366f1] hover:bg-[#5558e6] text-white rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Plus className="h-4 w-4" />
+                  New profile
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+              {profiles.map((profile) => (
+                <div
+                  key={profile.id}
+                  className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md hover:border-border transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Card Header: Title & 3-Dots */}
+                    <div className="flex items-center justify-between gap-2">
+                      <h3 className="text-base font-semibold text-foreground truncate">
+                        {profile.name}
+                      </h3>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Profile actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem
+                            onClick={() => handleOpenDeploy(profile)}
+                            className="font-medium text-[#6366f1] focus:text-[#6366f1]"
+                          >
+                            <Send className="mr-2 h-4 w-4 text-[#6366f1]" />
+                            Deploy to Nuvio...
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {!profile.isActive && (
+                            <DropdownMenuItem onClick={() => handleSetActive(profile)}>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              Set as Active
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setEditProfile(profile)
+                              setEditName(profile.name)
+                              setEditRows(String(profile.rowCount || 24))
+                              setEditCollections(String(profile.collectionCount || 1))
+                            }}
+                          >
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleExportConfig(profile)}>
+                            <FileJson className="mr-2 h-4 w-4" />
+                            Export config
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => setDeleteProfile(profile)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete profile
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
+                    {/* Status Badges */}
+                    <div className="flex items-center gap-1.5 mt-2.5 mb-5">
+                      {profile.isActive && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#818cf8]/15 text-[#6366f1] dark:bg-[#818cf8]/20 dark:text-[#a5b4fc]">
+                          Active
+                        </span>
+                      )}
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#10b981]/15 text-[#059669] dark:bg-[#10b981]/20 dark:text-[#34d399]">
+                        Ready
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Metadata stats row */}
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground pt-3 border-t border-border/40">
+                    <div className="flex items-center gap-1.5">
+                      <Layers className="h-3.5 w-3.5 text-muted-foreground/80" />
+                      <span>{profile.rowCount || 24} rows</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Folder className="h-3.5 w-3.5 text-muted-foreground/80" />
+                      <span>
+                        {profile.collectionCount || 1} collection
+                        {profile.collectionCount !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground/80" />
+                      <span>{formatTimeAgo(profile.updatedAt)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Deploy to Nuvio Modal */}
