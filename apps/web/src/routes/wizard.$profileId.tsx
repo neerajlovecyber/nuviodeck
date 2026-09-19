@@ -38,6 +38,7 @@ import {
   Info,
   Play,
   RotateCcw,
+  Copy,
 } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
@@ -137,6 +138,29 @@ function ProfileWizardPage() {
 
   // Live preview modal
   const [previewOpen, setPreviewOpen] = React.useState(false)
+  const [previewMetas, setPreviewMetas] = React.useState<Record<string, any[]>>({})
+
+  // Fetch real catalog preview items when Live Preview is opened
+  React.useEffect(() => {
+    if (!previewOpen) return
+    const previewRows = selectedRows.slice(0, 4)
+    previewRows.forEach(async (row) => {
+      try {
+        const cleanType = row.type === 'both' || !row.type ? 'movie' : row.type
+        const res = await fetch(
+          `http://localhost:3001/api/catalogs/${profileId}/catalog/${cleanType}/${row.id}.json`
+        )
+        if (res.ok) {
+          const data = await res.json()
+          if (data.metas && data.metas.length > 0) {
+            setPreviewMetas((prev) => ({ ...prev, [row.id]: data.metas }))
+          }
+        }
+      } catch {
+        // ignore preview fetch errors
+      }
+    })
+  }, [previewOpen, profileId, selectedRows])
 
   // Load profile data
   React.useEffect(() => {
@@ -1335,6 +1359,56 @@ function ProfileWizardPage() {
                     <span className="text-primary hover:underline cursor-pointer">Override</span>
                   </div>
                 </div>
+
+                {/* Stremio / Nuvio Addon Manifest Card */}
+                <div className="max-w-2xl mx-auto rounded-3xl border border-border bg-card p-6 shadow-md space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-foreground">Stremio & Nuvio Addon Manifest</h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Direct install URL for your configured {selectedRows.length} catalog rows and metadata.
+                      </p>
+                    </div>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                      v1.2.0
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Input
+                      readOnly
+                      value={`http://localhost:3001/api/catalogs/${profileId}/manifest.json`}
+                      className="font-mono text-xs h-10 bg-background/60"
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          `http://localhost:3001/api/catalogs/${profileId}/manifest.json`
+                        )
+                        toast.success('Manifest URL copied to clipboard!')
+                      }}
+                      className="h-10 px-3 text-xs gap-1.5 shrink-0"
+                    >
+                      <Copy className="size-3.5" />
+                      Copy
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <ExternalLink className="size-3 text-primary" />
+                      Install link:
+                    </span>
+                    <a
+                      href={`stremio://localhost:3001/api/catalogs/${profileId}/manifest.json`}
+                      className="text-primary font-medium hover:underline font-mono text-[11px]"
+                    >
+                      stremio://localhost:3001/api/catalogs/{profileId}/manifest.json
+                    </a>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1569,29 +1643,61 @@ function ProfileWizardPage() {
               </div>
 
               {/* Selected Home Rows Preview */}
-              {selectedRows.slice(0, 3).map((row) => (
-                <div key={row.id} className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-sm font-bold text-foreground tracking-wide">{row.name}</h4>
-                    <span className="text-xs text-muted-foreground">{row.category}</span>
+              {selectedRows.slice(0, 3).map((row) => {
+                const items = previewMetas[row.id] || []
+                return (
+                  <div key={row.id} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-foreground tracking-wide">{row.name}</h4>
+                      <span className="text-xs text-muted-foreground">{row.category}</span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+                      {items.length > 0
+                        ? items.slice(0, 6).map((item, idx) => (
+                            <div
+                              key={item.id || idx}
+                              className="aspect-[2/3] rounded-xl bg-muted/30 border border-border flex flex-col justify-between p-2 relative group overflow-hidden"
+                            >
+                              {item.poster && (
+                                <img
+                                  src={item.poster}
+                                  alt={item.name}
+                                  className="absolute inset-0 size-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  onError={(e) => {
+                                    ;(e.target as HTMLElement).style.display = 'none'
+                                  }}
+                                />
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                              <div className="relative z-10 self-start">
+                                {item.imdbRating && (
+                                  <div className="px-1.5 py-0.5 rounded-md bg-black/75 text-[9px] font-bold text-amber-400 backdrop-blur-xs flex items-center gap-0.5">
+                                    ★ {item.imdbRating}
+                                  </div>
+                                )}
+                              </div>
+                              <span className="relative z-10 text-[11px] text-white font-medium line-clamp-2 leading-tight">
+                                {item.name}
+                              </span>
+                            </div>
+                          ))
+                        : [1, 2, 3, 4, 5, 6].map((idx) => (
+                            <div
+                              key={idx}
+                              className="aspect-[2/3] rounded-xl bg-background border border-border flex flex-col justify-between p-2 relative group overflow-hidden"
+                            >
+                              <div className="size-5 rounded-md bg-black/60 text-[9px] font-bold flex items-center justify-center text-amber-400">
+                                ★ 8.{idx}
+                              </div>
+                              <span className="text-[10px] text-foreground font-medium truncate">
+                                {row.name} #{idx}
+                              </span>
+                            </div>
+                          ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-6 gap-3">
-                    {[1, 2, 3, 4, 5, 6].map((idx) => (
-                      <div
-                        key={idx}
-                        className="aspect-[2/3] rounded-xl bg-background border border-border flex flex-col justify-between p-2 relative group overflow-hidden"
-                      >
-                        <div className="size-5 rounded-md bg-black/60 text-[9px] font-bold flex items-center justify-center text-amber-400">
-                          ★ 8.{idx}
-                        </div>
-                        <span className="text-[10px] text-foreground font-medium truncate">
-                          Title #{idx}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           </DialogContent>
         </Dialog>
