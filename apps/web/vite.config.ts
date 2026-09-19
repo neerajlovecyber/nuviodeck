@@ -10,6 +10,11 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      "@workspace/ui/globals.css": path.resolve(
+        import.meta.dirname,
+        "../../packages/ui/src/styles/globals.css"
+      ),
+      "@workspace/ui": path.resolve(import.meta.dirname, "../../packages/ui/src"),
     },
     dedupe: ["react", "react-dom"],
   },

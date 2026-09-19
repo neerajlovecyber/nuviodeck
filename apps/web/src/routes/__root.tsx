@@ -1,10 +1,23 @@
-import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
 
 export const Route = createRootRoute({
   component: RootComponent,
 })
 
 function RootComponent() {
+  const pathname = useRouterState({
+    select: (s) => s.location.pathname,
+  })
+  const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+
+  if (isDashboard) {
+    return (
+      <div className="min-h-screen bg-background font-sans antialiased text-foreground">
+        <Outlet />
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background font-sans antialiased text-foreground">
       <header className="border-b bg-card px-6 py-4 flex items-center justify-between shadow-xs">
@@ -17,6 +30,13 @@ function RootComponent() {
         <nav className="flex items-center gap-6 text-sm font-medium">
           <Link
             to="/"
+            activeProps={{ className: 'text-primary font-semibold' }}
+            inactiveProps={{ className: 'text-muted-foreground hover:text-foreground transition-colors' }}
+          >
+            Home
+          </Link>
+          <Link
+            to="/dashboard"
             activeProps={{ className: 'text-primary font-semibold' }}
             inactiveProps={{ className: 'text-muted-foreground hover:text-foreground transition-colors' }}
           >

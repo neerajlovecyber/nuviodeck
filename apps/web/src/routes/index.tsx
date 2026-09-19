@@ -1,181 +1,120 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useAppStore } from '../store/useStore'
-import { Button } from '@workspace/ui/components/button'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { buttonVariants } from '@workspace/ui/components/button'
+import { Badge } from '@workspace/ui/components/badge'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@workspace/ui/components/card'
+import {
+  ArrowRight,
+  Sparkles,
+  BarChart3,
+  ShieldCheck,
+  Zap,
+} from 'lucide-react'
 
 export const Route = createFileRoute('/')({
-  component: IndexPage,
+  component: LandingPage,
 })
 
-const newUserSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-})
-
-type NewUserForm = z.infer<typeof newUserSchema>
-
-function IndexPage() {
-  const queryClient = useQueryClient()
-  const { user, counter, incrementCounter } = useAppStore()
-
-  // TanStack Query fetching from Hono backend API
-  const { data: healthData, isLoading: isHealthLoading } = useQuery({
-    queryKey: ['health'],
-    queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/health')
-      if (!res.ok) throw new Error('Health check failed')
-      return res.json()
-    },
-  })
-
-  const { data: usersData, isLoading: isUsersLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => {
-      const res = await fetch('http://localhost:3001/api/users')
-      if (!res.ok) throw new Error('Failed to fetch users')
-      return res.json()
-    },
-  })
-
-  // Mutation to add a user via Hono API
-  const createUserMutation = useMutation({
-    mutationFn: async (newUser: NewUserForm) => {
-      const res = await fetch('http://localhost:3001/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser),
-      })
-      if (!res.ok) throw new Error('Failed to create user')
-      return res.json()
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] })
-      reset()
-    },
-  })
-
-  // React Hook Form + Zod
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<NewUserForm>({
-    resolver: zodResolver(newUserSchema),
-  })
-
-  const onSubmit = (data: NewUserForm) => {
-    createUserMutation.mutate(data)
-  }
-
+function LandingPage() {
   return (
-    <div className="space-y-8">
-      {/* Header Section */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Nuviodeck Dashboard</h1>
-        <p className="text-muted-foreground mt-1">
-          Powered by React 19, TanStack Router, TanStack Query, Zustand & Hono with Drizzle ORM.
+    <div className="flex flex-col items-center justify-center py-16 md:py-24 max-w-5xl mx-auto space-y-16">
+      {/* Hero Section */}
+      <section className="flex flex-col items-center text-center space-y-6">
+        <Badge variant="secondary" className="px-3 py-1 text-xs gap-1.5 rounded-full">
+          <Sparkles className="size-3.5 text-primary" />
+          <span>Nuviodeck Workspace</span>
+        </Badge>
+
+        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground max-w-3xl">
+          A powerful modern dashboard for your business operations
+        </h1>
+
+        <p className="text-muted-foreground text-lg max-w-2xl">
+          Real-time analytics, interactive data tables, metrics, and workflow controls built with shadcn/ui and React 19.
         </p>
-      </div>
 
-      {/* Grid Status Cards */}
-      <div className="grid gap-6 md:grid-cols-3">
-        {/* Hono Backend Status Card */}
-        <div className="p-6 rounded-xl border bg-card text-card-foreground shadow-xs">
-          <h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wider">Hono API Status</h2>
-          <div className="mt-3 flex items-center gap-2">
-            <span
-              className={`h-3 w-3 rounded-full ${
-                healthData?.status === 'ok' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
-              }`}
-            />
-            <span className="font-bold text-lg">
-              {isHealthLoading ? 'Connecting...' : healthData?.status === 'ok' ? 'Online' : 'Offline'}
-            </span>
-          </div>
-          {healthData?.timestamp && (
-            <p className="text-xs text-muted-foreground mt-2">
-              Last Ping: {new Date(healthData.timestamp).toLocaleTimeString()}
-            </p>
-          )}
+        <div className="flex items-center gap-4 pt-2">
+          <Link
+            to="/dashboard"
+            className={buttonVariants({
+              size: 'lg',
+              className: 'rounded-xl px-8 h-12 text-base font-semibold shadow-sm',
+            })}
+          >
+            Open App
+            <ArrowRight className="size-4 ml-2" />
+          </Link>
+
+          <Link
+            to="/settings"
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'lg',
+              className: 'rounded-xl px-6 h-12 text-base',
+            })}
+          >
+            Settings
+          </Link>
         </div>
+      </section>
 
-        {/* Zustand Client State Card */}
-        <div className="p-6 rounded-xl border bg-card text-card-foreground shadow-xs">
-          <h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wider">Zustand State</h2>
-          <p className="mt-2 text-2xl font-bold">Clicks: {counter}</p>
-          <Button size="sm" className="mt-3" onClick={incrementCounter}>
-            Increment Counter
-          </Button>
-        </div>
-
-        {/* User Info Card */}
-        <div className="p-6 rounded-xl border bg-card text-card-foreground shadow-xs">
-          <h2 className="font-semibold text-muted-foreground text-sm uppercase tracking-wider">Active Session</h2>
-          <p className="mt-2 font-medium">{user?.name}</p>
-          <p className="text-xs text-muted-foreground">{user?.email}</p>
-        </div>
-      </div>
-
-      {/* Drizzle DB Users List & Add User Form */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Drizzle DB Users Table */}
-        <div className="p-6 rounded-xl border bg-card shadow-xs space-y-4">
-          <h3 className="font-semibold text-lg">Drizzle Database Users</h3>
-          {isUsersLoading ? (
-            <p className="text-muted-foreground text-sm">Loading users from SQLite...</p>
-          ) : usersData?.users?.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No users found. Create one using the form!</p>
-          ) : (
-            <ul className="divide-y border rounded-lg overflow-hidden">
-              {usersData?.users?.map((u: { id: number; name: string; email: string; createdAt: string }) => (
-                <li key={u.id} className="p-3 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                  <div>
-                    <p className="font-medium text-sm">{u.name}</p>
-                    <p className="text-xs text-muted-foreground">{u.email}</p>
-                  </div>
-                  <span className="text-[10px] bg-secondary text-secondary-foreground px-2 py-1 rounded-full font-mono">
-                    ID #{u.id}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* React Hook Form + Zod Form */}
-        <div className="p-6 rounded-xl border bg-card shadow-xs space-y-4">
-          <h3 className="font-semibold text-lg">Add New User</h3>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium mb-1">Name</label>
-              <input
-                {...register('name')}
-                placeholder="Jane Doe"
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-              />
-              {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
+      {/* Feature Cards Grid */}
+      <section className="grid gap-6 md:grid-cols-3 w-full">
+        <Card className="rounded-xl shadow-xs">
+          <CardHeader>
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+              <BarChart3 className="size-5" />
             </div>
+            <CardTitle className="text-lg">Interactive Analytics</CardTitle>
+            <CardDescription>
+              Real-time area charts and performance metrics visualizing your workspace data.
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
-            <div>
-              <label className="block text-xs font-medium mb-1">Email</label>
-              <input
-                {...register('email')}
-                placeholder="jane@example.com"
-                className="w-full px-3 py-2 border rounded-lg text-sm bg-background focus:outline-hidden focus:ring-2 focus:ring-primary"
-              />
-              {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
+        <Card className="rounded-xl shadow-xs">
+          <CardHeader>
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+              <Zap className="size-5" />
             </div>
+            <CardTitle className="text-lg">Draggable Data Table</CardTitle>
+            <CardDescription>
+              Filter, sort, reorder rows, and inspect records with drawer previews.
+            </CardDescription>
+          </CardHeader>
+        </Card>
 
-            <Button type="submit" disabled={createUserMutation.isPending} className="w-full">
-              {createUserMutation.isPending ? 'Adding...' : 'Add User to Drizzle DB'}
-            </Button>
-          </form>
+        <Card className="rounded-xl shadow-xs">
+          <CardHeader>
+            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
+              <ShieldCheck className="size-5" />
+            </div>
+            <CardTitle className="text-lg">Full Operational Control</CardTitle>
+            <CardDescription>
+              Manage documents, lifecycle streams, and team settings from a unified sidebar.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </section>
+
+      {/* Quick Launch Banner */}
+      <section className="w-full rounded-2xl border bg-card p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
+        <div>
+          <h3 className="text-xl font-bold">Ready to see it in action?</h3>
+          <p className="text-muted-foreground text-sm mt-1">
+            Explore the complete Dashboard 01 workspace with interactive charts and tables.
+          </p>
         </div>
-      </div>
+        <Link
+          to="/dashboard"
+          className={buttonVariants({
+            size: 'default',
+            className: 'rounded-lg font-semibold shrink-0',
+          })}
+        >
+          Open App
+          <ArrowRight className="size-4 ml-1.5" />
+        </Link>
+      </section>
     </div>
   )
 }
