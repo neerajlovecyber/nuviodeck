@@ -15,6 +15,10 @@ export default defineConfig({
         "../../packages/ui/src/styles/globals.css"
       ),
       "@workspace/ui": path.resolve(import.meta.dirname, "../../packages/ui/src"),
+      "cn": path.resolve(
+        import.meta.dirname,
+        "../../packages/ui/src/lib/utils.ts"
+      ),
     },
     dedupe: ["react", "react-dom"],
   },

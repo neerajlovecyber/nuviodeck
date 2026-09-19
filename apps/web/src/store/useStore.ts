@@ -10,7 +10,7 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  theme: 'dark',
+  theme: 'light',
   user: { name: 'Developer', email: 'dev@nuviodeck.com' },
   counter: 0,
   toggleTheme: () =>

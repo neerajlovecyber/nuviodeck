@@ -1,14 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { Hero11 } from '@/components/hero-11'
+import { Card, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components/card'
 import { buttonVariants } from '@workspace/ui/components/button'
-import { Badge } from '@workspace/ui/components/badge'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@workspace/ui/components/card'
-import {
-  ArrowRight,
-  Sparkles,
-  BarChart3,
-  ShieldCheck,
-  Zap,
-} from 'lucide-react'
+import { Film, Zap, Layers, ArrowRight } from 'lucide-react'
 
 export const Route = createFileRoute('/')({
   component: LandingPage,
@@ -16,105 +10,90 @@ export const Route = createFileRoute('/')({
 
 function LandingPage() {
   return (
-    <div className="flex flex-col items-center justify-center py-16 md:py-24 max-w-5xl mx-auto space-y-16">
-      {/* Hero Section */}
-      <section className="flex flex-col items-center text-center space-y-6">
-        <Badge variant="secondary" className="px-3 py-1 text-xs gap-1.5 rounded-full">
-          <Sparkles className="size-3.5 text-primary" />
-          <span>Nuviodeck Workspace</span>
-        </Badge>
+    <div className="w-full min-h-screen bg-stone-50 dark:bg-[#0c0f12]">
+      {/* Hero 11 Block */}
+      <Hero11
+        brandName="Nuviodeck"
+        title={"Curate Your Cinema,\nManifest Every Stream."}
+        description="A personalized media catalog engine and Debrid manifest manager. Generate signed manifest links, filter 4K HDR streams, and bring curated cinema collections directly to your favorite player."
+        primaryText="Open Dashboard"
+        primaryHref="/dashboard"
+        ctaText="Launch App"
+        ctaHref="/dashboard"
+      />
 
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-foreground max-w-3xl">
-          A powerful modern dashboard for your business operations
-        </h1>
+      {/* Catalog & Features Showcase Section */}
+      <div className="max-w-6xl mx-auto px-6 py-20 space-y-16" id="features">
+        <div className="text-center max-w-2xl mx-auto space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-amber-400">
+            Cinema Architecture
+          </p>
+          <h2 className="text-3xl md:text-4xl font-serif font-normal tracking-tight text-foreground">
+            Bespoke Catalogs & Debrid Integration
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Connect your streaming accounts and configure high-bitrate media manifests in seconds.
+          </p>
+        </div>
 
-        <p className="text-muted-foreground text-lg max-w-2xl">
-          Real-time analytics, interactive data tables, metrics, and workflow controls built with shadcn/ui and React 19.
-        </p>
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
+            <CardHeader>
+              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
+                <Film className="size-5" />
+              </div>
+              <CardTitle className="text-lg font-serif">1,000+ Curated Catalogs</CardTitle>
+              <CardDescription>
+                Discover collections across 29+ categories, from Criterion classics and director retrospectives to trending 4K HDR releases.
+              </CardDescription>
+            </CardHeader>
+          </Card>
 
-        <div className="flex items-center gap-4 pt-2">
+          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
+            <CardHeader>
+              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
+                <Zap className="size-5" />
+              </div>
+              <CardTitle className="text-lg font-serif">Bring Your Own Debrid</CardTitle>
+              <CardDescription>
+                Seamlessly connect Real-Debrid, AllDebrid, TorBox, or Premiumize with smart resolution filtering and audio track selection.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+
+          <Card className="rounded-2xl border bg-card/60 backdrop-blur-xs shadow-xs p-2">
+            <CardHeader>
+              <div className="size-10 rounded-xl bg-teal-950/10 dark:bg-amber-400/10 flex items-center justify-center text-teal-950 dark:text-amber-400 mb-2">
+                <Layers className="size-5" />
+              </div>
+              <CardTitle className="text-lg font-serif">Signed Manifest URLs</CardTitle>
+              <CardDescription>
+                One dynamic link compatible with Stremio, Kodi, and web players. Rotate tokens or manage family profiles with a click.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* Call to action card */}
+        <div className="rounded-3xl border bg-card/80 p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 shadow-sm">
+          <div className="space-y-2 text-center md:text-left">
+            <h3 className="text-2xl font-serif font-normal">Ready to experience your collection?</h3>
+            <p className="text-muted-foreground text-sm max-w-lg">
+              Explore your personalized workspace, manage stream manifests, and curate catalogs.
+            </p>
+          </div>
           <Link
             to="/dashboard"
             className={buttonVariants({
               size: 'lg',
-              className: 'rounded-xl px-8 h-12 text-base font-semibold shadow-sm',
+              className: 'rounded-full px-8 h-12 text-base font-semibold shadow-xs shrink-0',
             })}
           >
-            Open App
+            Launch Dashboard
             <ArrowRight className="size-4 ml-2" />
           </Link>
-
-          <Link
-            to="/settings"
-            className={buttonVariants({
-              variant: 'outline',
-              size: 'lg',
-              className: 'rounded-xl px-6 h-12 text-base',
-            })}
-          >
-            Settings
-          </Link>
         </div>
-      </section>
-
-      {/* Feature Cards Grid */}
-      <section className="grid gap-6 md:grid-cols-3 w-full">
-        <Card className="rounded-xl shadow-xs">
-          <CardHeader>
-            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
-              <BarChart3 className="size-5" />
-            </div>
-            <CardTitle className="text-lg">Interactive Analytics</CardTitle>
-            <CardDescription>
-              Real-time area charts and performance metrics visualizing your workspace data.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card className="rounded-xl shadow-xs">
-          <CardHeader>
-            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
-              <Zap className="size-5" />
-            </div>
-            <CardTitle className="text-lg">Draggable Data Table</CardTitle>
-            <CardDescription>
-              Filter, sort, reorder rows, and inspect records with drawer previews.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card className="rounded-xl shadow-xs">
-          <CardHeader>
-            <div className="size-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary mb-2">
-              <ShieldCheck className="size-5" />
-            </div>
-            <CardTitle className="text-lg">Full Operational Control</CardTitle>
-            <CardDescription>
-              Manage documents, lifecycle streams, and team settings from a unified sidebar.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </section>
-
-      {/* Quick Launch Banner */}
-      <section className="w-full rounded-2xl border bg-card p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xs">
-        <div>
-          <h3 className="text-xl font-bold">Ready to see it in action?</h3>
-          <p className="text-muted-foreground text-sm mt-1">
-            Explore the complete Dashboard 01 workspace with interactive charts and tables.
-          </p>
-        </div>
-        <Link
-          to="/dashboard"
-          className={buttonVariants({
-            size: 'default',
-            className: 'rounded-lg font-semibold shrink-0',
-          })}
-        >
-          Open App
-          <ArrowRight className="size-4 ml-1.5" />
-        </Link>
-      </section>
+      </div>
     </div>
   )
 }

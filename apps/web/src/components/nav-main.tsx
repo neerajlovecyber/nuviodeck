@@ -25,7 +25,7 @@ export function NavMain({
           <SidebarMenuItem className="flex items-center gap-2">
             <SidebarMenuButton
               tooltip="Quick Create"
-              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground"
+              className="min-w-8 bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground rounded-4xl"
             >
               <CirclePlusIcon />
               <span>Quick Create</span>
@@ -48,8 +48,8 @@ export function NavMain({
                 isActive={item.isActive}
                 className={
                   item.isActive
-                    ? "bg-[#b8b5ff] text-[#1e1b4b] hover:bg-[#a8a4ff] hover:text-[#1e1b4b] font-medium rounded-xl h-10 px-3.5 text-sm [&>svg]:size-4 [&>svg]:text-[#1e1b4b]"
-                    : "rounded-xl h-10 px-3.5 text-sm text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 [&>svg]:size-4"
+                    ? "bg-primary text-primary-foreground duration-200 ease-linear hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground data-active:bg-primary data-active:text-primary-foreground data-active:hover:bg-primary/90 data-active:hover:text-primary-foreground font-medium rounded-4xl [&>svg]:text-primary-foreground data-active:[&>svg]:text-primary-foreground"
+                    : "rounded-4xl text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 [&>svg]:size-4"
                 }
               >
                 {item.icon}

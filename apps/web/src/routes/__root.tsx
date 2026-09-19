@@ -1,4 +1,5 @@
 import { createRootRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
+import { ThemeToggle } from '@/components/theme-toggle'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -9,8 +10,9 @@ function RootComponent() {
     select: (s) => s.location.pathname,
   })
   const isDashboard = pathname === '/dashboard' || pathname.startsWith('/dashboard/')
+  const isLanding = pathname === '/'
 
-  if (isDashboard) {
+  if (isDashboard || isLanding) {
     return (
       <div className="min-h-screen bg-background font-sans antialiased text-foreground">
         <Outlet />
@@ -42,13 +44,7 @@ function RootComponent() {
           >
             Dashboard
           </Link>
-          <Link
-            to="/settings"
-            activeProps={{ className: 'text-primary font-semibold' }}
-            inactiveProps={{ className: 'text-muted-foreground hover:text-foreground transition-colors' }}
-          >
-            Settings
-          </Link>
+          <ThemeToggle />
         </nav>
       </header>
       <main className="container mx-auto p-6">
