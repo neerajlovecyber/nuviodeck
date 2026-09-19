@@ -24,6 +24,15 @@ import {
   RefreshCw,
   Sliders,
   Check,
+  Shuffle,
+  Clapperboard,
+  Tv,
+  Award,
+  Zap,
+  Sofa,
+  Baby,
+  Film,
+  LayoutGrid,
 } from 'lucide-react'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
@@ -89,6 +98,89 @@ function formatTimeAgo(isoString: string): string {
   }
 }
 
+const STARTING_POINTS = [
+  {
+    id: 'everyday_mix',
+    title: 'Everyday Mix',
+    description: 'A little of everything: trending, popular, and one big streamer.',
+    icon: Shuffle,
+    rowCount: 28,
+    collectionCount: 2,
+  },
+  {
+    id: 'cinephile',
+    title: 'Cinephile',
+    description: 'Movie-forward feed: discovery, prestige studios, Awards & Canon.',
+    icon: Clapperboard,
+    rowCount: 32,
+    collectionCount: 3,
+  },
+  {
+    id: 'tv_marathon',
+    title: 'TV Marathon',
+    description: 'Series-only feed tuned for what is currently airing and what is next.',
+    icon: Tv,
+    rowCount: 24,
+    collectionCount: 2,
+  },
+  {
+    id: 'curated',
+    title: 'Curated',
+    description: 'Tighter, slower feed leaning on critic darlings and decade staples.',
+    icon: Award,
+    rowCount: 20,
+    collectionCount: 2,
+  },
+  {
+    id: 'lite_streaming',
+    title: 'Lite Streaming',
+    description: 'Just the weekly trending picks across the major streamers.',
+    icon: Zap,
+    rowCount: 14,
+    collectionCount: 1,
+  },
+  {
+    id: 'weekend',
+    title: 'Weekend',
+    description: 'Trending, every-night genres, and a couple of IMDb staples.',
+    icon: Sofa,
+    rowCount: 22,
+    collectionCount: 2,
+  },
+  {
+    id: 'anime_fan',
+    title: 'Anime Fan',
+    description: 'Trending anime, K-Drama, and the studios that defined the genre.',
+    icon: Sparkles,
+    rowCount: 26,
+    collectionCount: 3,
+  },
+  {
+    id: 'kids_profile',
+    title: 'Kids Profile',
+    description: 'Family-safe rows tuned for shared screens.',
+    icon: Baby,
+    rowCount: 16,
+    collectionCount: 1,
+  },
+  {
+    id: 'classics_lover',
+    title: 'Classics Lover',
+    description: 'Pre-2000 essentials, canon lists, and the great auteurs.',
+    icon: Film,
+    rowCount: 25,
+    collectionCount: 2,
+  },
+  {
+    id: 'from_scratch',
+    title: 'From scratch',
+    description: 'Empty profile. Pick everything yourself.',
+    icon: LayoutGrid,
+    rowCount: 1,
+    collectionCount: 1,
+  },
+]
+
 function DashboardPage() {
   // Profiles state
   const [profiles, setProfiles] = React.useState<DeckProfile[]>([])
@@ -100,9 +192,7 @@ function DashboardPage() {
   // Modals state
   const [newProfileOpen, setNewProfileOpen] = React.useState(false)
   const [newProfileName, setNewProfileName] = React.useState('')
-  const [newProfileRows, setNewProfileRows] = React.useState('24')
-  const [newProfileCollections, setNewProfileCollections] = React.useState('1')
-  const [newProfileBadgeSet, setNewProfileBadgeSet] = React.useState('xp_aurora')
+  const [selectedStartingPoint, setSelectedStartingPoint] = React.useState('everyday_mix')
 
   const [importOpen, setImportOpen] = React.useState(false)
   const [importJson, setImportJson] = React.useState('')
@@ -184,18 +274,21 @@ function DashboardPage() {
       return
     }
 
+    const startingPoint = STARTING_POINTS.find((s) => s.id === selectedStartingPoint) || STARTING_POINTS[0]
+
     try {
       const res = await nuvioApi.createDeckProfile({
         name: newProfileName.trim(),
-        rowCount: parseInt(newProfileRows, 10) || 24,
-        collectionCount: parseInt(newProfileCollections, 10) || 1,
-        badgeSetId: newProfileBadgeSet,
+        rowCount: startingPoint.rowCount,
+        collectionCount: startingPoint.collectionCount,
+        badgeSetId: 'xp_aurora',
       })
 
       if (res.profile) {
         setProfiles((prev) => [res.profile, ...prev])
         toast.success(`Profile "${res.profile.name}" created!`)
         setNewProfileName('')
+        setSelectedStartingPoint('everyday_mix')
         setNewProfileOpen(false)
       }
     } catch (err: any) {
@@ -712,81 +805,86 @@ function DashboardPage() {
           </DialogContent>
         </Dialog>
 
-        {/* New Profile Modal */}
+        {/* Start a new profile Modal */}
         <Dialog open={newProfileOpen} onOpenChange={setNewProfileOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[580px]">
             <DialogHeader>
-              <DialogTitle className="text-lg">Create New Profile</DialogTitle>
-              <DialogDescription>
-                Create a standalone Deck profile configuration to customize and deploy.
+              <DialogTitle className="text-xl font-semibold text-foreground">
+                Start a new profile
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground mt-0.5">
+                Name it, then pick a starting point.
               </DialogDescription>
             </DialogHeader>
 
-            <form onSubmit={handleCreateProfile} className="space-y-4 py-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="name">Profile Name</Label>
+            <form onSubmit={handleCreateProfile} className="space-y-5 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium text-foreground">
+                  Profile name
+                </Label>
                 <Input
                   id="name"
-                  placeholder="e.g. Cinema 4K, Anime Deck, Kids"
+                  placeholder="Late-night vibes"
                   value={newProfileName}
                   onChange={(e) => setNewProfileName(e.target.value)}
+                  className="h-10 text-sm"
                   autoFocus
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="rows">Rows Count</Label>
-                  <Input
-                    id="rows"
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={newProfileRows}
-                    onChange={(e) => setNewProfileRows(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="collections">Collections</Label>
-                  <Input
-                    id="collections"
-                    type="number"
-                    min={1}
-                    max={20}
-                    value={newProfileCollections}
-                    onChange={(e) => setNewProfileCollections(e.target.value)}
-                  />
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-foreground">
+                  Starting point
+                </Label>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[360px] overflow-y-auto pr-1">
+                  {STARTING_POINTS.map((sp) => {
+                    const Icon = sp.icon
+                    const isSelected = selectedStartingPoint === sp.id
+                    return (
+                      <div
+                        key={sp.id}
+                        onClick={() => setSelectedStartingPoint(sp.id)}
+                        className={`group relative rounded-xl border p-3.5 flex items-start gap-3 cursor-pointer transition-all ${
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/40'
+                            : 'border-border/70 hover:border-border bg-card/60 hover:bg-card'
+                        }`}
+                      >
+                        <div
+                          className={`size-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-accent/70 text-muted-foreground group-hover:text-foreground'
+                          }`}
+                        >
+                          <Icon className="size-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-semibold text-foreground leading-tight">
+                            {sp.title}
+                          </h4>
+                          <p className="text-xs text-muted-foreground leading-normal mt-1">
+                            {sp.description}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="badgeset">Default Badge Preset</Label>
-                <Select value={newProfileBadgeSet} onValueChange={setNewProfileBadgeSet}>
-                  <SelectTrigger id="badgeset">
-                    <SelectValue placeholder="Select badge preset" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="xp_aurora">Aurora (Vibrant Teal/Purple)</SelectItem>
-                    <SelectItem value="xp_onyx">Onyx (Sleek Minimal Slate)</SelectItem>
-                    <SelectItem value="xp_velvet">Velvet (Luxury Crimson Gold)</SelectItem>
-                    <SelectItem value="xp_cyber">Cyberpunk (Neon Glow)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <DialogFooter className="pt-3">
+              <DialogFooter className="pt-2 gap-2 sm:gap-0">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => setNewProfileOpen(false)}
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  className="bg-[#6366f1] hover:bg-[#5558e6] text-white"
-                >
-                  Create Profile
+                <Button type="submit">
+                  Create profile
                 </Button>
               </DialogFooter>
             </form>
