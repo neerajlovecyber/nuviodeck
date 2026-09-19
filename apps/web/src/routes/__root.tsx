@@ -1,0 +1,39 @@
+import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
+
+export const Route = createRootRoute({
+  component: RootComponent,
+})
+
+function RootComponent() {
+  return (
+    <div className="min-h-screen bg-background font-sans antialiased text-foreground">
+      <header className="border-b bg-card px-6 py-4 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-lg">
+            N
+          </div>
+          <span className="font-semibold text-lg tracking-tight">Nuviodeck</span>
+        </div>
+        <nav className="flex items-center gap-6 text-sm font-medium">
+          <Link
+            to="/"
+            activeProps={{ className: 'text-primary font-semibold' }}
+            inactiveProps={{ className: 'text-muted-foreground hover:text-foreground transition-colors' }}
+          >
+            Dashboard
+          </Link>
+          <Link
+            to="/settings"
+            activeProps={{ className: 'text-primary font-semibold' }}
+            inactiveProps={{ className: 'text-muted-foreground hover:text-foreground transition-colors' }}
+          >
+            Settings
+          </Link>
+        </nav>
+      </header>
+      <main className="container mx-auto p-6">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
