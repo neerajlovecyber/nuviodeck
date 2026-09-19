@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import {
@@ -182,6 +182,8 @@ const STARTING_POINTS = [
 ]
 
 function DashboardPage() {
+  const navigate = useNavigate()
+
   // Profiles state
   const [profiles, setProfiles] = React.useState<DeckProfile[]>([])
   const [loading, setLoading] = React.useState(true)
@@ -290,6 +292,10 @@ function DashboardPage() {
         setNewProfileName('')
         setSelectedStartingPoint('everyday_mix')
         setNewProfileOpen(false)
+        navigate({
+          to: '/wizard/$profileId',
+          params: { profileId: res.profile.id },
+        })
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to create profile')
@@ -508,7 +514,13 @@ function DashboardPage() {
               {profiles.map((profile) => (
                 <div
                   key={profile.id}
-                  className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md hover:border-border transition-all flex flex-col justify-between"
+                  onClick={() =>
+                    navigate({
+                      to: '/wizard/$profileId',
+                      params: { profileId: profile.id },
+                    })
+                  }
+                  className="group relative rounded-2xl border border-border/70 bg-card p-5 shadow-xs hover:shadow-md hover:border-border transition-all flex flex-col justify-between cursor-pointer"
                 >
                   <div>
                     {/* Card Header: Title & 3-Dots */}
@@ -517,19 +529,20 @@ function DashboardPage() {
                         {profile.name}
                       </h3>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger
-                          render={
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Profile actions</span>
-                            </Button>
-                          }
-                        />
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-foreground rounded-md -mr-1"
+                              >
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Profile actions</span>
+                              </Button>
+                            }
+                          />
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem
                             onClick={() => handleOpenDeploy(profile)}
@@ -571,6 +584,7 @@ function DashboardPage() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
+                  </div>
 
                     {/* Status Badges */}
                     <div className="flex items-center gap-1.5 mt-2.5 mb-5">

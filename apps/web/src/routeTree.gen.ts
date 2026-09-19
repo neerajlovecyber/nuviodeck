@@ -14,6 +14,7 @@ import { Route as AvatarsRouteImport } from './routes/avatars'
 import { Route as BadgesRouteImport } from './routes/badges'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as WizardProfileIdRouteImport } from './routes/wizard.$profileId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const SettingsRoute = SettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WizardProfileIdRoute = WizardProfileIdRouteImport.update({
+  id: '/wizard/$profileId',
+  path: '/wizard/$profileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/wizard/$profileId': typeof WizardProfileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/wizard/$profileId': typeof WizardProfileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/badges': typeof BadgesRoute
   '/dashboard': typeof DashboardRoute
   '/settings': typeof SettingsRoute
+  '/wizard/$profileId': typeof WizardProfileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/avatars' | '/badges' | '/dashboard' | '/settings'
+  fullPaths:
+    | '/'
+    | '/avatars'
+    | '/badges'
+    | '/dashboard'
+    | '/settings'
+    | '/wizard/$profileId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/avatars' | '/badges' | '/dashboard' | '/settings'
-  id: '__root__' | '/' | '/avatars' | '/badges' | '/dashboard' | '/settings'
+  to:
+    | '/'
+    | '/avatars'
+    | '/badges'
+    | '/dashboard'
+    | '/settings'
+    | '/wizard/$profileId'
+  id:
+    | '__root__'
+    | '/'
+    | '/avatars'
+    | '/badges'
+    | '/dashboard'
+    | '/settings'
+    | '/wizard/$profileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   BadgesRoute: typeof BadgesRoute
   DashboardRoute: typeof DashboardRoute
   SettingsRoute: typeof SettingsRoute
+  WizardProfileIdRoute: typeof WizardProfileIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wizard/$profileId': {
+      id: '/wizard/$profileId'
+      path: '/wizard/$profileId'
+      fullPath: '/wizard/$profileId'
+      preLoaderRoute: typeof WizardProfileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   BadgesRoute: BadgesRoute,
   DashboardRoute: DashboardRoute,
   SettingsRoute: SettingsRoute,
+  WizardProfileIdRoute: WizardProfileIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

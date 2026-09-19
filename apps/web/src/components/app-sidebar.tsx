@@ -48,7 +48,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Wizard",
       url: "/dashboard",
       icon: <Wand2 />,
-      isActive: false,
+      isActive: pathname.startsWith("/wizard"),
     },
     {
       title: "Badges",
