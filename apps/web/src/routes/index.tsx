@@ -14,8 +14,8 @@ function LandingPage() {
       {/* Hero 11 Block */}
       <Hero11
         brandName="Nuviodeck"
-        title={"Curate Your Cinema,\nManifest Every Stream."}
-        description="A personalized media catalog engine and Debrid manifest manager. Generate signed manifest links, filter 4K HDR streams, and bring curated cinema collections directly to your favorite player."
+        title={"Build your streaming deck,\nvisually."}
+        description="1,000+ curated catalogs, instant Debrid integration, and 4K stream filtering, assembled in a visual wizard. No raw JSON. One signed link, straight into your player."
         primaryText="Open Dashboard"
         primaryHref="/dashboard"
         ctaText="Launch App"

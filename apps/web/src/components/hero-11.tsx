@@ -256,7 +256,7 @@ export function Hero11({
               className="mb-6 inline-flex items-center gap-2 rounded-full border border-teal-950/15 bg-white/40 dark:bg-black/30 px-3.5 py-1.5 text-xs font-medium backdrop-blur-md"
             >
               <Sparkles className="size-3.5 text-teal-800 dark:text-amber-400" />
-              <span>1,000+ Curated Catalogs • Debrid Stream Hub</span>
+              <span>Visual Catalog Builder • Zero JSON Config</span>
             </motion.div>
 
             <motion.h1
@@ -281,13 +281,6 @@ export function Hero11({
                 <span>{primaryText}</span>
                 <ArrowRight className="size-4" />
               </Link>
-
-              <a
-                href="#features"
-                className="inline-flex min-h-12 items-center rounded-full border border-teal-950/20 bg-white/30 dark:bg-white/5 dark:border-white/15 px-6 text-sm font-medium backdrop-blur-sm transition-colors hover:bg-white/50 dark:hover:bg-white/10"
-              >
-                Explore Features
-              </a>
             </motion.div>
 
             {/* Feature Highlights Pills */}
