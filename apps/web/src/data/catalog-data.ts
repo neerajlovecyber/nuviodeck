@@ -1,8 +1,14 @@
+import xperienceData from './xperience-catalogs.json'
+
 export interface CatalogItem {
   id: string
   name: string
   category: string
   type: 'movie' | 'series' | 'both'
+  source?: string
+  requires?: string[]
+  personalized?: boolean
+  sourceParams?: Record<string, any>
   description?: string
   isAi?: boolean
 }
@@ -10,186 +16,206 @@ export interface CatalogItem {
 export interface CatalogCategory {
   id: string
   name: string
+  count: number
   items: CatalogItem[]
 }
 
-export const CATALOG_CATEGORIES: CatalogCategory[] = [
-  {
-    id: 'ai',
-    name: 'AI GENERATED',
-    items: [
-      { id: 'ai-movies', name: 'AI for you - Movies', category: 'AI generated', type: 'movie', isAi: true },
-      { id: 'ai-series', name: 'AI for you - Series', category: 'AI generated', type: 'series', isAi: true },
-    ],
-  },
-  {
-    id: 'trending',
-    name: 'TRENDING',
-    items: [
-      { id: 'rec-series', name: 'Recommended For You - Series', category: 'Trending', type: 'series' },
-      { id: 'rec-movies', name: 'Recommended For You - Movies', category: 'Trending', type: 'movie' },
-      { id: 'foryou-movies', name: 'For You - Movies', category: 'Trending', type: 'movie' },
-      { id: 'foryou-series', name: 'For You - Series', category: 'Trending', type: 'series' },
-      { id: 'trend-series', name: 'Trending - Series', category: 'Trending', type: 'series' },
-      { id: 'trend-movies', name: 'Trending - Movies', category: 'Trending', type: 'movie' },
-      { id: 'popular-movies', name: 'Popular Movies This Week', category: 'Trending', type: 'movie' },
-      { id: 'popular-tv', name: 'Popular TV Shows This Week', category: 'Trending', type: 'series' },
-      { id: 'box-office', name: 'Box Office Top 10', category: 'Trending', type: 'movie' },
-      { id: 'trakt-anticipated', name: 'Trakt Most Anticipated', category: 'Trending', type: 'both' },
-    ],
-  },
-  {
-    id: 'new_latest',
-    name: 'NEW & LATEST',
-    items: [
-      { id: 'new-premieres', name: 'Brand New Premieres', category: 'New & Latest', type: 'both' },
-      { id: 'digital-releases', name: 'Latest Digital Releases', category: 'New & Latest', type: 'movie' },
-      { id: 'airing-today', name: 'Airing Today', category: 'New & Latest', type: 'series' },
-      { id: 'just-added', name: 'Recently Added to Catalog', category: 'New & Latest', type: 'both' },
-    ],
-  },
-  {
-    id: 'streaming_top10',
-    name: 'STREAMING TOP 10',
-    items: [
-      { id: 'top10-netflix', name: 'Netflix Top 10 Today', category: 'Streaming Top 10', type: 'both' },
-      { id: 'top10-apple', name: 'Apple TV+ Chart Toppers', category: 'Streaming Top 10', type: 'both' },
-      { id: 'top10-prime', name: 'Prime Video Top 10', category: 'Streaming Top 10', type: 'both' },
-      { id: 'top10-disney', name: 'Disney+ Most Watched', category: 'Streaming Top 10', type: 'both' },
-      { id: 'top10-hbo', name: 'HBO Max Global Top 10', category: 'Streaming Top 10', type: 'both' },
-    ],
-  },
-  {
-    id: 'streaming',
-    name: 'STREAMING',
-    items: [
-      { id: 'netflix-originals', name: 'Netflix Originals', category: 'Streaming', type: 'both' },
-      { id: 'apple-originals', name: 'Apple Originals & Prestige', category: 'Streaming', type: 'both' },
-      { id: 'prime-exclusives', name: 'Prime Exclusives', category: 'Streaming', type: 'both' },
-      { id: 'disney-featured', name: 'Disney+ Originals', category: 'Streaming', type: 'both' },
-      { id: 'hbo-specials', name: 'HBO Prestige Drama', category: 'Streaming', type: 'series' },
-      { id: 'paramount-hub', name: 'Paramount+ Showcase', category: 'Streaming', type: 'both' },
-    ],
-  },
-  {
-    id: 'genres',
-    name: 'GENRES',
-    items: [
-      { id: 'genre-action', name: 'High-Octane Action', category: 'Genres', type: 'movie' },
-      { id: 'genre-scifi', name: 'Sci-Fi & Cyberpunk Visions', category: 'Genres', type: 'both' },
-      { id: 'genre-thriller', name: 'Mind-Bending Thrillers', category: 'Genres', type: 'both' },
-      { id: 'genre-comedy', name: 'Top Rated Comedy', category: 'Genres', type: 'both' },
-      { id: 'genre-horror', name: 'Modern Horror & Suspense', category: 'Genres', type: 'movie' },
-      { id: 'genre-romance', name: 'Romantic Dramas', category: 'Genres', type: 'both' },
-    ],
-  },
-  {
-    id: 'anime',
-    name: 'ANIME',
-    items: [
-      { id: 'anime-trend-series', name: 'Trending Anime - Series', category: 'Anime', type: 'series' },
-      { id: 'anime-trend-movies', name: 'Trending Anime - Movies', category: 'Anime', type: 'movie' },
-      { id: 'anime-seasonal', name: 'Current Season Simulcasts', category: 'Anime', type: 'series' },
-      { id: 'anime-shonen', name: 'Top Shonen Anthems', category: 'Anime', type: 'series' },
-      { id: 'anime-classics', name: 'Anime Masterpieces & Canon', category: 'Anime', type: 'both' },
-      { id: 'anime-ghibli', name: 'Studio Ghibli Archive', category: 'Anime', type: 'movie' },
-    ],
-  },
-  {
-    id: 'world',
-    name: 'WORLD',
-    items: [
-      { id: 'world-kdrama', name: 'Trending K-Dramas', category: 'World', type: 'series' },
-      { id: 'world-indian', name: 'Indian Cinema Blockbusters', category: 'World', type: 'movie' },
-      { id: 'world-nordic', name: 'Nordic Noir Mystery', category: 'World', type: 'series' },
-      { id: 'world-british', name: 'British Mystery & Crime', category: 'World', type: 'series' },
-      { id: 'world-french', name: 'French Cinema Classics', category: 'World', type: 'movie' },
-    ],
-  },
-  {
-    id: 'awards',
-    name: 'AWARDS',
-    items: [
-      { id: 'awards-oscar-winners', name: 'Oscar Best Picture Winners', category: 'Awards', type: 'movie' },
-      { id: 'awards-cannes', name: 'Cannes Palme d\'Or Laureates', category: 'Awards', type: 'movie' },
-      { id: 'awards-emmy-drama', name: 'Emmy Best Drama Champions', category: 'Awards', type: 'series' },
-    ],
-  },
-  {
-    id: 'studios',
-    name: 'STUDIOS',
-    items: [
-      { id: 'studio-a24', name: 'A24 Film Collection', category: 'Studios', type: 'movie' },
-      { id: 'studio-marvel', name: 'Marvel Cinematic Universe', category: 'Studios', type: 'both' },
-      { id: 'studio-dc', name: 'DC Worlds & Elseworlds', category: 'Studios', type: 'both' },
-      { id: 'studio-pixar', name: 'Pixar Animation Archive', category: 'Studios', type: 'movie' },
-    ],
-  },
-]
+export interface PresetStartingPoint {
+  id: string
+  label: string
+  hint: string
+  rowIds: string[]
+}
 
 export interface CollectionFolder {
   id: string
-  name: string
+  title: string
+  badgeText: string
   logoText: string
-  badgeText?: string
   bgGradient: string
-  itemCount: number
+  gifUrl?: string
+  tileShape?: 'POSTER' | 'LANDSCAPE' | 'SQUARE'
+  coverSetId?: string | null
+  catalogSources?: string[]
 }
 
 export interface CollectionConfig {
   id: string
-  name: string
-  tileShape: 'Poster' | 'Landscape' | 'Square'
+  title: string
+  tileShape: 'POSTER' | 'LANDSCAPE' | 'SQUARE'
   pinToTop: boolean
   focusGlow: boolean
-  allTab: boolean
-  viewMode: 'Follow layout' | 'Rows' | 'Tabbed grid'
+  showAllTab: boolean
+  viewMode: 'FOLLOW_LAYOUT' | 'ROWS' | 'TABBED_GRID'
   backdropUrl: string
   folders: CollectionFolder[]
 }
 
+export interface CoverSetInfo {
+  id: string
+  label: string
+  tileShape?: 'POSTER' | 'LANDSCAPE' | 'SQUARE'
+  description?: string
+  dynamic?: boolean
+  supporterOnly?: boolean
+}
+
+// Convert extracted Xperience catalogs into structured categories
+const rawCatalogs = xperienceData.catalogs as Array<{
+  id: string
+  label: string
+  category: string
+  kind: 'movie' | 'series'
+  source?: string
+  source_params?: Record<string, any>
+  requires?: string[]
+  personalized?: boolean
+}>
+
+// Group by category
+const categoryIdList = xperienceData.categories as string[]
+const categoryLabelMap = xperienceData.categoryLabels as Record<string, string>
+
+// Map raw catalogs to CatalogItem format
+export const ALL_CATALOGS: CatalogItem[] = rawCatalogs.map((c) => ({
+  id: c.id,
+  name: c.label,
+  category: categoryLabelMap[c.category] || c.category,
+  type: c.kind === 'series' ? 'series' : 'movie',
+  source: c.source,
+  requires: c.requires || [],
+  personalized: !!c.personalized,
+  sourceParams: c.source_params || {},
+  isAi: c.source === 'gemini' || c.category === 'ai_generated',
+}))
+
+export const CATALOG_MAP = new Map<string, CatalogItem>(
+  ALL_CATALOGS.map((c) => [c.id, c])
+)
+
+// Categorized structure
+export const CATALOG_CATEGORIES: CatalogCategory[] = categoryIdList
+  .map((catId) => {
+    const items = ALL_CATALOGS.filter((c) => {
+      // match raw category id
+      const raw = rawCatalogs.find((r) => r.id === c.id)
+      return raw?.category === catId
+    })
+
+    return {
+      id: catId,
+      name: categoryLabelMap[catId] || catId,
+      count: items.length,
+      items,
+    }
+  })
+  .filter((cat) => cat.items.length > 0)
+
+// Official Xperience Starting Points Presets
+export const XPERIENCE_PRESETS: PresetStartingPoint[] = (xperienceData.presets as Array<{
+  id: string
+  label: string
+  hint: string
+}>).map((p) => ({
+  id: p.id,
+  label: p.label,
+  hint: p.hint,
+  rowIds: (xperienceData.presetRows as Record<string, string[]>)[p.id] || [],
+}))
+
+export function getPresetRows(presetId: string): CatalogItem[] {
+  const preset = XPERIENCE_PRESETS.find((p) => p.id === presetId)
+  if (!preset) return []
+  return preset.rowIds
+    .map((id) => CATALOG_MAP.get(id))
+    .filter((c): c is CatalogItem => !!c)
+}
+
+// Extracted Cover Sets from Xperience
+export const COVER_SETS: CoverSetInfo[] = [
+  { id: 'default', label: 'Default' },
+  { id: 'kaptain_genres', label: "Kaptain's Genres", tileShape: 'LANDSCAPE' },
+  { id: 'kaptain_trending', label: "Kaptain's Trending", tileShape: 'LANDSCAPE' },
+  { id: 'kaptain_world_cinema', label: "Kaptain's World Cinema", tileShape: 'LANDSCAPE' },
+  { id: 'kaptain_era_mixes', label: "Kaptain's Era Mixes", tileShape: 'LANDSCAPE' },
+  { id: 'kaptain_anime', label: "Kaptain's Anime", tileShape: 'LANDSCAPE' },
+  { id: 'kaptain_decades', label: "Kaptain's Decades", tileShape: 'LANDSCAPE' },
+  { id: 'editorial', label: 'Editorial', tileShape: 'LANDSCAPE' },
+  { id: 'editorial_portrait', label: 'Editorial Portrait', tileShape: 'POSTER' },
+  { id: 'awards_portrait', label: 'Awards Portrait', tileShape: 'POSTER' },
+  { id: 'mesh_nature', label: 'Mesh Nature', tileShape: 'LANDSCAPE' },
+  { id: 'holographic', label: 'Holographic', tileShape: 'LANDSCAPE' },
+  { id: 'holographic_portrait', label: 'Holographic Portrait', tileShape: 'POSTER' },
+  { id: 'carbon_mono', label: 'Carbon Mono', tileShape: 'LANDSCAPE' },
+  { id: 'carbon_mono_portrait', label: 'Carbon Mono Portrait', tileShape: 'POSTER' },
+  { id: 'spotlight', label: 'Spotlight', tileShape: 'LANDSCAPE' },
+  { id: 'spotlight_portrait', label: 'Spotlight Portrait', tileShape: 'POSTER' },
+  { id: 'duotone', label: 'Duotone', tileShape: 'LANDSCAPE' },
+  { id: 'duotone_portrait', label: 'Duotone Portrait', tileShape: 'POSTER' },
+  { id: 'monogram', label: 'Monogram', tileShape: 'LANDSCAPE' },
+  { id: 'monogram_portrait', label: 'Monogram Portrait', tileShape: 'POSTER' },
+  { id: 'chromatic', label: 'Chromatic', tileShape: 'LANDSCAPE' },
+  { id: 'chromatic_portrait', label: 'Chromatic Portrait', tileShape: 'POSTER' },
+  { id: 'obsidian', label: 'Obsidian', tileShape: 'POSTER' },
+  { id: 'key_art', label: 'Key Art', tileShape: 'LANDSCAPE' },
+  { id: 'key_art_portrait', label: 'Key Art Portrait', tileShape: 'POSTER' },
+  { id: 'dynamic_billboard', label: 'Dynamic Billboard', tileShape: 'LANDSCAPE', dynamic: true },
+  { id: 'dynamic_wall', label: 'Dynamic Poster Wall', tileShape: 'LANDSCAPE', dynamic: true },
+  { id: 'dynamic_duotone', label: 'Dynamic Duotone', tileShape: 'LANDSCAPE', dynamic: true },
+  { id: 'dynamic_showcase', label: 'Dynamic Showcase', tileShape: 'LANDSCAPE', dynamic: true },
+]
+
 export const DEFAULT_COLLECTIONS: CollectionConfig[] = [
   {
     id: 'col-streaming',
-    name: 'Streaming',
-    tileShape: 'Landscape',
+    title: 'Streaming Hub',
+    tileShape: 'LANDSCAPE',
     pinToTop: true,
     focusGlow: true,
-    allTab: true,
-    viewMode: 'Follow layout',
-    backdropUrl: 'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?q=80&w=1920',
+    showAllTab: true,
+    viewMode: 'FOLLOW_LAYOUT',
+    backdropUrl:
+      'https://images.unsplash.com/photo-1574375927938-d5a98e8ffe85?q=80&w=2069&auto=format&fit=crop',
     folders: [
       {
-        id: 'netflix',
-        name: 'Netflix',
+        id: 'f-netflix',
+        title: 'Netflix',
+        badgeText: 'ORIGINALS & MOVIES',
         logoText: 'NETFLIX',
-        badgeText: 'GIF',
-        bgGradient: 'from-black via-zinc-900 to-red-950',
-        itemCount: 9,
+        bgGradient: 'from-red-900/80 via-black to-zinc-950',
+        gifUrl: 'https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif',
+        tileShape: 'LANDSCAPE',
+        catalogSources: ['streaming_netflix_movies', 'streaming_netflix_series'],
       },
       {
-        id: 'appletv',
-        name: 'Apple TV+',
-        logoText: 'tv',
-        badgeText: 'GIF',
-        bgGradient: 'from-zinc-900 via-stone-800 to-neutral-700',
-        itemCount: 9,
+        id: 'f-apple',
+        title: 'Apple TV+',
+        badgeText: 'PRESTIGE SERIES',
+        logoText: 'tv+',
+        bgGradient: 'from-zinc-700/80 via-zinc-900 to-black',
+        gifUrl: 'https://media.giphy.com/media/26AHONQ79FdWZhAI0/giphy.gif',
+        tileShape: 'LANDSCAPE',
+        catalogSources: ['streaming_apple_movies', 'streaming_apple_series'],
       },
       {
-        id: 'prime',
-        name: 'Prime Video',
+        id: 'f-disney',
+        title: 'Disney+',
+        badgeText: 'DISNEY · MARVEL · PIXAR',
+        logoText: 'Disney+',
+        bgGradient: 'from-blue-900/80 via-indigo-950 to-black',
+        gifUrl: 'https://media.giphy.com/media/3o7TKMt1VVNkHV2PaE/giphy.gif',
+        tileShape: 'LANDSCAPE',
+        catalogSources: ['streaming_disney_movies', 'streaming_disney_series'],
+      },
+      {
+        id: 'f-prime',
+        title: 'Prime Video',
+        badgeText: 'AMAZON EXCLUSIVES',
         logoText: 'prime video',
-        badgeText: 'GIF',
-        bgGradient: 'from-blue-950 via-slate-900 to-sky-950',
-        itemCount: 9,
-      },
-      {
-        id: 'jiohotstar',
-        name: 'JioHotstar',
-        logoText: 'JioHotstar',
-        badgeText: 'GIF',
-        bgGradient: 'from-indigo-950 via-purple-950 to-pink-950',
-        itemCount: 7,
+        bgGradient: 'from-sky-900/80 via-cyan-950 to-black',
+        gifUrl: 'https://media.giphy.com/media/l41lI4bYmcsPJX9Go/giphy.gif',
+        tileShape: 'LANDSCAPE',
+        catalogSources: ['streaming_prime_movies', 'streaming_prime_series'],
       },
     ],
   },

@@ -62,6 +62,8 @@ import {
   DEFAULT_COLLECTIONS,
   CatalogItem,
   CollectionConfig,
+  XPERIENCE_PRESETS,
+  getPresetRows,
 } from '@/data/catalog-data'
 
 export const Route = createFileRoute('/wizard/$profileId')({
@@ -120,26 +122,11 @@ function ProfileWizardPage() {
   // Step 2: Home rows State
   const [catalogSearch, setCatalogSearch] = React.useState('')
   const [expandedCategories, setExpandedCategories] = React.useState<string[]>([
-    'ai',
-    'trending',
+    'for_you_trending',
+    'streaming_top10',
     'streaming',
   ])
-  const [selectedRows, setSelectedRows] = React.useState<CatalogItem[]>([
-    { id: 'ai-movies', name: 'AI for you - Movies', category: 'AI generated', type: 'movie', isAi: true },
-    { id: 'ai-series', name: 'AI for you - Series', category: 'AI generated', type: 'series', isAi: true },
-    { id: 'rec-series', name: 'Recommended For You - Series', category: 'Trending', type: 'series' },
-    { id: 'rec-movies', name: 'Recommended For You - Movies', category: 'Trending', type: 'movie' },
-    { id: 'foryou-movies', name: 'For You - Movies', category: 'Trending', type: 'movie' },
-    { id: 'foryou-series', name: 'For You - Series', category: 'Trending', type: 'series' },
-    { id: 'trend-anime-series', name: 'Trending Anime - Series', category: 'Anime', type: 'series' },
-    { id: 'trend-anime-movies', name: 'Trending Anime - Movies', category: 'Anime', type: 'movie' },
-    { id: 'trend-series', name: 'Trending - Series', category: 'Trending', type: 'series' },
-    { id: 'trend-movies', name: 'Trending - Movies', category: 'Trending', type: 'movie' },
-    { id: 'popular-movies', name: 'Popular Movies This Week', category: 'Trending', type: 'movie' },
-    { id: 'top10-netflix', name: 'Netflix Top 10 Today', category: 'Streaming Top 10', type: 'both' },
-    { id: 'genre-scifi', name: 'Sci-Fi & Cyberpunk Visions', category: 'Genres', type: 'both' },
-    { id: 'studio-a24', name: 'A24 Film Collection', category: 'Studios', type: 'movie' },
-  ])
+  const [selectedRows, setSelectedRows] = React.useState<CatalogItem[]>(() => getPresetRows('balanced'))
 
   // Step 3: Collections State
   const [collections, setCollections] = React.useState<CollectionConfig[]>(DEFAULT_COLLECTIONS)
@@ -164,7 +151,9 @@ function ProfileWizardPage() {
           if (found.configJson) {
             try {
               const cfg = JSON.parse(found.configJson)
-              if (cfg.rows) setSelectedRows(cfg.rows)
+              if (cfg.rows && Array.isArray(cfg.rows) && cfg.rows.length > 0) setSelectedRows(cfg.rows)
+              else if (cfg.selectedRows && Array.isArray(cfg.selectedRows) && cfg.selectedRows.length > 0) setSelectedRows(cfg.selectedRows)
+              else if (cfg.initialPresetId) setSelectedRows(getPresetRows(cfg.initialPresetId))
               if (cfg.collections) setCollections(cfg.collections)
             } catch {
               // ignore json error
@@ -945,34 +934,21 @@ function ProfileWizardPage() {
                         </Button>
                       }
                     />
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          const items = CATALOG_CATEGORIES.flatMap((c) => c.items).slice(0, 16)
-                          setSelectedRows(items)
-                          toast.success('Applied Everyday Mix preset')
-                        }}
-                      >
-                        Everyday Mix
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          const movies = CATALOG_CATEGORIES.flatMap((c) => c.items).filter((i) => i.type === 'movie').slice(0, 18)
-                          setSelectedRows(movies)
-                          toast.success('Applied Cinephile preset')
-                        }}
-                      >
-                        Cinephile
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          const series = CATALOG_CATEGORIES.flatMap((c) => c.items).filter((i) => i.type === 'series').slice(0, 16)
-                          setSelectedRows(series)
-                          toast.success('Applied TV Marathon preset')
-                        }}
-                      >
-                        TV Marathon
-                      </DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
+                      {XPERIENCE_PRESETS.map((preset) => (
+                        <DropdownMenuItem
+                          key={preset.id}
+                          onClick={() => {
+                            const rows = getPresetRows(preset.id)
+                            setSelectedRows(rows)
+                            toast.success(`Applied ${preset.label} preset (${rows.length} rows)`)
+                          }}
+                          className="flex flex-col items-start gap-0.5 cursor-pointer py-2"
+                        >
+                          <span className="font-semibold text-xs text-foreground">{preset.label}</span>
+                          <span className="text-[11px] text-muted-foreground line-clamp-1">{preset.hint}</span>
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

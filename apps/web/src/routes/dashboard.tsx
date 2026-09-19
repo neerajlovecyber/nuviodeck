@@ -73,6 +73,7 @@ import {
 } from '@workspace/ui/components/alert-dialog'
 import { toast } from 'sonner'
 import { nuvioApi, DeckProfile } from '@/lib/nuvio-api'
+import { getPresetRows } from '@/data/catalog-data'
 
 export const Route = createFileRoute('/dashboard')({
   component: DashboardPage,
@@ -278,12 +279,32 @@ function DashboardPage() {
 
     const startingPoint = STARTING_POINTS.find((s) => s.id === selectedStartingPoint) || STARTING_POINTS[0]
 
+    const presetIdMap: Record<string, string> = {
+      everyday_mix: 'balanced',
+      cinephile: 'movie_lover',
+      tv_marathon: 'series_binger',
+      curated: 'quality',
+      lite_streaming: 'lite_streaming',
+      weekend: 'casual',
+      anime_fan: 'anime_fan',
+      kids_profile: 'kids_profile',
+      classics_lover: 'classics_lover',
+    }
+    const officialPresetId = presetIdMap[selectedStartingPoint]
+    const initialRows = officialPresetId ? getPresetRows(officialPresetId) : []
+
     try {
       const res = await nuvioApi.createDeckProfile({
         name: newProfileName.trim(),
-        rowCount: startingPoint.rowCount,
+        rowCount: initialRows.length || startingPoint.rowCount,
         collectionCount: startingPoint.collectionCount,
         badgeSetId: 'xp_aurora',
+        configJson: JSON.stringify({
+          rows: initialRows,
+          selectedRows: initialRows,
+          startingPointPreset: selectedStartingPoint,
+          initialPresetId: officialPresetId,
+        }),
       })
 
       if (res.profile) {
