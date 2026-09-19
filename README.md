@@ -1,6 +1,17 @@
-# Nuviodeck Clean Monorepo
+# 🎬 Nuviodeck - Unified Stream & Catalog Management Platform
 
-Nuviodeck is a modern, high-performance web and desktop management platform built on a lean, ultra-fast monorepo architecture powered by **Bun**, **Turborepo**, **Vite**, **shadcn UI**, **Hono**, and **Vitest**.
+**Nuviodeck** is a modern, high-performance administration deck designed to manage **live streams**, **video-on-demand (VOD) catalogs**, and **media distribution** in one centralized control panel.
+
+---
+
+## 🎯 Product Purpose & Domain
+
+Nuviodeck eliminates fragmented admin panels by bringing stream control and catalog curation into a single deck:
+
+- 📺 **Live Stream Deck**: Monitor live stream health, bitrate, ingestion URLs, status alerts, and active viewer counts in real time.
+- 🍿 **Catalog & Content Management**: Manage movies, TV shows, episodes, genres, metadata tagging, poster assets, and distribution windows.
+- 📊 **Unified Analytics**: Real-time insights on bandwidth consumption, server node performance, active sessions, and viewer distribution.
+- 🔐 **Access & Rights Management**: Role-based access control (RBAC) for content managers, stream operators, and system administrators.
 
 ---
 
@@ -9,8 +20,8 @@ Nuviodeck is a modern, high-performance web and desktop management platform buil
 ```
 nuviodeck/
 ├── apps/
-│   ├── web/               # React 19 + Vite + Tailwind CSS v4 + shadcn/ui
-│   └── server/            # Hono API Server running natively on Bun
+│   ├── web/               # React 19 + TanStack Router + TanStack Query + Zustand + shadcn UI
+│   └── server/            # Hono API Server on Bun + Drizzle ORM (Bun SQLite)
 ├── packages/
 │   └── ui/                # Shared React UI component library (shadcn/ui)
 ├── turbo.json             # Turborepo task pipeline configuration
@@ -26,10 +37,14 @@ nuviodeck/
 | :--- | :--- | :--- |
 | **Runtime & Package Manager** | [Bun](https://bun.sh) | Fast JavaScript runtime & package manager |
 | **Monorepo Build System** | [Turborepo](https://turbo.build) | Task pipeline orchestration & incremental caching |
-| **Frontend App (`apps/web`)** | React 19 + Vite 8 | Fast SPA rendering & modern DX |
-| **Design System** | Tailwind CSS v4 + shadcn/ui | Premium utility-first styling & accessible components |
-| **Backend API (`apps/server`)** | Hono | Lightweight, high-speed API framework for Bun |
-| **Testing Suite** | Vitest | Fast unit & integration testing for React & Hono |
+| **Frontend App (`apps/web`)** | React 19 + Vite 8 | High-performance SPA rendering & modern DX |
+| **Routing** | TanStack Router | Type-safe file-based client routing |
+| **State & Data Fetching** | TanStack Query + Zustand | Server state caching & client state management |
+| **Form Validation** | React Hook Form + Zod | Schema-based form validation |
+| **Design System** | Tailwind CSS v4 + shadcn/ui | Utility-first styling & accessible UI primitives |
+| **Backend API (`apps/server`)** | Hono | Ultra-fast API framework running on Bun |
+| **Database & ORM** | Drizzle ORM + Bun SQLite | Type-safe ORM & lightweight SQLite storage |
+| **Testing Suite** | Vitest + Bun Test | Unit & integration testing across web & server |
 
 ---
 
@@ -46,51 +61,41 @@ bun --version # Recommended: v1.4+
 bun install
 ```
 
-### 3. Development Mode
+### 3. Start Development Mode
 Start both frontend and backend development servers simultaneously:
 ```bash
 bun dev
 ```
-- **Web App**: `http://localhost:5173`
-- **Hono API**: `http://localhost:3001`
+- 🌐 **Web Admin Deck**: `http://localhost:5173`
+- ⚙️ **Hono API Server**: `http://localhost:3001`
 
 ---
 
-## 📜 Workspace Scripts
+## 📜 Workspace Commands
 
 | Command | Action |
 | :--- | :--- |
 | `bun dev` | Runs dev servers for all apps in parallel via Turborepo |
-| `bun build` | Compiles frontend assets & bundles Hono server (cached via Turborepo) |
-| `bun test` | Runs Vitest test suites across frontend and server |
-| `bun typecheck` | Verifies TypeScript types across all workspace apps and packages |
+| `bun build` | Bundles frontend assets & Hono server (cached via Turborepo) |
+| `bun test` | Runs test suites across frontend and server |
+| `bun typecheck` | Verifies TypeScript types across all workspace projects |
 | `bun lint` | Runs linters across all workspace projects |
 
 ---
 
 ## 🗺️ Product Roadmap
 
-- [x] **Phase 1: Architecture & Foundation**
-  - [x] Scaffold clean monorepo with Turborepo & Bun Workspaces
-  - [x] Configure Vite 8 + React 19 + shadcn UI frontend (`apps/web`)
-  - [x] Build Hono API backend (`apps/server`) with CORS & health endpoints
-  - [x] Integrate Vitest testing suite across web & server
-- [ ] **Phase 2: Core Dashboard & Navigation**
-  - [ ] Implement responsive app layout and sidebar navigation
-  - [ ] Add user authentication & state management
-- [ ] **Phase 3: Real-Time Features & API Integration**
-  - [ ] Connect Hono backend endpoints with React Query / TanStack Query
-  - [ ] Implement WebSocket server for live updates
-- [ ] **Phase 4: Optimization & Deployment**
-  - [ ] Automated CI/CD build checks via GitHub Actions
-  - [ ] Production build deployment
-
----
-
-## 🤝 Commit Conventions
-
-Keep commits focused and semantic:
-- `feat:` New features
-- `fix:` Bug fixes
-- `refactor:` Code restructuring without functional changes
-- `chore:` Dependency or build system updates
+- [x] **Phase 1: Clean Architecture & Foundation**
+  - [x] Scaffold monorepo with Turborepo & Bun Workspaces
+  - [x] Integrate TanStack Router, TanStack Query, Zustand, and React Hook Form + Zod
+  - [x] Build Hono API backend with Drizzle ORM & Bun SQLite database
+  - [x] Integrate Vitest & Bun native testing suite
+- [ ] **Phase 2: Stream Management Deck**
+  - [ ] Build Live Stream Monitor dashboard (bitrate, server status, stream keys)
+  - [ ] Stream health status indicators & active session cards
+- [ ] **Phase 3: Catalog Curation & Media Library**
+  - [ ] Media catalog management UI (Movies, Shows, Episodes CRUD)
+  - [ ] Poster image upload & metadata tagging
+- [ ] **Phase 4: Real-Time WebSockets & Analytics**
+  - [ ] Hono WebSocket endpoint for real-time stream status pushes
+  - [ ] Analytics graphs & bandwidth monitoring charts
