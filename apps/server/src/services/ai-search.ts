@@ -13,13 +13,16 @@ export class AiSearchService {
   async searchWithAi(
     query: string,
     type: 'movie' | 'series' = 'movie',
-    options?: { rpdbKey?: string; language?: string }
+    options?: { rpdbKey?: string; posterConfig?: any; language?: string }
   ): Promise<any[]> {
     if (!this.geminiKey) {
       // If no AI key configured, fallback to standard TMDB search
       const tmdbRes = await this.tmdb.search(query, type === 'movie' ? 'movie' : 'tv')
       return (tmdbRes.results || []).map((item) =>
-        this.tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
+        this.tmdb.formatMetaPreview(item, type, {
+          rpdbKey: options?.rpdbKey,
+          posterConfig: options?.posterConfig,
+        })
       )
     }
 
@@ -58,6 +61,7 @@ Do not add markdown backticks or any other text.`
           if (searchRes.results && searchRes.results.length > 0) {
             return this.tmdb.formatMetaPreview(searchRes.results[0], type, {
               rpdbKey: options?.rpdbKey,
+              posterConfig: options?.posterConfig,
             })
           }
           return null
@@ -72,7 +76,10 @@ Do not add markdown backticks or any other text.`
       console.error('AI search failed, falling back to standard search:', err.message)
       const fallback = await this.tmdb.search(query, type === 'movie' ? 'movie' : 'tv')
       return (fallback.results || []).map((item) =>
-        this.tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
+        this.tmdb.formatMetaPreview(item, type, {
+          rpdbKey: options?.rpdbKey,
+          posterConfig: options?.posterConfig,
+        })
       )
     }
   }

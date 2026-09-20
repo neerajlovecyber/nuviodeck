@@ -1,5 +1,5 @@
 import { config } from '../config'
-import { getPosterUrl, getBackdropUrl } from './posters'
+import { getPosterUrl, getBackdropUrl, posterEngineService, PosterProviderConfig } from './posters'
 import { getMediaLogo } from './logos'
 import { getCustomEpisodeGroup, getCustomImdbId, fetchEpisodeGroup } from './episode-groups'
 import { isMovieReleasedDigitally } from './release-filter'
@@ -9,6 +9,7 @@ export interface TmdbClientOptions {
   apiKey?: string
   language?: string
   rpdbKey?: string
+  posterConfig?: PosterProviderConfig
   proxyUrl?: string
 }
 
@@ -46,12 +47,16 @@ export class TmdbService {
   private baseUrl: string
   private defaultLanguage: string
   private proxyUrl?: string
+  private posterConfig?: PosterProviderConfig
+  private rpdbKey?: string
 
   constructor(options?: TmdbClientOptions) {
     this.apiToken = options?.apiToken || config.tmdb.apiToken
     this.apiKey = options?.apiKey || config.tmdb.apiKey
     this.defaultLanguage = options?.language || 'en-US'
     this.proxyUrl = options?.proxyUrl || config.tmdb.proxyUrl
+    this.posterConfig = options?.posterConfig
+    this.rpdbKey = options?.rpdbKey
 
     // If proxyUrl is configured as a reverse proxy / mirror URL (e.g. https://tmdb-proxy.example.com/3)
     if (
@@ -185,7 +190,11 @@ export class TmdbService {
   }
 
   // --- Stremio Meta Formatters ---
-  formatMetaPreview(item: any, type: 'movie' | 'series', options?: { rpdbKey?: string }): any {
+  formatMetaPreview(
+    item: any,
+    type: 'movie' | 'series',
+    options?: { rpdbKey?: string; posterConfig?: PosterProviderConfig }
+  ): any {
     const isMovie = type === 'movie' || item.media_type === 'movie' || !!item.title
     const title = item.title || item.name || 'Untitled'
     const releaseDate = item.release_date || item.first_air_date || ''
@@ -199,7 +208,8 @@ export class TmdbService {
       imdbId,
       tmdbId,
       type: isMovie ? 'movie' : 'series',
-      rpdbKey: options?.rpdbKey,
+      config: options?.posterConfig || this.posterConfig,
+      rpdbKey: options?.rpdbKey || this.rpdbKey,
     })
 
     return {
@@ -215,7 +225,11 @@ export class TmdbService {
     }
   }
 
-  async formatFullMeta(details: any, type: 'movie' | 'series', options?: { rpdbKey?: string }): Promise<any> {
+  async formatFullMeta(
+    details: any,
+    type: 'movie' | 'series',
+    options?: { rpdbKey?: string; posterConfig?: PosterProviderConfig }
+  ): Promise<any> {
     const isMovie = type === 'movie'
     const title = details.title || details.name || 'Untitled'
     const releaseDate = details.release_date || details.first_air_date || ''
@@ -229,11 +243,13 @@ export class TmdbService {
     const director = details.credits?.crew?.filter((c: any) => c.job === 'Director').map((c: any) => c.name) || []
 
     const id = imdbId || `tmdb:${tmdbId}`
+    const posterCfg = options?.posterConfig || this.posterConfig
     const poster = getPosterUrl(details.poster_path, {
       imdbId,
       tmdbId,
       type,
-      rpdbKey: options?.rpdbKey,
+      config: posterCfg,
+      rpdbKey: options?.rpdbKey || this.rpdbKey,
     })
 
     // Trailer video
@@ -289,6 +305,13 @@ export class TmdbService {
         if (groupData?.groups) {
           for (const grp of groupData.groups) {
             for (const ep of grp.episodes) {
+              const epStill = posterEngineService.getEpisodeStillUrl(ep.still_path, {
+                tmdbId,
+                season: ep.season_number,
+                episode: ep.episode_number,
+                config: posterCfg,
+              }) || getBackdropUrl(ep.still_path, 'w780')
+
               episodes.push({
                 id: `${id}:${ep.season_number}:${ep.episode_number}`,
                 title: ep.name || `Episode ${ep.episode_number}`,
@@ -297,7 +320,7 @@ export class TmdbService {
                 episode: ep.episode_number,
                 released: ep.air_date ? new Date(ep.air_date).toISOString() : undefined,
                 overview: ep.overview,
-                thumbnail: getBackdropUrl(ep.still_path, 'w780'),
+                thumbnail: epStill,
               })
             }
           }
@@ -312,6 +335,13 @@ export class TmdbService {
             const seasonData = await this.getTvSeason(tmdbId, season.season_number, this.defaultLanguage)
             if (seasonData.episodes) {
               for (const ep of seasonData.episodes) {
+                const epStill = posterEngineService.getEpisodeStillUrl(ep.still_path, {
+                  tmdbId,
+                  season: ep.season_number,
+                  episode: ep.episode_number,
+                  config: posterCfg,
+                }) || getBackdropUrl(ep.still_path, 'w780')
+
                 episodes.push({
                   id: `${id}:${ep.season_number}:${ep.episode_number}`,
                   title: ep.name || `Episode ${ep.episode_number}`,
@@ -320,7 +350,7 @@ export class TmdbService {
                   episode: ep.episode_number,
                   released: ep.air_date ? new Date(ep.air_date).toISOString() : undefined,
                   overview: ep.overview,
-                  thumbnail: getBackdropUrl(ep.still_path, 'w780'),
+                  thumbnail: epStill,
                 })
               }
             }

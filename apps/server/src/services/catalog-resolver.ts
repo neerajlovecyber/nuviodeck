@@ -18,6 +18,7 @@ export interface CatalogResolveOptions {
   mdblistKey?: string
   geminiKey?: string
   rpdbKey?: string
+  posterConfig?: any
   language?: string
   hideAdult?: boolean
   excludeUnreleased?: boolean
@@ -182,6 +183,7 @@ export class CatalogResolver {
       apiToken: options?.tmdbToken,
       language: options?.language,
       rpdbKey: options?.rpdbKey,
+      posterConfig: options?.posterConfig,
       proxyUrl: options?.proxyUrl,
     })
     const mdblist = new MdbListService(options?.mdblistKey)
@@ -214,12 +216,16 @@ export class CatalogResolver {
       if (catalogId.includes('ai') || catalogId === 'tmdb.aisearch') {
         return aiSearch.searchWithAi(options.search, type, {
           rpdbKey: options?.rpdbKey,
+          posterConfig: options?.posterConfig,
           language: options?.language,
         })
       }
       const searchRes = await tmdb.search(options.search, tmdbType, page, !options?.hideAdult)
       return (searchRes.results || []).map((item) =>
-        tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
+        tmdb.formatMetaPreview(item, type, {
+          rpdbKey: options?.rpdbKey,
+          posterConfig: options?.posterConfig,
+        })
       )
     }
 
@@ -494,7 +500,10 @@ export class CatalogResolver {
     }
 
     return rawResults.map((item) =>
-      tmdb.formatMetaPreview(item, type, { rpdbKey: options?.rpdbKey })
+      tmdb.formatMetaPreview(item, type, {
+        rpdbKey: options?.rpdbKey,
+        posterConfig: options?.posterConfig,
+      })
     )
   }
 }

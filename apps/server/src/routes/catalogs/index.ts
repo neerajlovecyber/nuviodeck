@@ -42,7 +42,8 @@ async function getProfileConfig(profileId?: string) {
         tmdbToken: cfg.integrations?.tmdbToken,
         mdblistKey: cfg.integrations?.mdbListKey,
         geminiKey: cfg.ai?.apiKey,
-        rpdbKey: cfg.posters?.rpdbKey,
+        rpdbKey: cfg.posters?.rpdbKey || cfg.posters?.providers?.rpdb?.key,
+        posterConfig: cfg.posters,
         language: cfg.preferences?.language || 'en-US',
         hideAdult: cfg.preferences?.hideAdult ?? true,
         excludeUnreleased: cfg.preferences?.excludeUnreleased ?? false,
@@ -243,6 +244,7 @@ async function handleMetaRequest(profileId: string | undefined, type: string, ra
       apiToken: options.tmdbToken,
       language: options.language,
       rpdbKey: options.rpdbKey,
+      posterConfig: options.posterConfig,
       proxyUrl: options.proxyUrl,
     })
 
@@ -278,6 +280,7 @@ async function handleMetaRequest(profileId: string | undefined, type: string, ra
 
     const meta = await tmdb.formatFullMeta(details, isMovie ? 'movie' : 'series', {
       rpdbKey: options.rpdbKey,
+      posterConfig: options.posterConfig,
     })
 
     return { meta }
