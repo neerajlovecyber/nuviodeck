@@ -91,6 +91,20 @@ const POPULAR_LANGUAGES = [
   { code: 'nl-NL', name: 'Dutch' },
 ]
 
+const GROQ_MODELS = [
+  { id: 'openai/gpt-oss-120b', label: 'openai/gpt-oss-120b' },
+  { id: 'openai/gpt-oss-20b', label: 'openai/gpt-oss-20b' },
+]
+
+const GEMINI_MODELS = [
+  { id: 'gemini-3.5-flash-lite', label: 'gemini-3.5-flash-lite' },
+  { id: 'gemini-3.1-flash-lite', label: 'gemini-3.1-flash-lite' },
+  { id: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite' },
+  { id: 'gemini-2.5-flash', label: 'gemini-2.5-flash' },
+  { id: 'gemma-4-31b-it', label: 'gemma-4-31b-it' },
+  { id: 'gemma-4-26b-a4b-it', label: 'gemma-4-26b-a4b-it' },
+]
+
 export const Route = createFileRoute('/wizard/$profileId')({
   component: ProfileWizardPage,
 })
@@ -116,8 +130,10 @@ function ProfileWizardPage() {
   const [playbackEndRule, setPlaybackEndRule] = React.useState<'watched' | 'finished'>('finished')
 
   // AI & Search & Discover
-  const [aiProvider, setAiProvider] = React.useState('Google Gemini')
+  const [aiProvider, setAiProvider] = React.useState<'Google Gemini' | 'Groq'>('Google Gemini')
+  const [aiModel, setAiModel] = React.useState('gemini-3.5-flash-lite')
   const [aiApiKey, setAiApiKey] = React.useState('AIzaSyD-sample-verified-key')
+  const [groqApiKey, setGroqApiKey] = React.useState('')
   const [aiPoweredSearch, setAiPoweredSearch] = React.useState(true)
   const [searchEnabled, setSearchEnabled] = React.useState(true)
   const [searchIncludeXp, setSearchIncludeXp] = React.useState(true)
@@ -313,8 +329,11 @@ function ProfileWizardPage() {
           playbackEndRule,
         },
         ai: {
-          provider: aiProvider,
-          apiKey: aiApiKey,
+          provider: aiProvider === 'Groq' ? 'groq' : 'gemini',
+          apiKey: aiProvider === 'Groq' ? groqApiKey : aiApiKey,
+          geminiApiKey: aiApiKey,
+          groqApiKey,
+          model: aiModel,
           aiPoweredSearch,
         },
         search: {
@@ -730,27 +749,129 @@ function ProfileWizardPage() {
 
                   {openSection === 'ai' && (
                     <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-4 text-sm">
+                      {/* Provider Selector */}
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-foreground">AI Provider</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAiProvider('Google Gemini')
+                              setAiModel('gemini-3.5-flash-lite')
+                            }}
+                            className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
+                              aiProvider === 'Google Gemini'
+                                ? 'border-primary bg-primary/10 text-foreground'
+                                : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
+                            }`}
+                          >
+                            <span>Google Gemini</span>
+                            {aiProvider === 'Google Gemini' && <Check className="size-3 text-primary" />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAiProvider('Groq')
+                              setAiModel('openai/gpt-oss-120b')
+                            }}
+                            className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
+                              aiProvider === 'Groq'
+                                ? 'border-primary bg-primary/10 text-foreground'
+                                : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
+                            }`}
+                          >
+                            <span>Groq</span>
+                            {aiProvider === 'Groq' && <Check className="size-3 text-primary" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Model Selector matching Xperience UI */}
                       <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <Label className="text-xs text-foreground">Google Gemini API Key</Label>
-                          <a
-                            href="https://aistudio.google.com/apikey"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            Get a key <ExternalLink className="size-3" />
-                          </a>
+                          <Label className="text-xs text-foreground">Model</Label>
+                          <span className="text-[11px] font-mono text-muted-foreground">{aiModel}</span>
                         </div>
-                        <Input
-                          value={aiApiKey}
-                          onChange={(e) => setAiApiKey(e.target.value)}
-                          className="font-mono text-xs"
-                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button
+                                variant="outline"
+                                className="w-full justify-between font-mono text-xs h-9 bg-background/50 border-input"
+                              >
+                                <span className="truncate">{aiModel}</span>
+                                <ChevronDown className="size-3.5 opacity-50 ml-2 shrink-0" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="start" className="w-[calc(100vw-3rem)] max-w-[420px] p-1 bg-popover/95 backdrop-blur-md border-border/80 shadow-xl">
+                            {(aiProvider === 'Groq' ? GROQ_MODELS : GEMINI_MODELS).map((m) => (
+                              <DropdownMenuItem
+                                key={m.id}
+                                onClick={() => setAiModel(m.id)}
+                                className="flex items-center justify-between py-2 px-3 text-xs font-mono cursor-pointer rounded-md hover:bg-accent hover:text-accent-foreground"
+                              >
+                                <span className={aiModel === m.id ? 'text-primary font-medium' : 'text-foreground/80'}>
+                                  {m.label}
+                                </span>
+                                {aiModel === m.id && <Check className="size-3.5 text-primary shrink-0 ml-2" />}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                         <p className="text-[11px] text-muted-foreground">
-                          Your Trakt watch history and MDBList list names are sent to Google Gemini to generate custom recommendations. Nothing is sent until you select an AI row.
+                          {aiProvider === 'Groq'
+                            ? 'Default: openai/gpt-oss-120b. Ultra-fast inference with fallback to openai/gpt-oss-20b.'
+                            : 'Default: gemini-3.5-flash-lite. Automatic rate-limit failover across Gemini & Gemma models.'}
                         </p>
                       </div>
+
+                      {/* API Key Input */}
+                      {aiProvider === 'Google Gemini' ? (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-foreground">Google Gemini API Key</Label>
+                            <a
+                              href="https://aistudio.google.com/apikey"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              Get a key <ExternalLink className="size-3" />
+                            </a>
+                          </div>
+                          <Input
+                            value={aiApiKey}
+                            onChange={(e) => setAiApiKey(e.target.value)}
+                            placeholder="AIzaSy..."
+                            className="font-mono text-xs"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-foreground">Groq API Key</Label>
+                            <a
+                              href="https://console.groq.com/keys"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              Get a key <ExternalLink className="size-3" />
+                            </a>
+                          </div>
+                          <Input
+                            value={groqApiKey}
+                            onChange={(e) => setGroqApiKey(e.target.value)}
+                            placeholder="gsk_..."
+                            className="font-mono text-xs"
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-[11px] text-muted-foreground">
+                        Your Trakt watch history and MDBList list names are sent to generate personalized catalog rows.
+                      </p>
 
                       <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-2">
                         <Checkbox

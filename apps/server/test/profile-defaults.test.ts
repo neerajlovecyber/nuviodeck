@@ -168,4 +168,53 @@ describe('Profile Defaults & Advanced Content Filters (Matching Xperience UI)', 
       tmdbService.getTvSeason = originalGetTvSeason
     }
   })
+
+  it('provides default models and failover pools for Groq and Gemini matching Xperience UI', async () => {
+    const {
+      GROQ_MODELS,
+      DEFAULT_GROQ_MODEL,
+      GEMINI_MODELS,
+      DEFAULT_GEMINI_MODEL,
+      getAvailableAiModels,
+    } = await import('../src/services/ai-search')
+
+    // Groq models matching screenshot 1
+    expect(DEFAULT_GROQ_MODEL).toBe('openai/gpt-oss-120b')
+    expect(Array.from(GROQ_MODELS)).toEqual([
+      'openai/gpt-oss-120b',
+      'openai/gpt-oss-20b',
+    ])
+
+    // Gemini models matching screenshot 2
+    expect(DEFAULT_GEMINI_MODEL).toBe('gemini-3.5-flash-lite')
+    expect(Array.from(GEMINI_MODELS)).toEqual([
+      'gemini-3.5-flash-lite',
+      'gemini-3.1-flash-lite',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemma-4-31b-it',
+      'gemma-4-26b-a4b-it',
+    ])
+
+    const groqInfo = getAvailableAiModels('groq')
+    expect(groqInfo.defaultModel).toBe('openai/gpt-oss-120b')
+    expect(groqInfo.models.length).toBe(2)
+
+    const geminiInfo = getAvailableAiModels('gemini')
+    expect(geminiInfo.defaultModel).toBe('gemini-3.5-flash-lite')
+    expect(geminiInfo.models.length).toBe(6)
+
+    // Test /api/metadata/ai/models route
+    const { metadataRouter } = await import('../src/routes/metadata')
+    const metaApp = new Hono().route('/api/metadata', metadataRouter)
+    const res = await metaApp.request('/api/metadata/ai/models')
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.providers).toHaveLength(2)
+    const groqEntry = json.providers.find((p: any) => p.id === 'groq')
+    const geminiEntry = json.providers.find((p: any) => p.id === 'gemini')
+    expect(groqEntry.defaultModel).toBe('openai/gpt-oss-120b')
+    expect(geminiEntry.defaultModel).toBe('gemini-3.5-flash-lite')
+  })
 })
+

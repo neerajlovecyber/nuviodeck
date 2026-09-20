@@ -17,6 +17,7 @@ export interface CatalogResolveOptions {
   tmdbToken?: string
   mdblistKey?: string
   geminiKey?: string
+  groqKey?: string
   aiModel?: string
   aiProvider?: string
   enableAiRecs?: boolean
@@ -205,7 +206,10 @@ export class CatalogResolver {
       proxyUrl: options?.proxyUrl,
     })
     const mdblist = new MdbListService(options?.mdblistKey)
-    const aiSearch = new AiSearchService(options?.geminiKey, tmdb)
+    const aiSearch = new AiSearchService(
+      { geminiKey: options?.geminiKey, groqKey: options?.groqKey },
+      tmdb
+    )
 
     const isMovie = type === 'movie'
     const tmdbType = isMovie ? 'movie' : 'tv'
@@ -278,6 +282,9 @@ export class CatalogResolver {
           posterConfig: options?.posterConfig,
           language: options?.language,
           model: options?.aiModel,
+          provider: options?.aiProvider,
+          geminiKey: options?.geminiKey,
+          groqKey: options?.groqKey,
         })
       }
       const searchRes = await tmdb.search(options.search, tmdbType, page, !options?.hideAdult)
@@ -318,7 +325,12 @@ export class CatalogResolver {
       const topic = xpCat.label || (isMovie ? 'Recommended Movies' : 'Recommended TV Shows')
       return aiSearch.searchWithAi(topic, type, {
         rpdbKey: options?.rpdbKey,
+        posterConfig: options?.posterConfig,
         language: options?.language,
+        model: options?.aiModel,
+        provider: options?.aiProvider,
+        geminiKey: options?.geminiKey,
+        groqKey: options?.groqKey,
       })
     }
 

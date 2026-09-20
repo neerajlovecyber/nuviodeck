@@ -1,8 +1,34 @@
 import { Hono } from 'hono'
 import { TmdbService } from '../../services/tmdb'
-import { AiSearchService } from '../../services/ai-search'
+import {
+  AiSearchService,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GROQ_MODEL,
+  GEMINI_MODELS,
+  GROQ_MODELS,
+} from '../../services/ai-search'
 
 export const metadataRouter = new Hono()
+
+// Supported AI providers and models matching Xperience UI
+metadataRouter.get('/ai/models', (c) => {
+  return c.json({
+    providers: [
+      {
+        id: 'gemini',
+        name: 'Google Gemini',
+        defaultModel: DEFAULT_GEMINI_MODEL,
+        models: [...GEMINI_MODELS],
+      },
+      {
+        id: 'groq',
+        name: 'Groq',
+        defaultModel: DEFAULT_GROQ_MODEL,
+        models: [...GROQ_MODELS],
+      },
+    ],
+  })
+})
 
 // Health / status of metadata providers
 metadataRouter.get('/status', (c) => {
@@ -22,6 +48,8 @@ metadataRouter.get('/search', async (c) => {
   const query = c.req.query('q')
   const typeParam = c.req.query('type') || 'all' // movie, series, all
   const mode = c.req.query('mode') || 'auto' // standard, ai, auto
+  const provider = c.req.query('provider')
+  const model = c.req.query('model')
   const page = parseInt(c.req.query('page') || '1', 10)
 
   if (!query) {
@@ -36,7 +64,8 @@ metadataRouter.get('/search', async (c) => {
     if (mode === 'ai') {
       const results = await aiSearch.searchWithAi(
         query,
-        typeParam === 'series' ? 'series' : 'movie'
+        typeParam === 'series' ? 'series' : 'movie',
+        { provider, model }
       )
       return c.json({
         query,

@@ -41,8 +41,16 @@ async function getProfileConfig(profileId?: string) {
       options: {
         tmdbToken: cfg.integrations?.tmdbToken,
         mdblistKey: cfg.integrations?.mdbListKey,
-        geminiKey: cfg.ai?.apiKey,
-        aiModel: cfg.ai?.model || 'gemini-2.5-flash',
+        geminiKey: cfg.ai?.apiKey || cfg.ai?.geminiApiKey,
+        groqKey:
+          cfg.ai?.groqApiKey ||
+          cfg.ai?.groqKey ||
+          (cfg.ai?.provider?.toLowerCase().includes('groq') ? cfg.ai?.apiKey : undefined),
+        aiModel:
+          cfg.ai?.model ||
+          (cfg.ai?.provider?.toLowerCase().includes('groq')
+            ? 'openai/gpt-oss-120b'
+            : 'gemini-3.5-flash-lite'),
         aiProvider: cfg.ai?.provider || 'gemini',
         enableAiRecs: cfg.ai?.enableAiRecs ?? true,
         enableAiSearch: cfg.ai?.enableAiSearch ?? true,
