@@ -592,8 +592,15 @@ export class CatalogResolver {
         } else {
           // Dynamic discover query with exact parameters from Xperience
           const dynamicParams: Record<string, any> = { ...discoverParams }
+          if (p.discover) {
+            const providerId = STREAMING_PROVIDER_MAP[p.discover] || p.discover
+            dynamicParams.with_watch_providers = providerId
+            dynamicParams.watch_region = countryCode || 'US'
+          }
           if (p.min_votes) dynamicParams['vote_count.gte'] = p.min_votes
-          if (p.sort) dynamicParams.sort_by = p.sort
+          if (p.sort === 'top_rated') dynamicParams.sort_by = 'vote_average.desc'
+          else if (p.sort === 'popular') dynamicParams.sort_by = 'popularity.desc'
+          else if (p.sort) dynamicParams.sort_by = p.sort
           if (p.popular) dynamicParams.sort_by = 'popularity.desc'
           if (p.person_actor) dynamicParams.with_cast = p.person_actor
           if (p.person_director) dynamicParams.with_crew = p.person_director
