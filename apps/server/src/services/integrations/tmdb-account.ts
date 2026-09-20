@@ -156,6 +156,90 @@ export class TmdbAccountService {
     const data = (await res.json()) as any
     return data.results || []
   }
+
+  /**
+   * Add / Remove item from user Favorites
+   */
+  async setFavorite(
+    accountId: number | string,
+    sessionId: string,
+    mediaType: 'movie' | 'tv',
+    mediaId: number,
+    favorite: boolean
+  ): Promise<{ success: boolean; status_message?: string }> {
+    const url = `${this.baseUrl}/account/${accountId}/favorite?api_key=${this.apiKey}&session_id=${sessionId}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        media_type: mediaType,
+        media_id: mediaId,
+        favorite,
+      }),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({ success: false }))
+  }
+
+  /**
+   * Add / Remove item from user Watchlist
+   */
+  async setWatchlist(
+    accountId: number | string,
+    sessionId: string,
+    mediaType: 'movie' | 'tv',
+    mediaId: number,
+    watchlist: boolean
+  ): Promise<{ success: boolean; status_message?: string }> {
+    const url = `${this.baseUrl}/account/${accountId}/watchlist?api_key=${this.apiKey}&session_id=${sessionId}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        media_type: mediaType,
+        media_id: mediaId,
+        watchlist,
+      }),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({ success: false }))
+  }
+
+  /**
+   * Rate a movie or TV show (rating: 0.5 to 10.0)
+   */
+  async rateMedia(
+    sessionId: string,
+    mediaType: 'movie' | 'tv',
+    mediaId: number,
+    rating: number
+  ): Promise<{ success: boolean; status_message?: string }> {
+    const url = `${this.baseUrl}/${mediaType}/${mediaId}/rating?api_key=${this.apiKey}&session_id=${sessionId}`
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: rating }),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({ success: false }))
+  }
+
+  /**
+   * Delete rating for a movie or TV show
+   */
+  async deleteRating(
+    sessionId: string,
+    mediaType: 'movie' | 'tv',
+    mediaId: number
+  ): Promise<{ success: boolean; status_message?: string }> {
+    const url = `${this.baseUrl}/${mediaType}/${mediaId}/rating?api_key=${this.apiKey}&session_id=${sessionId}`
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({ success: false }))
+  }
 }
 
 export const tmdbAccountService = new TmdbAccountService()

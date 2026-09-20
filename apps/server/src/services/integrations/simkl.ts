@@ -5,6 +5,38 @@ export interface SimklPinResponse {
   interval: number
 }
 
+export interface SimklScrobblePayload {
+  movie?: {
+    title?: string
+    year?: number
+    ids: {
+      simkl?: number
+      tmdb?: number
+      imdb?: string
+    }
+  }
+  show?: {
+    title?: string
+    year?: number
+    ids: {
+      simkl?: number
+      tmdb?: number
+      imdb?: string
+    }
+  }
+  episode?: {
+    season: number
+    number: number
+    title?: string
+    ids?: {
+      simkl?: number
+      tmdb?: number
+      imdb?: string
+    }
+  }
+  progress?: number // 0 to 100
+}
+
 export class SimklService {
   private clientId: string
   private baseUrl = 'https://api.simkl.com'
@@ -88,13 +120,59 @@ export class SimklService {
   }
 
   /**
-   * Log playback to history
+   * Log playback to history (movies, shows, or episodes)
    */
-  async addToHistory(accessToken: string, item: { ids: { simkl?: number; tmdb?: number; imdb?: string } }): Promise<any> {
+  async addToHistory(
+    accessToken: string,
+    payload: {
+      movies?: Array<{ title?: string; ids: { simkl?: number; tmdb?: number; imdb?: string } }>
+      shows?: Array<{ title?: string; ids: { simkl?: number; tmdb?: number; imdb?: string } }>
+      episodes?: Array<{ season: number; number: number; ids?: { simkl?: number; tmdb?: number; imdb?: string } }>
+    }
+  ): Promise<any> {
     const res = await fetch(`${this.baseUrl}/sync/history`, {
       method: 'POST',
       headers: this.headers(accessToken),
-      body: JSON.stringify({ movies: [item] }),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({}))
+  }
+
+  /**
+   * Simkl Scrobble: Playback Started
+   */
+  async scrobbleStart(accessToken: string, payload: SimklScrobblePayload): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/sync/playback/start`, {
+      method: 'POST',
+      headers: this.headers(accessToken),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({}))
+  }
+
+  /**
+   * Simkl Scrobble: Playback Paused
+   */
+  async scrobblePause(accessToken: string, payload: SimklScrobblePayload): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/sync/playback/pause`, {
+      method: 'POST',
+      headers: this.headers(accessToken),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({}))
+  }
+
+  /**
+   * Simkl Scrobble: Playback Stopped / Completed
+   */
+  async scrobbleStop(accessToken: string, payload: SimklScrobblePayload): Promise<any> {
+    const res = await fetch(`${this.baseUrl}/sync/playback/stop`, {
+      method: 'POST',
+      headers: this.headers(accessToken),
+      body: JSON.stringify(payload),
       signal: AbortSignal.timeout(4000),
     })
     return res.json().catch(() => ({}))

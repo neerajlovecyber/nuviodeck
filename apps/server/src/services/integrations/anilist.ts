@@ -164,6 +164,38 @@ export class AniListService {
     `
     return this.query<any>(mutation, { mediaId, progress, status }, token)
   }
+
+  /**
+   * Search anime by title
+   */
+  async searchAnime(title: string): Promise<AniListMediaEntry['media'][]> {
+    const q = `
+      query ($search: String) {
+        Page(page: 1, perPage: 10) {
+          media(search: $search, type: ANIME) {
+            id
+            idMal
+            title {
+              romaji
+              english
+              native
+            }
+            coverImage {
+              large
+              medium
+            }
+            bannerImage
+            episodes
+            format
+            genres
+            averageScore
+          }
+        }
+      }
+    `
+    const data = await this.query<any>(q, { search: title })
+    return data?.Page?.media || []
+  }
 }
 
 export const anilistService = new AniListService()

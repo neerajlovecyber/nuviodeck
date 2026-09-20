@@ -2,7 +2,11 @@ export interface ResolvedMediaId {
   tmdbId?: number
   imdbId?: string
   kitsuId?: number
+  anilistId?: number
+  malId?: number
   type: 'movie' | 'series' | 'anime'
+  mediaType?: 'movie' | 'series' | 'anime'
+  rawId?: string
   season?: number
   episode?: number
 }
@@ -17,13 +21,15 @@ export class IdResolverService {
   private cacheTtlMs = 24 * 60 * 60 * 1000 // 24 hours
 
   /**
-   * Resolves any incoming media ID into its canonical IDs across TMDB, IMDb, and Kitsu.
+   * Resolves any incoming media ID into its canonical IDs across TMDB, IMDb, Kitsu, AniList, and MAL.
    * Handles formats:
    * - `tt1234567` (IMDb)
    * - `tt1234567:1:2` (IMDb with season & episode)
    * - `tmdb:12345` or `12345` (TMDB)
    * - `tmdb:12345:1:2` (TMDB with season & episode)
    * - `kitsu:1234` or `kitsu:1234:5` (Kitsu)
+   * - `anilist:1234` or `anilist:1234:5` (AniList)
+   * - `mal:1234` or `mal:1234:5` (MyAnimeList)
    */
   async resolve(idString: string, defaultType: 'movie' | 'series' | 'anime' = 'movie'): Promise<ResolvedMediaId> {
     const cached = this.cache.get(idString)
@@ -40,15 +46,21 @@ export class IdResolverService {
     if (parts.length >= 3 && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
       season = Number(parts[1])
       episode = Number(parts[2])
-    } else if (parts.length === 2 && prefix === 'kitsu' && !isNaN(Number(parts[1]))) {
-      // kitsu:1234
-    } else if (parts.length === 3 && prefix === 'kitsu' && !isNaN(Number(parts[2]))) {
-      // kitsu:1234:5
+    } else if (parts.length === 2 && (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal') && !isNaN(Number(parts[1]))) {
+      // anime ID without episode
+    } else if (parts.length === 3 && (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal') && !isNaN(Number(parts[2]))) {
+      // anime ID with episode
       episode = Number(parts[2])
     }
 
+    const mediaType = (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal')
+      ? 'anime'
+      : (season !== undefined || parts.length >= 3 ? 'series' : defaultType)
+
     const result: ResolvedMediaId = {
-      type: season !== undefined || parts.length >= 3 ? 'series' : defaultType,
+      type: mediaType,
+      mediaType,
+      rawId: idString,
       season,
       episode,
     }
@@ -62,12 +74,13 @@ export class IdResolverService {
         if (tmdbMatch) {
           result.tmdbId = tmdbMatch.id
           result.type = tmdbMatch.type
+          result.mediaType = tmdbMatch.type
         }
       } catch {
         // Graceful fallback
       }
     }
-    // 2. If it's a TMDB ID: `tmdb:12345` or numeric
+    // 2. If it's a TMDB ID: `tmdb:12345`
     else if (prefix === 'tmdb' && parts[1]) {
       const tmdbNumeric = Number(parts[1])
       if (!isNaN(tmdbNumeric)) {
@@ -94,6 +107,19 @@ export class IdResolverService {
     else if (prefix === 'kitsu' && parts[1]) {
       result.kitsuId = Number(parts[1])
       result.type = 'anime'
+      result.mediaType = 'anime'
+    }
+    // 5. If it's AniList: `anilist:1234`
+    else if (prefix === 'anilist' && parts[1]) {
+      result.anilistId = Number(parts[1])
+      result.type = 'anime'
+      result.mediaType = 'anime'
+    }
+    // 6. If it's MAL: `mal:1234`
+    else if (prefix === 'mal' && parts[1]) {
+      result.malId = Number(parts[1])
+      result.type = 'anime'
+      result.mediaType = 'anime'
     }
 
     // Cache the resolved result
@@ -155,3 +181,4 @@ export class IdResolverService {
 }
 
 export const idResolverService = new IdResolverService()
+export const crossPlatformIdResolver = idResolverService

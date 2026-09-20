@@ -125,6 +125,56 @@ integrationsRouter.get('/tmdb/lists', async (c) => {
   }
 })
 
+// Add / Remove from TMDB Favorites
+integrationsRouter.post('/tmdb/favorite', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'tmdb')).limit(1)
+    if (!conn) return c.json({ error: 'TMDB account is not connected' }, 401)
+
+    const extra = conn.extraJson ? JSON.parse(conn.extraJson) : {}
+    const { mediaType, mediaId, favorite = true } = await c.req.json()
+    if (!mediaType || !mediaId) return c.json({ error: 'mediaType and mediaId are required' }, 400)
+
+    const result = await tmdbAccountService.setFavorite(extra.accountId, conn.accessToken, mediaType, Number(mediaId), favorite)
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+// Add / Remove from TMDB Watchlist
+integrationsRouter.post('/tmdb/watchlist', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'tmdb')).limit(1)
+    if (!conn) return c.json({ error: 'TMDB account is not connected' }, 401)
+
+    const extra = conn.extraJson ? JSON.parse(conn.extraJson) : {}
+    const { mediaType, mediaId, watchlist = true } = await c.req.json()
+    if (!mediaType || !mediaId) return c.json({ error: 'mediaType and mediaId are required' }, 400)
+
+    const result = await tmdbAccountService.setWatchlist(extra.accountId, conn.accessToken, mediaType, Number(mediaId), watchlist)
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+// Rate a media on TMDB
+integrationsRouter.post('/tmdb/rate', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'tmdb')).limit(1)
+    if (!conn) return c.json({ error: 'TMDB account is not connected' }, 401)
+
+    const { mediaType, mediaId, rating } = await c.req.json()
+    if (!mediaType || !mediaId || rating === undefined) return c.json({ error: 'mediaType, mediaId, and rating are required' }, 400)
+
+    const result = await tmdbAccountService.rateMedia(conn.accessToken, mediaType, Number(mediaId), Number(rating))
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 integrationsRouter.delete('/tmdb/disconnect', async (c) => {
   await db.delete(accountConnections).where(eq(accountConnections.id, 'tmdb'))
   return c.json({ success: true, message: 'TMDB account disconnected' })
@@ -344,10 +394,62 @@ integrationsRouter.get('/simkl/lists', async (c) => {
   }
 })
 
+integrationsRouter.post('/simkl/scrobble/start', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
+    if (!conn || !conn.scrobbleEnabled) {
+      return c.json({ skipped: true, reason: 'Simkl scrobble disabled or not connected' })
+    }
+    const body = await c.req.json()
+    const result = await simklService.scrobbleStart(conn.accessToken, body)
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+integrationsRouter.post('/simkl/scrobble/pause', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
+    if (!conn || !conn.scrobbleEnabled) {
+      return c.json({ skipped: true, reason: 'Simkl scrobble disabled or not connected' })
+    }
+    const body = await c.req.json()
+    const result = await simklService.scrobblePause(conn.accessToken, body)
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+integrationsRouter.post('/simkl/scrobble/stop', async (c) => {
+  try {
+    const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
+    if (!conn || !conn.scrobbleEnabled) {
+      return c.json({ skipped: true, reason: 'Simkl scrobble disabled or not connected' })
+    }
+    const body = await c.req.json()
+    const result = await simklService.scrobbleStop(conn.accessToken, body)
+    return c.json(result)
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+integrationsRouter.patch('/simkl/scrobble', async (c) => {
+  const { enabled } = await c.req.json()
+  await db
+    .update(accountConnections)
+    .set({ scrobbleEnabled: Boolean(enabled), updatedAt: new Date().toISOString() })
+    .where(eq(accountConnections.id, 'simkl'))
+  return c.json({ success: true, scrobbleEnabled: Boolean(enabled) })
+})
+
 integrationsRouter.delete('/simkl/disconnect', async (c) => {
   await db.delete(accountConnections).where(eq(accountConnections.id, 'simkl'))
   return c.json({ success: true, message: 'Simkl account disconnected' })
 })
+
 
 // ----------------------------------------------------
 // 5. AniList Endpoints

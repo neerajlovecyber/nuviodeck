@@ -113,6 +113,30 @@ export class TraktService {
   }
 
   /**
+   * 3. Refresh expired access token using refresh_token
+   */
+  async refreshAccessToken(refreshToken: string): Promise<TraktTokenResponse> {
+    const res = await fetch(`${this.baseUrl}/oauth/token`, {
+      method: 'POST',
+      headers: this.headers(),
+      body: JSON.stringify({
+        refresh_token: refreshToken,
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        redirect_uri: 'urn:ietf:wg:oauth:2.0:oob',
+        grant_type: 'refresh_token',
+      }),
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => '')
+      throw new Error(`Trakt token refresh failed (${res.status}): ${err}`)
+    }
+    return res.json()
+  }
+
+  /**
    * Fetch current user profile
    */
   async getUserProfile(accessToken: string): Promise<any> {

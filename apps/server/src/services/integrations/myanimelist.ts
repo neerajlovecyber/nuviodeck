@@ -19,6 +19,36 @@ export class MyAnimeListService {
   }
 
   /**
+   * Refresh expired access token using refresh_token
+   */
+  async refreshAccessToken(refreshToken: string): Promise<{
+    token_type: string
+    expires_in: number
+    access_token: string
+    refresh_token: string
+  }> {
+    const body = new URLSearchParams()
+    body.set('client_id', this.clientId)
+    body.set('grant_type', 'refresh_token')
+    body.set('refresh_token', refreshToken)
+
+    const res = await fetch('https://myanimelist.net/v1/oauth2/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: body.toString(),
+      signal: AbortSignal.timeout(5000),
+    })
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => '')
+      throw new Error(`MyAnimeList token refresh failed (${res.status}): ${err}`)
+    }
+    return res.json()
+  }
+
+  /**
    * Get authenticated user profile info
    */
   async getUser(accessToken: string): Promise<any> {

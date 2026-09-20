@@ -5,6 +5,7 @@ import { traktService } from './integrations/trakt'
 import { simklService } from './integrations/simkl'
 import { anilistService } from './integrations/anilist'
 import { myAnimeListService } from './integrations/myanimelist'
+import { crossPlatformIdResolver } from './metadata/id-resolver'
 
 export interface PlaybackStartInput {
   profileId: string
@@ -98,8 +99,11 @@ export class PlaybackTrackerService {
         },
       })
 
-    // Notify Trakt scrobbler of playback start
-    await this.notifyTraktStart(input).catch(() => {})
+    // Notify Trakt and Simkl scrobblers of playback start
+    await Promise.allSettled([
+      this.notifyTraktStart(input),
+      this.notifySimklStart(input),
+    ])
 
     return sessionData as PlaybackSession
   }
@@ -118,15 +122,17 @@ export class PlaybackTrackerService {
       .where(eq(playbackSessions.id, sessionId))
       .limit(1)
 
-    if (!session) return null
+    if (!session) {
+      return null
+    }
 
-    const duration = input.durationMs || session.durationMs || 1
-    const position = input.positionMs || session.lastPositionMs || 0
-    const percent = Math.min(100, Math.max(0, Math.round((position / duration) * 100)))
-    const isFinished = percent >= 90 || input.status === 'completed'
     const now = new Date().toISOString()
+    const position = input.positionMs
+    const duration = input.durationMs || session.durationMs || 1
+    const percent = Math.min(100, Math.round((position / duration) * 100))
 
-    if (isFinished) {
+    // Trigger A: Check 90% threshold for movie or episode
+    if (percent >= 90 || input.status === 'completed') {
       // Finished! Mark completed across all connected trackers
       const updated = await this.markSessionCompleted(session)
       return updated
@@ -145,8 +151,11 @@ export class PlaybackTrackerService {
       })
       .where(eq(playbackSessions.id, sessionId))
 
-    // For Trakt: scrobble pause with current percentage -> lands in Trakt Continue Watching!
-    await this.notifyTraktPause(session, percent).catch(() => {})
+    // For Trakt & Simkl: scrobble pause with current percentage
+    await Promise.allSettled([
+      this.notifyTraktPause(session, percent),
+      this.notifySimklPause(session, percent),
+    ])
 
     const [updatedSession] = await db
       .select()
@@ -174,17 +183,13 @@ export class PlaybackTrackerService {
       })
       .where(eq(playbackSessions.id, session.id))
 
-    // Dispatch to Trakt (Mark as watched)
-    await this.notifyTraktStop(session).catch(() => {})
-
-    // Dispatch to Simkl (Add to history)
-    await this.notifySimklHistory(session).catch(() => {})
-
-    // Dispatch to AniList (SaveMediaListEntry matching AnilistStream)
-    await this.notifyAniListProgress(session).catch(() => {})
-
-    // Dispatch to MyAnimeList
-    await this.notifyMALProgress(session).catch(() => {})
+    // Dispatch to Trakt, Simkl, AniList, and MAL simultaneously
+    await Promise.allSettled([
+      this.notifyTraktStop(session),
+      this.notifySimklStop(session),
+      this.notifyAniListProgress(session),
+      this.notifyMALProgress(session),
+    ])
 
     return {
       ...session,
@@ -196,7 +201,7 @@ export class PlaybackTrackerService {
   }
 
   /**
-   * 4. Check Stremio runtime timer expirations (Mode: "Mark as watched")
+   * 4. Auto-completion timer check for Stremio players (Trigger C)
    */
   async checkRuntimeExpirations(): Promise<number> {
     const now = Date.now()
@@ -311,7 +316,53 @@ export class PlaybackTrackerService {
     }
   }
 
-  private async notifySimklHistory(session: PlaybackSession): Promise<void> {
+  private async notifySimklStart(input: PlaybackStartInput): Promise<void> {
+    const [simkl] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
+    if (!simkl || !simkl.scrobbleEnabled) return
+
+    const numericTmdb = input.mediaId.startsWith('tmdb:')
+      ? parseInt(input.mediaId.replace('tmdb:', ''), 10)
+      : undefined
+    const imdbId = input.mediaId.startsWith('tt') ? input.mediaId : undefined
+
+    if (input.mediaType === 'movie') {
+      await simklService.scrobbleStart(simkl.accessToken, {
+        movie: { title: input.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+        progress: 0,
+      })
+    } else {
+      await simklService.scrobbleStart(simkl.accessToken, {
+        show: { title: input.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+        episode: { season: input.season || 1, number: input.episode || 1 },
+        progress: 0,
+      })
+    }
+  }
+
+  private async notifySimklPause(session: PlaybackSession, progressPercent: number): Promise<void> {
+    const [simkl] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
+    if (!simkl || !simkl.scrobbleEnabled) return
+
+    const numericTmdb = session.mediaId.startsWith('tmdb:')
+      ? parseInt(session.mediaId.replace('tmdb:', ''), 10)
+      : undefined
+    const imdbId = session.mediaId.startsWith('tt') ? session.mediaId : undefined
+
+    if (session.mediaType === 'movie') {
+      await simklService.scrobblePause(simkl.accessToken, {
+        movie: { title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+        progress: progressPercent,
+      })
+    } else {
+      await simklService.scrobblePause(simkl.accessToken, {
+        show: { title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+        episode: { season: session.season || 1, number: session.episode || 1 },
+        progress: progressPercent,
+      })
+    }
+  }
+
+  private async notifySimklStop(session: PlaybackSession): Promise<void> {
     const [simkl] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'simkl')).limit(1)
     if (!simkl) return
 
@@ -320,17 +371,52 @@ export class PlaybackTrackerService {
       : undefined
     const imdbId = session.mediaId.startsWith('tt') ? session.mediaId : undefined
 
-    await simklService.addToHistory(simkl.accessToken, {
-      ids: { tmdb: numericTmdb, imdb: imdbId },
-    })
+    if (simkl.scrobbleEnabled) {
+      if (session.mediaType === 'movie') {
+        await simklService.scrobbleStop(simkl.accessToken, {
+          movie: { title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+          progress: 100,
+        })
+      } else {
+        await simklService.scrobbleStop(simkl.accessToken, {
+          show: { title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } },
+          episode: { season: session.season || 1, number: session.episode || 1 },
+          progress: 100,
+        })
+      }
+    } else {
+      await simklService.addToHistory(simkl.accessToken, {
+        movies: session.mediaType === 'movie' ? [{ title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } }] : undefined,
+        shows: session.mediaType !== 'movie' ? [{ title: session.title, ids: { tmdb: numericTmdb, imdb: imdbId } }] : undefined,
+      })
+    }
   }
 
   private async notifyAniListProgress(session: PlaybackSession): Promise<void> {
-    if (session.mediaType !== 'anime' && !session.mediaId.startsWith('anilist:')) return
     const [anilist] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'anilist')).limit(1)
     if (!anilist) return
 
-    const anilistId = parseInt(session.mediaId.replace('anilist:', ''), 10)
+    let anilistId: number | undefined
+
+    if (session.mediaId.startsWith('anilist:')) {
+      anilistId = parseInt(session.mediaId.replace('anilist:', ''), 10)
+    } else {
+      // Cross-Platform ID Resolution (e.g. from kitsu, imdb, or title)
+      try {
+        const canonical = await crossPlatformIdResolver.resolve(session.mediaId)
+        if (canonical.anilistId) {
+          anilistId = canonical.anilistId
+        } else if (canonical.rawId?.startsWith('anilist:')) {
+          anilistId = parseInt(canonical.rawId.replace('anilist:', ''), 10)
+        } else if (session.title) {
+          const results = await anilistService.searchAnime(session.title)
+          if (results.length > 0) {
+            anilistId = results[0].id
+          }
+        }
+      } catch {}
+    }
+
     if (!anilistId || isNaN(anilistId)) return
 
     await anilistService.updateProgress(
@@ -338,15 +424,31 @@ export class PlaybackTrackerService {
       anilistId,
       session.episode || 1,
       'CURRENT'
-    )
+    ).catch(() => {})
   }
 
   private async notifyMALProgress(session: PlaybackSession): Promise<void> {
-    if (session.mediaType !== 'anime' && !session.mediaId.startsWith('mal:')) return
     const [mal] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'myanimelist')).limit(1)
     if (!mal) return
 
-    const malId = parseInt(session.mediaId.replace('mal:', ''), 10)
+    let malId: number | undefined
+
+    if (session.mediaId.startsWith('mal:')) {
+      malId = parseInt(session.mediaId.replace('mal:', ''), 10)
+    } else {
+      try {
+        const canonical = await crossPlatformIdResolver.resolve(session.mediaId)
+        if (canonical.malId) {
+          malId = canonical.malId
+        } else if (session.title) {
+          const anilistResults = await anilistService.searchAnime(session.title)
+          if (anilistResults.length > 0 && anilistResults[0].idMal) {
+            malId = anilistResults[0].idMal
+          }
+        }
+      } catch {}
+    }
+
     if (!malId || isNaN(malId)) return
 
     await myAnimeListService.updateProgress(
@@ -354,7 +456,7 @@ export class PlaybackTrackerService {
       malId,
       session.episode || 1,
       'watching'
-    )
+    ).catch(() => {})
   }
 }
 

@@ -177,4 +177,53 @@ describe('User Account Integrations Backend (TMDB, Trakt, Simkl, AniList, MAL)',
     const finalStatusData = await finalStatusRes.json()
     expect(finalStatusData.integrations.trakt.connected).toBe(false)
   })
+
+  it('TMDB: favorite/watchlist/rating endpoints reject when disconnected or missing params', async () => {
+    await db.delete(accountConnections).where(eq(accountConnections.id, 'tmdb'))
+
+    const favRes = await app.request('/api/integrations/tmdb/favorite', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaType: 'movie', mediaId: 550, favorite: true }),
+    })
+    expect(favRes.status).toBe(401)
+
+    const watchRes = await app.request('/api/integrations/tmdb/watchlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaType: 'movie', mediaId: 550, watchlist: true }),
+    })
+    expect(watchRes.status).toBe(401)
+
+    const rateRes = await app.request('/api/integrations/tmdb/rate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaType: 'movie', mediaId: 550, rating: 8.5 }),
+    })
+    expect(rateRes.status).toBe(401)
+
+  })
+
+  it('Simkl Scrobbler: gracefully skips when not connected', async () => {
+    await db.delete(accountConnections).where(eq(accountConnections.id, 'simkl'))
+
+    const startRes = await app.request('/api/integrations/simkl/scrobble/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie: { title: 'Fight Club', year: 1999 }, progress: 10 }),
+    })
+    expect(startRes.status).toBe(200)
+    const startData = await startRes.json()
+    expect(startData.skipped).toBe(true)
+
+    const stopRes = await app.request('/api/integrations/simkl/scrobble/stop', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movie: { title: 'Fight Club', year: 1999 }, progress: 95 }),
+    })
+    expect(stopRes.status).toBe(200)
+    const stopData = await stopRes.json()
+    expect(stopData.skipped).toBe(true)
+  })
 })
+
