@@ -11,7 +11,7 @@ export class StreamAdapters {
     type: string,
     id: string,
     debridKeys?: Record<string, string>,
-    timeoutMs: number = 4000
+    timeoutMs: number = 2500
   ): Promise<ParsedStreamMetadata[]> {
     try {
       switch (source.type) {

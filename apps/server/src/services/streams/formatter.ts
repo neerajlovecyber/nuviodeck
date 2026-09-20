@@ -51,7 +51,7 @@ export class StreamMicroSyntaxEngine {
     return {
       stream: {
         resolution: stream.resolution,
-        quality: stream.quality,
+        quality: stream.quality && stream.quality !== 'Unknown' ? stream.quality : '',
         visualTags: stream.visualTags || [],
         audioTags: stream.audioTags || [],
         audioChannels: stream.audioChannels ? [stream.audioChannels] : [],
@@ -165,29 +165,14 @@ export class StreamMicroSyntaxEngine {
       if (result === prev) break
     }
 
-    // 4. Post-processing: clean up removed lines and whitespace
+    // 4. Post-processing: clean up removed lines and blank empty lines
     const lines = result.split('\n')
     const cleanedLines = lines
       .filter((line) => !line.includes(this.REMOVE_LINE_TOKEN))
-      .map((line) => line.replace(new RegExp(this.REMOVE_LINE_TOKEN, 'g'), ''))
+      .map((line) => line.replace(new RegExp(this.REMOVE_LINE_TOKEN, 'g'), '').trim())
+      .filter((line) => line.length > 0)
 
-    // Collapse multiple consecutive empty lines to a single empty line
-    const finalLines: string[] = []
-    let prevEmpty = false
-    for (const line of cleanedLines) {
-      const trimmed = line.trim()
-      if (!trimmed) {
-        if (!prevEmpty && finalLines.length > 0) {
-          finalLines.push('')
-          prevEmpty = true
-        }
-      } else {
-        finalLines.push(line)
-        prevEmpty = false
-      }
-    }
-
-    return finalLines.join('\n').trim()
+    return cleanedLines.join('\n').trim()
   }
 
   private static evaluateSingleExpression(expr: string, context: Record<string, any>): string {

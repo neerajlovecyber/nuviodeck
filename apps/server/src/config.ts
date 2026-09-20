@@ -25,10 +25,10 @@ export const config = {
     apiKey: process.env.RPDB_API_KEY || 't0-free-rpdb',
   },
   topposters: {
-    apiKey: process.env.TOPPOSTERS_API_KEY || 'TP-txrM3ckKjDNEKviNF4628FZBPZBXm1AA',
+    apiKey: process.env.TOPPOSTERS_API_KEY || '',
   },
   easyratings: {
-    token: process.env.EASYRATINGS_TOKEN || 'Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd',
+    token: process.env.EASYRATINGS_TOKEN || '',
   },
   betterposters: {
     url:
