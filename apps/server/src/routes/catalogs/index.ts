@@ -4,6 +4,8 @@ import { deckProfiles } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { TmdbService } from '../../services/tmdb'
 import { CatalogResolver, getCatalogRegistry } from '../../services/catalog-resolver'
+import { streamAggregatorService } from '../../services/streams'
+import { StreamsProfileConfig } from '../../services/streams/types'
 
 export const catalogsRouter = new Hono()
 
@@ -78,6 +80,31 @@ async function getProfileConfig(profileId?: string) {
         region: cfg.preferences?.region || 'United States',
         proxyUrl: cfg.preferences?.proxyUrl || cfg.integrations?.proxyUrl,
       },
+      streams: (cfg.streams || {
+        enabled: false,
+        sources: [
+          { id: 'comet_torbox', name: 'Comet', type: 'comet', enabled: true, debridService: 'torbox' },
+          { id: 'stremthru_torbox', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'torbox' },
+          { id: 'comet_rd', name: 'Comet', type: 'comet', enabled: true, debridService: 'realdebrid' },
+          { id: 'stremthru_rd', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'realdebrid' },
+        ],
+        debridKeys: {
+          torbox: cfg.debrid?.torbox?.apiKey || cfg.debrid?.torboxKey || '',
+          realdebrid: cfg.debrid?.realdebrid?.apiKey || cfg.debrid?.realDebridKey || '',
+          alldebrid: cfg.debrid?.alldebrid?.apiKey || cfg.debrid?.allDebridKey || '',
+          premiumize: cfg.debrid?.premiumize?.apiKey || cfg.debrid?.premiumizeKey || '',
+          debridlink: cfg.debrid?.debridlink?.apiKey || cfg.debrid?.debridLinkKey || '',
+        },
+        filters: {
+          mostPerResolution: 10,
+          excludedQualities: ['CAM', 'TS', 'SCR'],
+        },
+        mergeStrategy: 'priority',
+        formatter: {
+          preset: 'prism',
+          viewMode: 'full',
+        },
+      }) as StreamsProfileConfig,
     }
   } catch (err: any) {
     console.error('Error fetching profile config:', err.message)
@@ -85,6 +112,7 @@ async function getProfileConfig(profileId?: string) {
       name: 'Nuviodeck Profile',
       rows: [],
       options: {},
+      streams: { enabled: false, sources: [] } as StreamsProfileConfig,
     }
   }
 }
@@ -93,7 +121,12 @@ async function getProfileConfig(profileId?: string) {
 // 1. Manifest Endpoints
 // ----------------------------------------------------
 
-function buildManifest(profileId: string, profileName: string, rows: any[]) {
+function buildManifest(
+  profileId: string,
+  profileName: string,
+  rows: any[],
+  streamsEnabled: boolean = false
+) {
   const defaultCatalogs = [
     {
       type: 'movie',
@@ -128,21 +161,26 @@ function buildManifest(profileId: string, profileName: string, rows: any[]) {
     extra: [{ name: 'skip' }, { name: 'search' }],
   }))
 
+  const resources = ['catalog', 'meta']
+  if (streamsEnabled) {
+    resources.push('stream')
+  }
+
   return {
     id: `org.nuviodeck.${profileId || 'default'}`,
     version: '1.2.0',
     name: `Nuviodeck: ${profileName}`,
-    description: `Curated multi-source catalog engine (TMDB, MDBList, AI Search, RPDB) for Nuvio`,
-    resources: ['catalog', 'meta'],
-    types: ['movie', 'series'],
-    idPrefixes: ['tmdb:', 'tt'],
+    description: `Curated multi-source catalog and playback engine for Nuvio & Stremio`,
+    resources,
+    types: streamsEnabled ? ['movie', 'series', 'anime'] : ['movie', 'series'],
+    idPrefixes: streamsEnabled ? ['tmdb:', 'tt', 'kitsu:'] : ['tmdb:', 'tt'],
     catalogs: customCatalogs.length > 0 ? customCatalogs : defaultCatalogs,
   }
 }
 
 // Global default manifest
 catalogsRouter.get('/manifest.json', (c) => {
-  const manifest = buildManifest('deck', 'Curated Engine', [])
+  const manifest = buildManifest('deck', 'Curated Engine', [], false)
   c.header('Content-Type', 'application/json')
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=3600, public')
@@ -152,8 +190,8 @@ catalogsRouter.get('/manifest.json', (c) => {
 // Per-profile dynamic manifest
 catalogsRouter.get('/:profileId/manifest.json', async (c) => {
   const profileId = c.req.param('profileId')
-  const { name, rows } = await getProfileConfig(profileId)
-  const manifest = buildManifest(profileId, name, rows)
+  const { name, rows, streams } = await getProfileConfig(profileId)
+  const manifest = buildManifest(profileId, name, rows, streams?.enabled ?? false)
   c.header('Content-Type', 'application/json')
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=1800, public')
@@ -342,3 +380,53 @@ catalogsRouter.get('/:profileId/meta/:type/:id', async (c) => {
   c.header('Cache-Control', 'max-age=3600, public')
   return c.json(result)
 })
+
+// ----------------------------------------------------
+// 5. Streams Endpoints (Stremio Protocol)
+// ----------------------------------------------------
+
+async function handleStreamRequest(
+  profileId: string | undefined,
+  type: string,
+  rawId: string
+) {
+  const cleanId = rawId.endsWith('.json') ? rawId.slice(0, -5) : rawId
+  const { streams } = await getProfileConfig(profileId)
+
+  if (!streams || !streams.enabled) {
+    return { streams: [] }
+  }
+
+  const results = await streamAggregatorService.getStreams(
+    type,
+    cleanId,
+    streams,
+    profileId
+  )
+
+  return { streams: results }
+}
+
+// Standalone stream route: /stream/:type/:id
+catalogsRouter.get('/stream/:type/:id', async (c) => {
+  const type = c.req.param('type')
+  const id = c.req.param('id')
+  const result = await handleStreamRequest(undefined, type, id)
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'no-cache')
+  return c.json(result)
+})
+
+// Profile stream route: /:profileId/stream/:type/:id
+catalogsRouter.get('/:profileId/stream/:type/:id', async (c) => {
+  const profileId = c.req.param('profileId')
+  const type = c.req.param('type')
+  const id = c.req.param('id')
+  const result = await handleStreamRequest(profileId, type, id)
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'no-cache')
+  return c.json(result)
+})
+
