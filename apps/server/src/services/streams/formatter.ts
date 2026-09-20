@@ -302,6 +302,75 @@ export class StreamFormatter {
     }
   }
 
+  // --- 9. Tamtaro ---
+  private static formatTamtaro(
+    stream: ParsedStreamMetadata,
+    viewMode: string
+  ): StremioStream {
+    const serviceShort = (stream.debridService || 'TB').substring(0, 2).toUpperCase()
+    const name = `[${serviceShort}] ${stream.resolution}\n${stream.quality}`
+
+    const lines: string[] = []
+    const titleStr = stream.title
+      ? `${stream.title}${stream.year ? ` (${stream.year})` : ''}`
+      : stream.filename || stream.rawTitle
+    lines.push(`✎ ${titleStr}`)
+
+    const visualStr = stream.visualTags.length > 0 ? `✧ ${stream.visualTags.join(' · ')}` : ''
+    if (stream.quality || visualStr) {
+      lines.push([stream.quality ? `▣ ${stream.quality}` : '', visualStr].filter(Boolean).join(' '))
+    }
+
+    const audio = stream.audioTags.join(' · ') || 'Stereo'
+    const chan = stream.audioChannels ? ` ☊ ${stream.audioChannels}` : ''
+    lines.push(`♬ ${audio}${chan}`)
+
+    const sizeStr = stream.sizeFormatted ? `◧ ${stream.sizeFormatted}` : ''
+    const seedStr = stream.seeders !== undefined ? `⇋ ${stream.seeders}` : ''
+    const sizeLine = [sizeStr, seedStr].filter(Boolean).join(' ')
+    if (sizeLine) lines.push(sizeLine)
+
+    const serviceName = stream.debridService || 'Debrid'
+    lines.push(`○ [${serviceShort}] ${stream.sourceName} • ${serviceName}`)
+
+    const description = this.applyViewMode(lines, viewMode)
+
+    return {
+      ...stream.originalStream,
+      name,
+      description,
+      title: description,
+    }
+  }
+
+  // --- 10. Plain ---
+  private static formatPlain(stream: ParsedStreamMetadata): StremioStream {
+    const serviceName = (stream.debridService || 'TB').substring(0, 2).toUpperCase()
+    const name = `[${serviceName}] ${stream.resolution} - ${stream.quality}`
+
+    const lines: string[] = []
+    lines.push(stream.filename || stream.title || stream.rawTitle || 'Media')
+    if (stream.quality || stream.visualTags.length > 0) {
+      lines.push([stream.quality, ...stream.visualTags].filter(Boolean).join(' | '))
+    }
+    if (stream.audioTags.length > 0) {
+      lines.push(stream.audioTags.join(' | '))
+    }
+    const sizeStr = stream.sizeFormatted ? stream.sizeFormatted : ''
+    const seedStr = stream.seeders !== undefined ? `${stream.seeders} seeders` : ''
+    const details = [sizeStr, seedStr, `via ${stream.sourceName}`].filter(Boolean).join(' | ')
+    lines.push(details)
+
+    const description = lines.join('\n')
+
+    return {
+      ...stream.originalStream,
+      name,
+      description,
+      title: description,
+    }
+  }
+
   // --- Custom Template Engine ---
   private static formatCustom(
     stream: ParsedStreamMetadata,
