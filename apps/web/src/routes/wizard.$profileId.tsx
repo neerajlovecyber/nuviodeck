@@ -66,6 +66,7 @@ import {
   CollectionConfig,
   XPERIENCE_PRESETS,
   getPresetRows,
+  useCatalogRegistry,
 } from '@/data/catalog-data'
 import languagesData from '@/data/languages.json'
 import { AGE_RATINGS } from '@/data/age-ratings'
@@ -143,6 +144,49 @@ function ProfileWizardPage() {
   const [proxyUrl, setProxyUrl] = React.useState('')
   const [excludedGenres, setExcludedGenres] = React.useState<string[]>([])
   const [animeEpisodeOrdering, setAnimeEpisodeOrdering] = React.useState('TheTVDB')
+
+  // Dynamic Catalog Registry (Server Single Source of Truth)
+  const { data: registryData } = useCatalogRegistry()
+  const activeCategories = registryData?.categories || CATALOG_CATEGORIES
+  const activePresets = registryData?.presets || XPERIENCE_PRESETS
+
+  // Dynamic Custom Row state
+  const [customRowInput, setCustomRowInput] = React.useState('')
+  const [customRowType, setCustomRowType] = React.useState<'movie' | 'series'>('movie')
+  const [customRowPrefix, setCustomRowPrefix] = React.useState<'mdblist' | 'tmdb_actor' | 'tmdb_director' | 'tmdb_company'>('mdblist')
+
+  const handleAddCustomRow = () => {
+    if (!customRowInput.trim()) return
+    let cleanVal = customRowInput.trim()
+    if (cleanVal.includes('mdblist.com/lists/')) {
+      cleanVal = cleanVal.split('mdblist.com/lists/')[1].replace(/\/+$/, '')
+    }
+    const id = `${customRowPrefix}:${cleanVal}`
+    const prefixName = customRowPrefix.replace('tmdb_', '').toUpperCase()
+    const label = `Custom [${prefixName}]: ${cleanVal}`
+
+    if (selectedRows.some((r) => r.id === id)) {
+      toast.error('Row already added to profile')
+      return
+    }
+    if (selectedRows.length >= 50) {
+      toast.error('Maximum 50 rows limit reached')
+      return
+    }
+
+    setSelectedRows((prev) => [
+      ...prev,
+      {
+        id,
+        name: label,
+        category: 'Custom Dynamic Rows',
+        type: customRowType,
+        source: customRowPrefix.startsWith('tmdb') ? 'tmdb' : 'mdblist',
+      },
+    ])
+    setCustomRowInput('')
+    toast.success(`Added custom row: ${label}`)
+  }
 
   // Expanded cards in Setup
   const [openSection, setOpenSection] = React.useState<string | null>('integrations')
@@ -1111,11 +1155,20 @@ function ProfileWizardPage() {
                       }
                     />
                     <DropdownMenuContent align="end" className="w-64 max-h-80 overflow-y-auto">
-                      {XPERIENCE_PRESETS.map((preset) => (
+                      {activePresets.map((preset) => (
                         <DropdownMenuItem
                           key={preset.id}
                           onClick={() => {
-                            const rows = getPresetRows(preset.id)
+                            let rows: CatalogItem[] = []
+                            if (registryData?.presetRows && registryData.presetRows[preset.id]) {
+                              const allItems = activeCategories.flatMap((c) => c.items)
+                              const map = new Map(allItems.map((i) => [i.id, i]))
+                              rows = registryData.presetRows[preset.id].map(
+                                (id) => map.get(id) || { id, name: id.replace(/_/g, ' '), category: 'Curated', type: 'movie' as const }
+                              )
+                            } else {
+                              rows = getPresetRows(preset.id, activeCategories)
+                            }
                             setSelectedRows(rows)
                             toast.success(`Applied ${preset.label} preset (${rows.length} rows)`)
                           }}
@@ -1147,6 +1200,65 @@ function ProfileWizardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
                   {/* Left Column: Categories */}
                   <div className="md:col-span-6 space-y-3">
+                    {/* Custom Dynamic Ad-Hoc Row Input */}
+                    <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                          <Plus className="size-3.5 text-primary" />
+                          <span>Add Custom Dynamic Row</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground">MDBList · TMDB Person / Studio</span>
+                      </div>
+                      <div className="grid grid-cols-12 gap-2">
+                        <select
+                          value={customRowPrefix}
+                          onChange={(e) => setCustomRowPrefix(e.target.value as any)}
+                          className="col-span-5 h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                        >
+                          <option value="mdblist">MDBList List / Slug</option>
+                          <option value="tmdb_actor">TMDB Actor ID</option>
+                          <option value="tmdb_director">TMDB Director ID</option>
+                          <option value="tmdb_company">TMDB Studio ID</option>
+                        </select>
+                        <select
+                          value={customRowType}
+                          onChange={(e) => setCustomRowType(e.target.value as any)}
+                          className="col-span-3 h-8 rounded-lg border border-input bg-background px-2 text-xs"
+                        >
+                          <option value="movie">Movies</option>
+                          <option value="series">Series</option>
+                        </select>
+                        <Input
+                          value={customRowInput}
+                          onChange={(e) => setCustomRowInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddCustomRow()
+                            }
+                          }}
+                          placeholder={
+                            customRowPrefix === 'mdblist'
+                              ? 'e.g. 164547 or username/list'
+                              : 'e.g. 500 (Tom Cruise)'
+                          }
+                          className="col-span-4 h-8 text-xs px-2.5"
+                        />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={handleAddCustomRow}
+                          className="h-7 text-xs px-3 gap-1"
+                        >
+                          <Plus className="size-3" />
+                          Add Row
+                        </Button>
+                      </div>
+                    </div>
+
                     {/* Search Input */}
                     <div className="relative">
                       <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1160,7 +1272,7 @@ function ProfileWizardPage() {
 
                     {/* Categories Accordion */}
                     <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
-                      {CATALOG_CATEGORIES.map((cat) => {
+                      {activeCategories.map((cat) => {
                         const isExpanded = expandedCategories.includes(cat.id)
                         const filteredItems = cat.items.filter((i) =>
                           i.name.toLowerCase().includes(catalogSearch.toLowerCase())

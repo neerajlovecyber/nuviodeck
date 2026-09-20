@@ -48,6 +48,7 @@ export class MdbListService {
           'Accept': 'application/json',
           'User-Agent': 'Nuviodeck-Engine/1.0.0',
         },
+        signal: AbortSignal.timeout(2000),
       })
 
       if (!res.ok) {

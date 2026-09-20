@@ -78,8 +78,14 @@ export async function getMediaLogo(
     if (!isToken && key) {
       url.searchParams.set('api_key', key)
     }
-
-    const res = await fetch(url.toString(), { headers })
+    const fetchOptions: RequestInit & { proxy?: string } = {
+      headers,
+      signal: AbortSignal.timeout(2500),
+    }
+    if (proxyUrl) {
+      fetchOptions.proxy = proxyUrl
+    }
+    const res = await fetch(url.toString(), fetchOptions)
     if (!res.ok) {
       logoCache.set(cacheKey, { url: '', expires: Date.now() + 60 * 60 * 1000 })
       return ''

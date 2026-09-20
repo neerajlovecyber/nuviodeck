@@ -3,7 +3,7 @@ import { db } from '../../db'
 import { deckProfiles } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { TmdbService } from '../../services/tmdb'
-import { CatalogResolver } from '../../services/catalog-resolver'
+import { CatalogResolver, getCatalogRegistry } from '../../services/catalog-resolver'
 
 export const catalogsRouter = new Hono()
 
@@ -131,6 +131,31 @@ catalogsRouter.get('/:profileId/manifest.json', async (c) => {
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=1800, public')
   return c.json(manifest)
+})
+
+// ----------------------------------------------------
+// Catalog Registry & Categories (Single Source of Truth)
+// ----------------------------------------------------
+
+// Full catalog registry with items and categories
+catalogsRouter.get('/registry', (c) => {
+  const registry = getCatalogRegistry()
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=3600, stale-while-revalidate=86400, public')
+  return c.json(registry)
+})
+
+// Lightweight category directory
+catalogsRouter.get('/registry/categories', (c) => {
+  const registry = getCatalogRegistry()
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=3600, stale-while-revalidate=86400, public')
+  return c.json({
+    total: registry.total,
+    categories: registry.categoryDirectory,
+  })
 })
 
 // ----------------------------------------------------

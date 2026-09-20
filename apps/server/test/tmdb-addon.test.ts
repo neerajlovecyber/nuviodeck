@@ -98,6 +98,20 @@ describe('TMDB Addon Extracted Services & Functionality', () => {
       const metas = await resolver.resolveCatalog('trending_movies', 'movie', { page: 1 })
       expect(Array.isArray(metas)).toBe(true)
     })
+
+    it('resolves Xperience catalogs (actor, director, decade, mdblist) data-driven from catalog metadata', async () => {
+      const [actorMetas, directorMetas, decadeMetas, mdblistMetas] = await Promise.all([
+        resolver.resolveCatalog('actor_tom_cruise', 'movie', { page: 1 }),
+        resolver.resolveCatalog('director_christopher_nolan', 'movie', { page: 1 }),
+        resolver.resolveCatalog('decade_90s_movies', 'movie', { page: 1 }),
+        resolver.resolveCatalog('snoak_top100_movies', 'movie', { page: 1 }),
+      ])
+
+      expect(Array.isArray(actorMetas)).toBe(true)
+      expect(Array.isArray(directorMetas)).toBe(true)
+      expect(Array.isArray(decadeMetas)).toBe(true)
+      expect(Array.isArray(mdblistMetas)).toBe(true)
+    }, 15000)
   })
 
   describe('HTTP Endpoints & Stremio Protocol', () => {
@@ -122,6 +136,42 @@ describe('TMDB Addon Extracted Services & Functionality', () => {
       expect(data).toHaveProperty('metas')
       expect(Array.isArray(data.metas)).toBe(true)
     })
+
+    it('GET /api/catalogs/registry serves single-source catalog registry with categories', async () => {
+      const res = await app.request('/api/catalogs/registry')
+      expect(res.status).toBe(200)
+
+      const data = await res.json()
+      expect(data).toHaveProperty('total')
+      expect(data.total).toBe(1133)
+      expect(Array.isArray(data.categories)).toBe(true)
+      expect(data.categories.length).toBeGreaterThanOrEqual(28)
+      expect(Array.isArray(data.categoryDirectory)).toBe(true)
+    })
+
+    it('GET /api/catalogs/registry/categories serves lightweight category list', async () => {
+      const res = await app.request('/api/catalogs/registry/categories')
+      expect(res.status).toBe(200)
+
+      const data = await res.json()
+      expect(data.total).toBe(1133)
+      expect(Array.isArray(data.categories)).toBe(true)
+      expect(data.categories[0]).toHaveProperty('id')
+      expect(data.categories[0]).toHaveProperty('name')
+      expect(data.categories[0]).toHaveProperty('count')
+    })
+
+    it('resolves dynamic ad-hoc catalogs (tmdb_actor:500, tmdb_director:525, mdblist:164547)', async () => {
+      const [actorRes, directorRes, mdblistRes] = await Promise.all([
+        resolver.resolveCatalog('tmdb_actor:500', 'movie', { page: 1 }),
+        resolver.resolveCatalog('tmdb_director:525', 'movie', { page: 1 }),
+        resolver.resolveCatalog('mdblist:164547', 'movie', { page: 1 }),
+      ])
+
+      expect(Array.isArray(actorRes)).toBe(true)
+      expect(Array.isArray(directorRes)).toBe(true)
+      expect(Array.isArray(mdblistRes)).toBe(true)
+    }, 15000)
 
     it('GET /api/catalogs/meta/movie/tmdb:invalid returns null or 404 cleanly without crashing', async () => {
       const res = await app.request('/api/catalogs/meta/movie/tmdb:invalid')

@@ -1,4 +1,4 @@
-import xperienceData from './xperience-catalogs.json'
+import { useQuery } from '@tanstack/react-query'
 
 export interface CatalogItem {
   id: string
@@ -60,109 +60,143 @@ export interface CoverSetInfo {
   supporterOnly?: boolean
 }
 
-// Convert extracted Xperience catalogs into structured categories
-const rawCatalogs = xperienceData.catalogs as Array<{
-  id: string
-  label: string
-  category: string
-  kind: 'movie' | 'series'
-  source?: string
-  source_params?: Record<string, any>
-  requires?: string[]
-  personalized?: boolean
-}>
+// Lightweight immediate fallback categories while backend registry hydrates
+export const FALLBACK_CATEGORIES: CatalogCategory[] = [
+  {
+    id: 'for_you_trending',
+    name: 'For You & Trending',
+    count: 6,
+    items: [
+      { id: 'trending_movies', name: 'Trending Movies', category: 'For You & Trending', type: 'movie', source: 'tmdb' },
+      { id: 'trending_series', name: 'Trending Series', category: 'For You & Trending', type: 'series', source: 'tmdb' },
+      { id: 'snoak_top100_movies', name: 'Top 100 Movies Today', category: 'For You & Trending', type: 'movie', source: 'mdblist' },
+      { id: 'snoak_top100_series', name: 'Top 100 Shows Today', category: 'For You & Trending', type: 'series', source: 'mdblist' },
+      { id: 'top_rated_movies', name: 'Top Rated Movies', category: 'For You & Trending', type: 'movie', source: 'tmdb' },
+      { id: 'top_rated_series', name: 'Top Rated Series', category: 'For You & Trending', type: 'series', source: 'tmdb' },
+    ],
+  },
+  {
+    id: 'streaming_providers',
+    name: 'Streaming Services',
+    count: 8,
+    items: [
+      { id: 'streaming_netflix_movies', name: 'Netflix Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
+      { id: 'streaming_netflix_series', name: 'Netflix Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
+      { id: 'streaming_apple_movies', name: 'Apple TV+ Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
+      { id: 'streaming_apple_series', name: 'Apple TV+ Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
+      { id: 'streaming_disney_movies', name: 'Disney+ Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
+      { id: 'streaming_disney_series', name: 'Disney+ Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
+      { id: 'streaming_prime_movies', name: 'Prime Video Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
+      { id: 'streaming_prime_series', name: 'Prime Video Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
+    ],
+  },
+  {
+    id: 'studios',
+    name: 'Studios & Labels',
+    count: 6,
+    items: [
+      { id: 'studio_a24_movies', name: 'A24 Films', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+      { id: 'studio_marvel_movies', name: 'Marvel Studios', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+      { id: 'studio_pixar_movies', name: 'Pixar Animation', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+      { id: 'studio_ghibli_movies', name: 'Studio Ghibli', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+      { id: 'studio_warner_movies', name: 'Warner Bros. Pictures', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+      { id: 'studio_blumhouse_movies', name: 'Blumhouse Productions', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
+    ],
+  },
+]
 
-// Group by category
-const categoryIdList = xperienceData.categories as string[]
-const categoryLabelMap = xperienceData.categoryLabels as Record<string, string>
+export const CATALOG_CATEGORIES = FALLBACK_CATEGORIES
 
-// Map raw catalogs to CatalogItem format
-export const ALL_CATALOGS: CatalogItem[] = rawCatalogs.map((c) => ({
-  id: c.id,
-  name: c.label,
-  category: categoryLabelMap[c.category] || c.category,
-  type: c.kind === 'series' ? 'series' : 'movie',
-  source: c.source,
-  requires: c.requires || [],
-  personalized: !!c.personalized,
-  sourceParams: c.source_params || {},
-  isAi: c.source === 'gemini' || c.category === 'ai_generated',
-}))
+export const ALL_CATALOGS = FALLBACK_CATEGORIES.flatMap((c) => c.items)
+export const CATALOG_MAP = new Map<string, CatalogItem>(ALL_CATALOGS.map((c) => [c.id, c]))
 
-export const CATALOG_MAP = new Map<string, CatalogItem>(
-  ALL_CATALOGS.map((c) => [c.id, c])
-)
+// Starting Point Presets
+export const XPERIENCE_PRESETS: PresetStartingPoint[] = [
+  {
+    id: 'balanced',
+    label: 'Everyday Mix',
+    hint: 'A little of everything: trending, popular, and big streamers.',
+    rowIds: [
+      'trending_movies',
+      'trending_series',
+      'snoak_top100_movies',
+      'snoak_top100_series',
+      'streaming_netflix_movies',
+      'streaming_netflix_series',
+    ],
+  },
+  {
+    id: 'movie_lover',
+    label: 'Cinephile',
+    hint: 'Movie-forward feed: prestige studios, awards, and trending cinema.',
+    rowIds: [
+      'trending_movies',
+      'snoak_top100_movies',
+      'top_rated_movies',
+      'studio_a24_movies',
+      'studio_marvel_movies',
+    ],
+  },
+  {
+    id: 'series_binger',
+    label: 'TV Marathon',
+    hint: 'Series-only feed tuned for current and popular television.',
+    rowIds: [
+      'trending_series',
+      'snoak_top100_series',
+      'top_rated_series',
+      'streaming_netflix_series',
+      'streaming_apple_series',
+    ],
+  },
+]
 
-// Categorized structure
-export const CATALOG_CATEGORIES: CatalogCategory[] = categoryIdList
-  .map((catId) => {
-    const items = ALL_CATALOGS.filter((c) => {
-      // match raw category id
-      const raw = rawCatalogs.find((r) => r.id === c.id)
-      return raw?.category === catId
-    })
-
-    return {
-      id: catId,
-      name: categoryLabelMap[catId] || catId,
-      count: items.length,
-      items,
-    }
-  })
-  .filter((cat) => cat.items.length > 0)
-
-// Official Xperience Starting Points Presets
-export const XPERIENCE_PRESETS: PresetStartingPoint[] = (xperienceData.presets as Array<{
-  id: string
-  label: string
-  hint: string
-}>).map((p) => ({
-  id: p.id,
-  label: p.label,
-  hint: p.hint,
-  rowIds: (xperienceData.presetRows as Record<string, string[]>)[p.id] || [],
-}))
-
-export function getPresetRows(presetId: string): CatalogItem[] {
+export function getPresetRows(presetId: string, customCategories?: CatalogCategory[]): CatalogItem[] {
   const preset = XPERIENCE_PRESETS.find((p) => p.id === presetId)
   if (!preset) return []
+
+  const allItems = (customCategories || FALLBACK_CATEGORIES).flatMap((c) => c.items)
+  const map = new Map(allItems.map((i) => [i.id, i]))
+
   return preset.rowIds
-    .map((id) => CATALOG_MAP.get(id))
-    .filter((c): c is CatalogItem => !!c)
+    .map((id) => map.get(id) || { id, name: id.replace(/_/g, ' '), category: 'Curated', type: 'movie' as const })
 }
 
-// Extracted Cover Sets from Xperience
+/**
+ * Hook to dynamically load all 1,133+ catalog definitions from the backend single-source of truth.
+ * Uses TanStack Query with 24-hour browser caching.
+ */
+export function useCatalogRegistry() {
+  return useQuery({
+    queryKey: ['catalogRegistry'],
+    queryFn: async () => {
+      const res = await fetch('/api/catalogs/registry')
+      if (!res.ok) {
+        throw new Error(`Failed to load catalog registry (${res.status})`)
+      }
+      return (await res.json()) as {
+        total: number
+        categories: CatalogCategory[]
+        categoryDirectory: Array<{ id: string; name: string; count: number }>
+        presets?: Array<{ id: string; label: string; hint: string }>
+        presetRows?: Record<string, string[]>
+      }
+    },
+    staleTime: 1000 * 60 * 60, // 1 hour
+    gcTime: 1000 * 60 * 60 * 24, // 24 hours
+  })
+}
+
+// Visual Cover Art Sets
 export const COVER_SETS: CoverSetInfo[] = [
   { id: 'default', label: 'Default' },
   { id: 'kaptain_genres', label: "Kaptain's Genres", tileShape: 'LANDSCAPE' },
   { id: 'kaptain_trending', label: "Kaptain's Trending", tileShape: 'LANDSCAPE' },
-  { id: 'kaptain_world_cinema', label: "Kaptain's World Cinema", tileShape: 'LANDSCAPE' },
-  { id: 'kaptain_era_mixes', label: "Kaptain's Era Mixes", tileShape: 'LANDSCAPE' },
-  { id: 'kaptain_anime', label: "Kaptain's Anime", tileShape: 'LANDSCAPE' },
-  { id: 'kaptain_decades', label: "Kaptain's Decades", tileShape: 'LANDSCAPE' },
   { id: 'editorial', label: 'Editorial', tileShape: 'LANDSCAPE' },
   { id: 'editorial_portrait', label: 'Editorial Portrait', tileShape: 'POSTER' },
   { id: 'awards_portrait', label: 'Awards Portrait', tileShape: 'POSTER' },
-  { id: 'mesh_nature', label: 'Mesh Nature', tileShape: 'LANDSCAPE' },
-  { id: 'holographic', label: 'Holographic', tileShape: 'LANDSCAPE' },
-  { id: 'holographic_portrait', label: 'Holographic Portrait', tileShape: 'POSTER' },
   { id: 'carbon_mono', label: 'Carbon Mono', tileShape: 'LANDSCAPE' },
-  { id: 'carbon_mono_portrait', label: 'Carbon Mono Portrait', tileShape: 'POSTER' },
-  { id: 'spotlight', label: 'Spotlight', tileShape: 'LANDSCAPE' },
-  { id: 'spotlight_portrait', label: 'Spotlight Portrait', tileShape: 'POSTER' },
-  { id: 'duotone', label: 'Duotone', tileShape: 'LANDSCAPE' },
-  { id: 'duotone_portrait', label: 'Duotone Portrait', tileShape: 'POSTER' },
-  { id: 'monogram', label: 'Monogram', tileShape: 'LANDSCAPE' },
-  { id: 'monogram_portrait', label: 'Monogram Portrait', tileShape: 'POSTER' },
-  { id: 'chromatic', label: 'Chromatic', tileShape: 'LANDSCAPE' },
-  { id: 'chromatic_portrait', label: 'Chromatic Portrait', tileShape: 'POSTER' },
-  { id: 'obsidian', label: 'Obsidian', tileShape: 'POSTER' },
-  { id: 'key_art', label: 'Key Art', tileShape: 'LANDSCAPE' },
-  { id: 'key_art_portrait', label: 'Key Art Portrait', tileShape: 'POSTER' },
-  { id: 'dynamic_billboard', label: 'Dynamic Billboard', tileShape: 'LANDSCAPE', dynamic: true },
-  { id: 'dynamic_wall', label: 'Dynamic Poster Wall', tileShape: 'LANDSCAPE', dynamic: true },
-  { id: 'dynamic_duotone', label: 'Dynamic Duotone', tileShape: 'LANDSCAPE', dynamic: true },
-  { id: 'dynamic_showcase', label: 'Dynamic Showcase', tileShape: 'LANDSCAPE', dynamic: true },
+  { id: 'holographic', label: 'Holographic', tileShape: 'LANDSCAPE' },
 ]
 
 export const DEFAULT_COLLECTIONS: CollectionConfig[] = [

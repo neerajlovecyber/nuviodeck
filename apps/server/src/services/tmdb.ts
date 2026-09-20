@@ -66,7 +66,7 @@ export class TmdbService {
     }
   }
 
-  private async request<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
+  async request<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
     const url = new URL(`${this.baseUrl}/${endpoint.replace(/^\//, '')}`)
     
     // Add language if not provided
@@ -101,6 +101,7 @@ export class TmdbService {
     const fetchOptions: RequestInit & { proxy?: string } = {
       method: 'GET',
       headers,
+      signal: AbortSignal.timeout(2000),
     }
 
     if (this.proxyUrl) {
