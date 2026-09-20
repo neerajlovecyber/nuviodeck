@@ -50,9 +50,20 @@ export class TmdbService {
   constructor(options?: TmdbClientOptions) {
     this.apiToken = options?.apiToken || config.tmdb.apiToken
     this.apiKey = options?.apiKey || config.tmdb.apiKey
-    this.baseUrl = config.tmdb.baseUrl
     this.defaultLanguage = options?.language || 'en-US'
     this.proxyUrl = options?.proxyUrl || config.tmdb.proxyUrl
+
+    // If proxyUrl is configured as a reverse proxy / mirror URL (e.g. https://tmdb-proxy.example.com/3)
+    if (
+      this.proxyUrl &&
+      (this.proxyUrl.startsWith('http://') || this.proxyUrl.startsWith('https://')) &&
+      (this.proxyUrl.endsWith('/3') || this.proxyUrl.includes('/3/'))
+    ) {
+      this.baseUrl = this.proxyUrl.replace(/\/+$/, '')
+      this.proxyUrl = undefined
+    } else {
+      this.baseUrl = config.tmdb.baseUrl
+    }
   }
 
   private async request<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {

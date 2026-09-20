@@ -115,7 +115,7 @@ function buildManifest(profileId: string, profileName: string, rows: any[]) {
 
 // Global default manifest
 catalogsRouter.get('/manifest.json', (c) => {
-  const manifest = buildManifest('default', 'Curated Engine', [])
+  const manifest = buildManifest('deck', 'Curated Engine', [])
   c.header('Content-Type', 'application/json')
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=3600, public')
