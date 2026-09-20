@@ -1,40 +1,13 @@
 import { Hono } from 'hono'
 import { nuvioClient } from '../lib/nuvio-client'
 import { resolveAccessToken } from './nuvio/auth'
-import path from 'path'
+import { badgesEngineService } from '../services/badges'
 
 export const badgesRouter = new Hono()
 
-// Load badge sets from web data directory
-let cachedBadgeSets: any[] | null = null
-
-async function getBadgeSets(): Promise<any[]> {
-  if (cachedBadgeSets) return cachedBadgeSets
-  try {
-    const possiblePaths = [
-      path.resolve(import.meta.dirname, '../data/badge-sets.json'),
-      path.resolve(import.meta.dirname, '../../../apps/web/src/data/badge-sets-signature.json'),
-      path.resolve(process.cwd(), '../web/src/data/badge-sets-signature.json'),
-      path.resolve(process.cwd(), 'apps/web/src/data/badge-sets-signature.json'),
-      path.resolve(process.cwd(), 'apps/server/src/data/badge-sets.json'),
-      path.resolve(process.cwd(), 'src/data/badge-sets.json'),
-    ]
-    for (const p of possiblePaths) {
-      const file = Bun.file(p)
-      if (await file.exists()) {
-        cachedBadgeSets = await file.json()
-        return cachedBadgeSets || []
-      }
-    }
-  } catch (e) {
-    console.error('Failed to load badge-sets-signature.json:', e)
-  }
-  return []
-}
-
 // List all badge set presets
 badgesRouter.get('/presets', async (c) => {
-  const sets = await getBadgeSets()
+  const sets = await badgesEngineService.getBadgeSets()
   const summaries = sets.map((s) => ({
     id: s.id,
     label: s.label,
@@ -51,20 +24,29 @@ badgesRouter.get('/presets', async (c) => {
 // Get a specific badge set
 badgesRouter.get('/presets/:presetId', async (c) => {
   const presetId = c.req.param('presetId')
-  const sets = await getBadgeSets()
-  const found = sets.find((s) => s.id === presetId)
+  const found = await badgesEngineService.getBadgeSetById(presetId)
   if (!found) {
     return c.json({ error: `Badge set ${presetId} not found` }, 404)
   }
   return c.json({ preset: found })
 })
 
+// Resolve specific badge image URL
+badgesRouter.get('/resolve/:presetId/:ratingKey', async (c) => {
+  const presetId = c.req.param('presetId')
+  const ratingKey = c.req.param('ratingKey')
+  const imageUrl = await badgesEngineService.resolveBadgeImageUrl(presetId, ratingKey)
+  if (!imageUrl) {
+    return c.json({ error: `Badge not found for key ${ratingKey} in preset ${presetId}` }, 404)
+  }
+  return c.json({ presetId, ratingKey, imageUrl })
+})
+
 // Public export endpoint returning raw JSON ready for Nuvio TV / Mobile Settings -> Badges import
 badgesRouter.get('/export/:presetId', async (c) => {
   const presetParam = c.req.param('presetId') || ''
   const presetId = presetParam.replace(/\.json$/, '')
-  const sets = await getBadgeSets()
-  const found = sets.find((s) => s.id === presetId)
+  const found = await badgesEngineService.getBadgeSetById(presetId)
 
   if (!found) {
     return c.json({ error: `Badge set ${presetId} not found` }, 404)

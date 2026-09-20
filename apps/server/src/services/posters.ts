@@ -16,6 +16,8 @@ export interface PosterProviderConfig {
   fanartKey?: string
   xrdbUrl?: string
   postersplusUrl?: string
+  simklKey?: string
+  simklUrl?: string
   providerOrder?: string[]
   providers?: Record<string, ProviderCardConfig>
   showRatingsOnPosters?: boolean
@@ -34,6 +36,39 @@ export interface PosterResolveOptions {
 }
 
 export class PosterEngineService {
+  /**
+   * Supported providers list with metadata matching Xperience suite
+   */
+  getProvidersList() {
+    return [
+      { id: 'custom', name: 'Custom URL', type: 'url', placeholder: 'https://proxy.com/{type}/{id}.jpg', supportsEpisodeStills: true, supportsSeasonPosters: true },
+      { id: 'betterposters', name: 'BetterPosters', type: 'url', configureUrl: 'https://btttr.cc', placeholder: 'https://btttr.cc/config/token', supportsSeasonPosters: true },
+      { id: 'easyrating', name: 'EasyRatings (ERDB)', type: 'url', configureUrl: 'https://easyratingsdb.com', placeholder: 'https://easyratingsdb.com/...', supportsEpisodeStills: true, supportsSeasonPosters: true },
+      { id: 'topposters', name: 'Top Posters', type: 'key', configureUrl: 'https://top-streaming.stream', placeholder: 'topposters api key', supportsEpisodeStills: true, supportsSeasonPosters: true },
+      { id: 'rpdb', name: 'RPDB', type: 'key', configureUrl: 'https://ratingposterdb.com', placeholder: 'rpdb api key', supportsSeasonPosters: true },
+      { id: 'simkl', name: 'Simkl Posters', type: 'key', configureUrl: 'https://simkl.com', placeholder: 'simkl client id or url' },
+      { id: 'omdb', name: 'OMDb', type: 'key', configureUrl: 'https://omdbapi.com/apikey.aspx', placeholder: 'omdb api key' },
+      { id: 'fanart', name: 'Fanart.tv', type: 'key', configureUrl: 'https://fanart.tv/get-an-api-key', placeholder: 'fanart api key' },
+      { id: 'xrdb', name: 'XRDB', type: 'url', configureUrl: 'https://xrdb.ibbylabs.dev', placeholder: 'https://xrdb-host or poster url', supportsEpisodeStills: true, supportsSeasonPosters: true },
+      { id: 'postersplus', name: 'Posters+', type: 'url', configureUrl: 'https://postersplus.elfhosted.com', placeholder: 'posters+ poster url', supportsEpisodeStills: true, supportsSeasonPosters: true },
+    ]
+  }
+
+  getDefaultOrder() {
+    return [
+      'custom',
+      'betterposters',
+      'easyrating',
+      'topposters',
+      'rpdb',
+      'simkl',
+      'omdb',
+      'fanart',
+      'xrdb',
+      'postersplus',
+    ]
+  }
+
   /**
    * Helper to retrieve a provider's key or URL from either:
    * 1. The dragged-card dictionary: cfg.providers[providerId] (with enabled check)
@@ -60,6 +95,8 @@ export class PosterEngineService {
         return cfg.toppostersKey?.trim() || null
       case 'rpdb':
         return cfg.rpdbKey?.trim() || config.rpdb.apiKey?.trim() || null
+      case 'simkl':
+        return cfg.simklKey?.trim() || cfg.simklUrl?.trim() || null
       case 'omdb':
         return cfg.omdbKey?.trim() || null
       case 'fanart':
@@ -86,29 +123,24 @@ export class PosterEngineService {
     }
 
     const showRatings = cfg.showRatingsOnPosters ?? true
-
     const imdbId = options?.imdbId
     const tmdbId = options?.tmdbId
     const isMovie = options?.type === 'movie'
     const type = isMovie ? 'movie' : 'series'
+    const season = options?.season
 
-    // User defines priority order by dragging cards up and down
-    const order = cfg.providerOrder || [
-      'custom',
-      'betterposters',
-      'easyrating',
-      'topposters',
-      'rpdb',
-      'omdb',
-      'fanart',
-      'xrdb',
-      'postersplus',
-    ]
+    const order = cfg.providerOrder || this.getDefaultOrder()
 
     if (showRatings) {
       for (const provider of order) {
         const val = this.getProviderValue(cfg, provider)
         if (!val) continue
+
+        // Check if resolving season-specific poster
+        if (season !== undefined && season !== null && season > 0 && !isMovie) {
+          const seasonUrl = this.resolveSeasonPoster(provider, val, tmdbId, imdbId, season)
+          if (seasonUrl) return seasonUrl
+        }
 
         switch (provider) {
           case 'custom':
@@ -178,9 +210,38 @@ export class PosterEngineService {
             }
             break
 
+          case 'simkl':
+            if (imdbId || tmdbId) {
+              if (val.includes('{')) {
+                return val
+                  .replace('{id}', String(imdbId || tmdbId))
+                  .replace('{imdbId}', imdbId || '')
+                  .replace('{tmdbId}', String(tmdbId || ''))
+                  .replace('{type}', type)
+              }
+              const target = imdbId || tmdbId
+              return `https://simkl.in/posters/${target}_m.webp`
+            }
+            break
+
           case 'omdb':
             if (imdbId) {
               return `https://img.omdbapi.com/?apikey=${val}&i=${imdbId}&h=1000`
+            }
+            break
+
+          case 'fanart':
+            if (imdbId || tmdbId) {
+              if (val.includes('{')) {
+                return val
+                  .replace('{id}', String(imdbId || tmdbId))
+                  .replace('{imdbId}', imdbId || '')
+                  .replace('{tmdbId}', String(tmdbId || ''))
+                  .replace('{type}', type)
+              }
+              const id = imdbId || tmdbId
+              const fanartType = isMovie ? 'movies' : 'tv'
+              return `https://assets.fanart.tv/fanart/${fanartType}/${id}/movieposter.jpg`
             }
             break
 
@@ -207,6 +268,62 @@ export class PosterEngineService {
 
     const width = options?.width || 'w500'
     return `${config.tmdb.imageBaseUrl}/${width}${posterPath}`
+  }
+
+  /**
+   * Resolve season-level poster specific URLs
+   */
+  private resolveSeasonPoster(
+    provider: string,
+    val: string,
+    tmdbId?: number | string | null,
+    imdbId?: string | null,
+    season?: number
+  ): string | null {
+    if (!season || season <= 0) return null
+
+    switch (provider) {
+      case 'rpdb':
+        if (tmdbId) {
+          return `https://api.ratingposterdb.com/${val}/tmdb/poster-default/series-${tmdbId}/S${season}.jpg`
+        }
+        if (imdbId) {
+          return `https://api.ratingposterdb.com/${val}/imdb/poster-default/${imdbId}/season/${season}.jpg`
+        }
+        break
+
+      case 'topposters':
+        if (tmdbId) {
+          return `https://api.top-streaming.stream/${val}/tmdb/poster-default/series-${tmdbId}/S${season}.jpg`
+        }
+        break
+
+      case 'easyrating': {
+        const targetId = imdbId || `tmdb-${tmdbId}`
+        if (val.startsWith('Tk-') || !val.startsWith('http')) {
+          return `https://easyratingsdb.com/${val}/poster/${targetId}/season/${season}.jpg`
+        }
+        const base = val.replace(/\/+$/, '')
+        return `${base}/poster/${targetId}/season/${season}.jpg`
+      }
+
+      case 'betterposters': {
+        const base = val.replace(/\/+$/, '')
+        return `${base}/series/${imdbId || `tmdb-${tmdbId}`}/season/${season}.jpg`
+      }
+
+      case 'xrdb': {
+        const base = val.replace(/\/+$/, '')
+        return `${base}/poster/series/${imdbId || tmdbId}/season/${season}.jpg`
+      }
+
+      case 'postersplus': {
+        const base = val.replace(/\/+$/, '')
+        return `${base}/poster/series/${imdbId || tmdbId}/season/${season}.jpg`
+      }
+    }
+
+    return null
   }
 
   /**
@@ -312,6 +429,12 @@ export class PosterEngineService {
           break
         case 'omdb':
           sampleUrl = `https://img.omdbapi.com/?apikey=${cleanKeyOrUrl}&i=${testImdb}`
+          break
+        case 'simkl':
+          sampleUrl = `https://simkl.in/posters/${testImdb}_m.webp`
+          break
+        case 'fanart':
+          sampleUrl = `https://assets.fanart.tv/fanart/movies/${testImdb}/movieposter.jpg`
           break
         case 'betterposters':
           if (cleanKeyOrUrl.includes('{')) {

@@ -22,28 +22,8 @@ postersRouter.get('/status', (c) => {
 // Supported Poster Providers directory matching Xperience suite
 postersRouter.get('/providers', (c) => {
   return c.json({
-    providers: [
-      { id: 'custom', name: 'Custom URL', type: 'url', placeholder: 'https://proxy.com/{type}/{id}.jpg', supportsEpisodeStills: true },
-      { id: 'betterposters', name: 'BetterPosters', type: 'url', configureUrl: 'https://btttr.cc', placeholder: 'https://btttr.cc/config/token' },
-      { id: 'easyrating', name: 'EasyRatings (ERDB)', type: 'url', configureUrl: 'https://easyratingsdb.com', placeholder: 'https://easyratingsdb.com/...', supportsEpisodeStills: true },
-      { id: 'topposters', name: 'Top Posters', type: 'key', configureUrl: 'https://top-streaming.stream', placeholder: 'topposters api key', supportsEpisodeStills: true },
-      { id: 'rpdb', name: 'RPDB', type: 'key', configureUrl: 'https://ratingposterdb.com', placeholder: 'rpdb api key' },
-      { id: 'omdb', name: 'OMDb', type: 'key', configureUrl: 'https://omdbapi.com/apikey.aspx', placeholder: 'omdb api key' },
-      { id: 'fanart', name: 'Fanart.tv', type: 'key', configureUrl: 'https://fanart.tv/get-an-api-key', placeholder: 'fanart api key' },
-      { id: 'xrdb', name: 'XRDB', type: 'url', configureUrl: 'https://xrdb.ibbylabs.dev', placeholder: 'https://xrdb-host or poster url', supportsEpisodeStills: true },
-      { id: 'postersplus', name: 'Posters+', type: 'url', configureUrl: 'https://postersplus.elfhosted.com', placeholder: 'posters+ poster url', supportsEpisodeStills: true },
-    ],
-    defaultOrder: [
-      'custom',
-      'betterposters',
-      'easyrating',
-      'topposters',
-      'rpdb',
-      'omdb',
-      'fanart',
-      'xrdb',
-      'postersplus',
-    ],
+    providers: posterEngineService.getProvidersList(),
+    defaultOrder: posterEngineService.getDefaultOrder(),
     options: {
       showRatingsOnPosters: true,
       ratingBadgedEpisodeStills: true,

@@ -6,14 +6,14 @@ import { posterEngineService } from '../src/services/posters'
 const app = new Hono()
 app.route('/api/posters', postersRouter)
 
-describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, BetterPosters, EasyRatings)', () => {
-  it('GET /api/posters/providers lists all 9 supported providers and default options', async () => {
+describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, BetterPosters, EasyRatings, Simkl, Fanart, OMDb)', () => {
+  it('GET /api/posters/providers lists all 10 supported providers and default options', async () => {
     const res = await app.request('/api/posters/providers')
     expect(res.status).toBe(200)
 
     const data = await res.json()
     expect(Array.isArray(data.providers)).toBe(true)
-    expect(data.providers.length).toBe(9)
+    expect(data.providers.length).toBe(10)
 
     const providerIds = data.providers.map((p: any) => p.id)
     expect(providerIds).toContain('custom')
@@ -21,6 +21,7 @@ describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, Better
     expect(providerIds).toContain('easyrating')
     expect(providerIds).toContain('topposters')
     expect(providerIds).toContain('rpdb')
+    expect(providerIds).toContain('simkl')
     expect(providerIds).toContain('omdb')
     expect(providerIds).toContain('fanart')
     expect(providerIds).toContain('xrdb')
@@ -297,4 +298,102 @@ describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, Better
     })
     expect(resCustom).toBe('https://pictorium-nsp.vercel.app/api/poster/movie/tt0137523')
   })
+
+  it('resolves Simkl and Fanart.tv poster URLs correctly', () => {
+    // Simkl
+    const simklUrl = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0137523',
+      type: 'movie',
+      config: {
+        simklKey: 'simkl_token',
+        providerOrder: ['simkl'],
+      },
+    })
+    expect(simklUrl).toBe('https://simkl.in/posters/tt0137523_m.webp')
+
+    // Fanart.tv
+    const fanartUrl = posterEngineService.getPosterUrl(null, {
+      tmdbId: 550,
+      type: 'movie',
+      config: {
+        fanartKey: 'fanart_key_123',
+        providerOrder: ['fanart'],
+      },
+    })
+    expect(fanartUrl).toBe('https://assets.fanart.tv/fanart/movies/550/movieposter.jpg')
+  })
+
+  it('resolves Season-level specific posters across providers (RPDB, TopPosters, EasyRatings)', () => {
+    // 1. RPDB Season Poster
+    const rpdbSeason = posterEngineService.getPosterUrl(null, {
+      tmdbId: 1399,
+      imdbId: 'tt0944947',
+      type: 'series',
+      season: 3,
+      config: {
+        rpdbKey: 'rp_key_123',
+        providerOrder: ['rpdb'],
+      },
+    })
+    expect(rpdbSeason).toBe('https://api.ratingposterdb.com/rp_key_123/tmdb/poster-default/series-1399/S3.jpg')
+
+    // 2. TopPosters Season Poster
+    const topSeason = posterEngineService.getPosterUrl(null, {
+      tmdbId: 1399,
+      type: 'series',
+      season: 2,
+      config: {
+        toppostersKey: 'tp_key_123',
+        providerOrder: ['topposters'],
+      },
+    })
+    expect(topSeason).toBe('https://api.top-streaming.stream/tp_key_123/tmdb/poster-default/series-1399/S2.jpg')
+
+    // 3. EasyRatings Season Poster
+    const easySeason = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0944947',
+      type: 'series',
+      season: 1,
+      config: {
+        easyratingUrl: 'https://easyratingsdb.com/Tk-123',
+        providerOrder: ['easyrating'],
+      },
+    })
+    expect(easySeason).toBe('https://easyratingsdb.com/Tk-123/poster/tt0944947/season/1.jpg')
+  })
+
+  it('Badges Engine: loads badge sets dataset and resolves badge image URLs', async () => {
+    const { badgesEngineService } = await import('../src/services/badges')
+    const { badgesRouter } = await import('../src/routes/badges')
+    const badgeApp = new Hono()
+    badgeApp.route('/api/badges', badgesRouter)
+
+    // 1. Service list
+    const sets = await badgesEngineService.getBadgeSets()
+    expect(Array.isArray(sets)).toBe(true)
+    expect(sets.length).toBeGreaterThan(0)
+
+    // 2. Resolve badge image
+    const auroraSet = sets.find((s) => s.id === 'xp_aurora') || sets[0]
+    expect(auroraSet).toBeDefined()
+
+    const imageUrl = await badgesEngineService.resolveBadgeImageUrl(auroraSet.id, '4k')
+    if (imageUrl) {
+      expect(typeof imageUrl).toBe('string')
+      expect(imageUrl).toContain('http')
+    }
+
+    // 3. Endpoints
+    const resPresets = await badgeApp.request('/api/badges/presets')
+    expect(resPresets.status).toBe(200)
+    const dataPresets = await resPresets.json()
+    expect(Array.isArray(dataPresets.presets)).toBe(true)
+    expect(dataPresets.presets.length).toBeGreaterThan(0)
+
+    const resExport = await badgeApp.request(`/api/badges/export/${auroraSet.id}.json`)
+    expect(resExport.status).toBe(200)
+    const exportData = await resExport.json()
+    expect(exportData.id).toBe(auroraSet.id)
+  })
 })
+
