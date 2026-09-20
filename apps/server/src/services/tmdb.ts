@@ -3,6 +3,7 @@ import { getPosterUrl, getBackdropUrl, posterEngineService, PosterProviderConfig
 import { getMediaLogo } from './logos'
 import { getCustomEpisodeGroup, getCustomImdbId, fetchEpisodeGroup } from './episode-groups'
 import { isMovieReleasedDigitally } from './release-filter'
+import { AnimeFillerService } from './anime/filler-checker'
 
 export interface TmdbClientOptions {
   apiToken?: string
@@ -319,9 +320,12 @@ export class TmdbService {
         ).catch(() => null)
 
         if (groupData?.groups) {
+          const fillerData = await AnimeFillerService.getFillerData(details.name || details.title || '').catch(() => null)
           for (const grp of groupData.groups) {
             for (const ep of grp.episodes) {
+              const fillerStatus = fillerData?.episodes.get(ep.episode_number)?.status
               const isFiller = Boolean(
+                fillerStatus === 'Filler' ||
                 ep.overview?.toLowerCase().includes('filler') ||
                 ep.name?.toLowerCase().includes('filler')
               )
@@ -366,13 +370,16 @@ export class TmdbService {
 
       // Fallback to standard TMDB seasons if no custom group or group fetch failed
       if (episodes.length === 0 && details.seasons) {
+        const fillerData = await AnimeFillerService.getFillerData(details.name || details.title || '').catch(() => null)
         for (const season of details.seasons) {
           if (season.season_number === 0 && season.episode_count === 0) continue
           try {
             const seasonData = await this.getTvSeason(tmdbId, season.season_number, this.defaultLanguage)
             if (seasonData.episodes) {
               for (const ep of seasonData.episodes) {
+                const fillerStatus = fillerData?.episodes.get(ep.episode_number)?.status
                 const isFiller = Boolean(
+                  fillerStatus === 'Filler' ||
                   ep.overview?.toLowerCase().includes('filler') ||
                   ep.name?.toLowerCase().includes('filler')
                 )

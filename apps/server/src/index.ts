@@ -25,6 +25,8 @@ import { integrationsRouter } from './routes/integrations'
 import { progressRouter } from './routes/progress'
 import { streamingProvidersRouter } from './routes/streaming-providers'
 import { avatarsRouter } from './routes/avatars'
+import { proxyRouter } from './routes/proxy'
+import { subtitlesRouter } from './routes/subtitles'
 
 const app = new Hono()
 
@@ -132,6 +134,12 @@ app.route('/api/streaming-providers', streamingProvidersRouter)
 
 // 10. Avatars Catalog
 app.route('/api/avatars', avatarsRouter)
+
+// 11. Byte-Range Video Streaming Proxy
+app.route('/api/proxy', proxyRouter)
+
+// 12. Subtitles Provider Engine
+app.route('/api/subtitles', subtitlesRouter)
 
 // Legacy / Users table endpoints
 app.get('/api/users', async (c) => {
