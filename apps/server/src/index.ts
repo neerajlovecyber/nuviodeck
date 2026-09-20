@@ -21,6 +21,7 @@ import { metadataRouter } from './routes/metadata'
 import { catalogsRouter } from './routes/catalogs'
 import { debridRouter } from './routes/debrid'
 import { postersRouter } from './routes/posters'
+import { integrationsRouter } from './routes/integrations'
 
 const app = new Hono()
 
@@ -90,6 +91,7 @@ app.get('/api/health', (c) => {
       catalogs: '/api/catalogs',
       debrid: '/api/debrid',
       posters: '/api/posters',
+      integrations: '/api/integrations',
     },
   })
 })
@@ -112,6 +114,9 @@ app.route('/api/debrid', debridRouter)
 
 // 6. Posters & Visual Art Overlays
 app.route('/api/posters', postersRouter)
+
+// 7. User Account Integrations (TMDB, Trakt, Simkl, AniList, MAL)
+app.route('/api/integrations', integrationsRouter)
 
 // Legacy / Users table endpoints
 app.get('/api/users', async (c) => {

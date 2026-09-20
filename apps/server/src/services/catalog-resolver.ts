@@ -2,6 +2,11 @@ import { TmdbService } from './tmdb'
 import { MdbListService } from './mdblist'
 import { AiSearchService } from './ai-search'
 import { isMovieReleasedDigitally } from './release-filter'
+import { db } from '../db'
+import { accountConnections } from '../db/schema'
+import { eq } from 'drizzle-orm'
+import { tmdbAccountService } from './integrations/tmdb-account'
+import { traktService } from './integrations/trakt'
 
 export interface CatalogResolveOptions {
   page?: number
@@ -282,6 +287,46 @@ export class CatalogResolver {
         try {
           const res = await tmdb.request<any>(`list/${listId}`, { page })
           rawResults = res.items || res.results || []
+        } catch {
+          rawResults = []
+        }
+      } else if (catalogId.startsWith('tmdb_watchlist') || catalogId.startsWith('tmdb_favorites')) {
+        try {
+          const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'tmdb')).limit(1)
+          if (conn) {
+            const extra = conn.extraJson ? JSON.parse(conn.extraJson) : {}
+            const accountId = extra.accountId
+            const sessionId = conn.accessToken
+            const isWatchlist = catalogId.startsWith('tmdb_watchlist')
+            const fetchRes = isWatchlist
+              ? await tmdbAccountService.getWatchlist(accountId, sessionId, isMovie ? 'movies' : 'tv', page)
+              : await tmdbAccountService.getFavorites(accountId, sessionId, isMovie ? 'movies' : 'tv', page)
+            rawResults = fetchRes.results || []
+          }
+        } catch {
+          rawResults = []
+        }
+      } else if (catalogId.startsWith('trakt_watchlist') || catalogId.startsWith('trakt_recommendations')) {
+        try {
+          const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'trakt')).limit(1)
+          if (conn) {
+            const isWatchlist = catalogId.startsWith('trakt_watchlist')
+            const items = isWatchlist
+              ? await traktService.getWatchlist(conn.accessToken, isMovie ? 'movies' : 'shows', page)
+              : await traktService.getRecommendations(conn.accessToken, isMovie ? 'movies' : 'shows', page)
+            rawResults = (items || []).map((item: any) => {
+              const media = item.movie || item.show || item
+              return {
+                id: media.ids?.tmdb || media.ids?.imdb,
+                imdb_id: media.ids?.imdb,
+                title: media.title,
+                name: media.title,
+                release_date: media.year ? `${media.year}-01-01` : undefined,
+                first_air_date: media.year ? `${media.year}-01-01` : undefined,
+                overview: media.overview || '',
+              }
+            })
+          }
         } catch {
           rawResults = []
         }

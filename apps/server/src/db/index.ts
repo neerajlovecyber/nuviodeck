@@ -40,6 +40,21 @@ sqlite.run(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS account_connections (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    username TEXT,
+    display_name TEXT,
+    avatar_url TEXT,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    expires_at INTEGER,
+    scrobble_enabled INTEGER DEFAULT 1,
+    extra_json TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 `)
 
 // Seed initial default profiles if empty (like Xperience)

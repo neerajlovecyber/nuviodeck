@@ -34,6 +34,21 @@ export const deckProfiles = sqliteTable('deck_profiles', {
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
+export const accountConnections = sqliteTable('account_connections', {
+  id: text('id').primaryKey(), // provider name or `${userId}:${provider}`
+  provider: text('provider').notNull(), // 'tmdb' | 'trakt' | 'simkl' | 'anilist' | 'myanimelist'
+  username: text('username'),
+  displayName: text('display_name'),
+  avatarUrl: text('avatar_url'),
+  accessToken: text('access_token').notNull(),
+  refreshToken: text('refresh_token'),
+  expiresAt: integer('expires_at'),
+  scrobbleEnabled: integer('scrobble_enabled', { mode: 'boolean' }).default(true),
+  extraJson: text('extra_json'),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 
@@ -42,3 +57,6 @@ export type NewNuvioSession = typeof nuvioSessions.$inferInsert
 
 export type DeckProfile = typeof deckProfiles.$inferSelect
 export type NewDeckProfile = typeof deckProfiles.$inferInsert
+
+export type AccountConnection = typeof accountConnections.$inferSelect
+export type NewAccountConnection = typeof accountConnections.$inferInsert
