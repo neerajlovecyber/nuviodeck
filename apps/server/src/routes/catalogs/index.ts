@@ -3,7 +3,14 @@ import { db } from '../../db'
 import { deckProfiles } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { TmdbService } from '../../services/tmdb'
-import { CatalogResolver, getCatalogRegistry } from '../../services/catalog-resolver'
+import {
+  CatalogResolver,
+  getCatalogRegistry,
+  getCuratedCatalogs,
+  getCuratedCategories,
+  getCuratedPresets,
+  getCuratedPresetById,
+} from '../../services/catalog-resolver'
 import { streamAggregatorService } from '../../services/streams'
 import { StreamsProfileConfig } from '../../services/streams/types'
 
@@ -221,6 +228,64 @@ catalogsRouter.get('/registry/categories', (c) => {
     total: registry.total,
     categories: registry.categoryDirectory,
   })
+})
+
+// ----------------------------------------------------
+// Curated Catalogs & Layout Presets Explorer
+// ----------------------------------------------------
+
+// GET /api/catalogs/curated - Search and filter through 1,133 curated catalogs
+catalogsRouter.get('/curated', (c) => {
+  const category = c.req.query('category')
+  const kind = c.req.query('kind') as 'movie' | 'series' | 'all' | undefined
+  const search = c.req.query('search') || c.req.query('q')
+  const limit = c.req.query('limit') ? parseInt(c.req.query('limit')!, 10) : undefined
+  const offset = c.req.query('offset') ? parseInt(c.req.query('offset')!, 10) : undefined
+
+  const result = getCuratedCatalogs({
+    category,
+    kind,
+    search,
+    limit,
+    offset,
+  })
+
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=1800, stale-while-revalidate=86400, public')
+  return c.json(result)
+})
+
+// GET /api/catalogs/curated/categories - List all 32 curated categories with counts
+catalogsRouter.get('/curated/categories', (c) => {
+  const categories = getCuratedCategories()
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=3600, stale-while-revalidate=86400, public')
+  return c.json({ categories })
+})
+
+// GET /api/catalogs/curated/presets - List all 9 pre-built layout presets
+catalogsRouter.get('/curated/presets', (c) => {
+  const presets = getCuratedPresets()
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=3600, stale-while-revalidate=86400, public')
+  return c.json({ presets })
+})
+
+// GET /api/catalogs/curated/presets/:id - Get full row configuration for a preset
+catalogsRouter.get('/curated/presets/:id', (c) => {
+  const presetId = c.req.param('id')
+  const result = getCuratedPresetById(presetId)
+  if (!result) {
+    return c.json({ error: `Preset "${presetId}" not found` }, 404)
+  }
+
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Cache-Control', 'max-age=3600, stale-while-revalidate=86400, public')
+  return c.json(result)
 })
 
 // ----------------------------------------------------

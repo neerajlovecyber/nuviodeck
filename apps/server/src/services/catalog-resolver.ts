@@ -147,6 +147,152 @@ export interface CatalogCategory {
   }>
 }
 
+export interface CatalogFilterOptions {
+  category?: string
+  kind?: 'movie' | 'series' | 'all'
+  search?: string
+  limit?: number
+  offset?: number
+}
+
+export interface CuratedCatalogItem {
+  id: string
+  label: string
+  category: string
+  categoryLabel: string
+  kind: 'movie' | 'series'
+  source?: string
+  sourceParams?: Record<string, any>
+  requires: string[]
+  personalized?: boolean
+  tileShape?: 'POSTER' | 'LANDSCAPE' | 'SQUARE'
+  coverSlug?: string
+}
+
+export function getCuratedCatalogs(filter?: CatalogFilterOptions): {
+  total: number
+  items: CuratedCatalogItem[]
+  limit: number
+  offset: number
+} {
+  const categoryLabelMap = (xperienceData.categoryLabels || {}) as Record<string, string>
+  const limit = Math.min(filter?.limit ?? 50, 200)
+  const offset = filter?.offset ?? 0
+
+  let items: CuratedCatalogItem[] = (xperienceData.catalogs as any[]).map((c) => ({
+    id: c.id,
+    label: c.label,
+    category: c.category,
+    categoryLabel: categoryLabelMap[c.category] || c.category,
+    kind: c.kind === 'series' ? 'series' : 'movie',
+    source: c.source,
+    sourceParams: c.source_params,
+    requires: c.requires || [],
+    personalized: Boolean(c.personalized),
+    tileShape: c.category?.includes('collections') || c.category?.includes('streaming') ? 'LANDSCAPE' : 'POSTER',
+    coverSlug: c.defaultCoverSlug || `${c.category}.${c.id}`,
+  }))
+
+  if (filter?.category) {
+    const catClean = filter.category.toLowerCase()
+    items = items.filter((i) => i.category.toLowerCase() === catClean || i.categoryLabel.toLowerCase() === catClean)
+  }
+
+  if (filter?.kind && filter.kind !== 'all') {
+    items = items.filter((i) => i.kind === filter.kind)
+  }
+
+  if (filter?.search) {
+    const q = filter.search.toLowerCase().trim()
+    items = items.filter(
+      (i) =>
+        i.label.toLowerCase().includes(q) ||
+        i.id.toLowerCase().includes(q) ||
+        i.categoryLabel.toLowerCase().includes(q)
+    )
+  }
+
+  const total = items.length
+  const paginated = items.slice(offset, offset + limit)
+
+  return {
+    total,
+    items: paginated,
+    limit,
+    offset,
+  }
+}
+
+export function getCuratedCategories(): Array<{ id: string; label: string; count: number }> {
+  const categoryIdList = (xperienceData.categories || []) as string[]
+  const categoryLabelMap = (xperienceData.categoryLabels || {}) as Record<string, string>
+  const catalogs = (xperienceData.catalogs || []) as any[]
+
+  return categoryIdList.map((catId) => ({
+    id: catId,
+    label: categoryLabelMap[catId] || catId,
+    count: catalogs.filter((c) => c.category === catId).length,
+  }))
+}
+
+export function getCuratedPresets(): Array<{
+  id: string
+  label: string
+  hint: string
+  rowCount: number
+  rowIds: string[]
+}> {
+  const presets = (xperienceData.presets || []) as Array<{ id: string; label: string; hint: string }>
+  const presetRows = (xperienceData.presetRows || {}) as Record<string, string[]>
+
+  return presets.map((p) => {
+    const rows = presetRows[p.id] || []
+    return {
+      ...p,
+      rowCount: rows.length,
+      rowIds: rows,
+    }
+  })
+}
+
+export function getCuratedPresetById(presetId: string): {
+  preset: { id: string; label: string; hint: string }
+  rows: CuratedCatalogItem[]
+} | null {
+  const presets = (xperienceData.presets || []) as Array<{ id: string; label: string; hint: string }>
+  const presetRows = (xperienceData.presetRows || {}) as Record<string, string[]>
+  const categoryLabelMap = (xperienceData.categoryLabels || {}) as Record<string, string>
+
+  const found = presets.find((p) => p.id === presetId)
+  if (!found) return null
+
+  const rowIds = presetRows[presetId] || []
+  const catalogList = (xperienceData.catalogs || []) as any[]
+  const rowMap = new Map<string, any>(catalogList.map((c) => [c.id, c]))
+
+  const rows: CuratedCatalogItem[] = rowIds
+    .map((id) => rowMap.get(id))
+    .filter(Boolean)
+    .map((c) => ({
+      id: c.id,
+      label: c.label,
+      category: c.category,
+      categoryLabel: categoryLabelMap[c.category] || c.category,
+      kind: c.kind === 'series' ? 'series' : 'movie',
+      source: c.source,
+      sourceParams: c.source_params,
+      requires: c.requires || [],
+      personalized: Boolean(c.personalized),
+      tileShape: c.category?.includes('collections') || c.category?.includes('streaming') ? 'LANDSCAPE' : 'POSTER',
+      coverSlug: c.defaultCoverSlug || `${c.category}.${c.id}`,
+    }))
+
+  return {
+    preset: found,
+    rows,
+  }
+}
+
 export function getCatalogRegistry(): {
   total: number
   categories: CatalogCategory[]

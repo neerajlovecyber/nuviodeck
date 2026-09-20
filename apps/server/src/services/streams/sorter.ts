@@ -1,4 +1,4 @@
-import { ParsedStreamMetadata, StreamMergeStrategy } from './types'
+import { ParsedStreamMetadata, StreamMergeStrategy, StreamSortCriterion } from './types'
 
 const RESOLUTION_WEIGHT: Record<string, number> = {
   '2160p': 60,
@@ -20,13 +20,41 @@ const QUALITY_WEIGHT: Record<string, number> = {
   Unknown: 0,
 }
 
+const VISUAL_TAG_WEIGHT: Record<string, number> = {
+  DV: 50,
+  'HDR10+': 45,
+  HDR10: 40,
+  HDR: 35,
+  IMAX: 30,
+  '10bit': 20,
+  '3D': 10,
+}
+
+const AUDIO_TAG_WEIGHT: Record<string, number> = {
+  Atmos: 50,
+  TrueHD: 45,
+  'DTS-HD MA': 40,
+  'DTS-HD': 35,
+  DTS: 30,
+  'DD+': 25,
+  FLAC: 20,
+  DD: 15,
+  AAC: 10,
+  Opus: 8,
+}
+
 export class StreamSorter {
   static sort(
     streams: ParsedStreamMetadata[],
     strategy: StreamMergeStrategy = 'priority',
     sourceOrder: string[] = [],
-    preferredLanguages: string[] = []
+    preferredLanguages: string[] = [],
+    sortCriteria?: StreamSortCriterion[]
   ): ParsedStreamMetadata[] {
+    if (sortCriteria && sortCriteria.length > 0) {
+      return this.sortByCustomCriteria(streams, sortCriteria, preferredLanguages)
+    }
+
     switch (strategy) {
       case 'in_order':
         return this.sortInOrder(streams, sourceOrder)
@@ -167,6 +195,79 @@ export class StreamSorter {
 
       if (a.sizeBytes && b.sizeBytes && a.sizeBytes !== b.sizeBytes) {
         return b.sizeBytes - a.sizeBytes
+      }
+
+      return 0
+    })
+  }
+
+  private static sortByCustomCriteria(
+    streams: ParsedStreamMetadata[],
+    criteria: StreamSortCriterion[],
+    preferredLanguages: string[] = []
+  ): ParsedStreamMetadata[] {
+    const langRank = new Map<string, number>()
+    preferredLanguages.forEach((lang, idx) => langRank.set(lang.toLowerCase(), idx + 1))
+
+    return [...streams].sort((a, b) => {
+      for (const crit of criteria) {
+        let diff = 0
+        switch (crit) {
+          case 'cached':
+            if (a.cached !== b.cached) {
+              return a.cached ? -1 : 1
+            }
+            break
+
+          case 'resolution':
+            const resA = RESOLUTION_WEIGHT[a.resolution] ?? 0
+            const resB = RESOLUTION_WEIGHT[b.resolution] ?? 0
+            diff = resB - resA
+            if (diff !== 0) return diff
+            break
+
+          case 'visualTag':
+            const vScoreA = Math.max(0, ...a.visualTags.map((t) => VISUAL_TAG_WEIGHT[t] || 0))
+            const vScoreB = Math.max(0, ...b.visualTags.map((t) => VISUAL_TAG_WEIGHT[t] || 0))
+            diff = vScoreB - vScoreA
+            if (diff !== 0) return diff
+            break
+
+          case 'audioTag':
+            const aScoreA = Math.max(0, ...a.audioTags.map((t) => AUDIO_TAG_WEIGHT[t] || 0))
+            const aScoreB = Math.max(0, ...b.audioTags.map((t) => AUDIO_TAG_WEIGHT[t] || 0))
+            diff = aScoreB - aScoreA
+            if (diff !== 0) return diff
+            break
+
+          case 'quality':
+            const qA = QUALITY_WEIGHT[a.quality] ?? 0
+            const qB = QUALITY_WEIGHT[b.quality] ?? 0
+            diff = qB - qA
+            if (diff !== 0) return diff
+            break
+
+          case 'language':
+            if (preferredLanguages.length > 0) {
+              const aLangScore = a.languages.reduce((best, l) => Math.min(best, langRank.get(l.toLowerCase()) || 999), 999)
+              const bLangScore = b.languages.reduce((best, l) => Math.min(best, langRank.get(l.toLowerCase()) || 999), 999)
+              diff = aLangScore - bLangScore
+              if (diff !== 0) return diff
+            }
+            break
+
+          case 'size':
+            if (a.sizeBytes && b.sizeBytes && a.sizeBytes !== b.sizeBytes) {
+              return b.sizeBytes - a.sizeBytes
+            }
+            break
+
+          case 'seeders':
+            if (a.seeders !== undefined && b.seeders !== undefined && a.seeders !== b.seeders) {
+              return b.seeders - a.seeders
+            }
+            break
+        }
       }
 
       return 0

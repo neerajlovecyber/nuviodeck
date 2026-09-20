@@ -1,7 +1,60 @@
 import { Hono } from 'hono'
+import { EventEmitter } from 'events'
+import { streamSSE } from 'hono/streaming'
 import { playbackTrackerService } from '../../services/playback-tracker'
 
 export const progressRouter = new Hono()
+
+// Central Event Emitter for Multi-Device Real-Time Sync
+const broadcastEmitter = new EventEmitter()
+broadcastEmitter.setMaxListeners(200)
+
+export function broadcastPlaybackEvent(profileId: string, event: string, data: any) {
+  broadcastEmitter.emit('playback', { profileId, event, data, timestamp: Date.now() })
+}
+
+// Real-Time Playback & Device Broadcast SSE Stream
+// GET /api/progress/events (optional ?profileId=xxx)
+progressRouter.get('/events', async (c) => {
+  const profileId = c.req.query('profileId')
+
+  return streamSSE(c, async (stream) => {
+    // 1. Initial Connection Handshake
+    await stream.writeSSE({
+      event: 'connected',
+      data: JSON.stringify({
+        status: 'connected',
+        profileId: profileId || 'all',
+        timestamp: Date.now(),
+      }),
+    })
+
+    // 2. Event Listener
+    const listener = (payload: any) => {
+      if (!profileId || payload.profileId === profileId) {
+        stream.writeSSE({
+          event: payload.event,
+          data: JSON.stringify(payload),
+        })
+      }
+    }
+
+    broadcastEmitter.on('playback', listener)
+
+    stream.onAbort(() => {
+      broadcastEmitter.off('playback', listener)
+    })
+
+    // 3. Keepalive Ping every 25 seconds
+    while (true) {
+      await stream.sleep(25000)
+      await stream.writeSSE({
+        event: 'ping',
+        data: JSON.stringify({ timestamp: Date.now() }),
+      })
+    }
+  })
+})
 
 // Playback started
 progressRouter.post('/playback/start', async (c) => {
@@ -12,6 +65,7 @@ progressRouter.post('/playback/start', async (c) => {
     }
 
     const session = await playbackTrackerService.handlePlaybackStart(body)
+    broadcastPlaybackEvent(body.profileId, 'playback.started', session)
     return c.json({ success: true, session })
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
@@ -27,6 +81,7 @@ progressRouter.post('/playback/update', async (c) => {
     }
 
     const session = await playbackTrackerService.handlePlaybackProgress(body)
+    broadcastPlaybackEvent(body.profileId, 'playback.progress', session)
     return c.json({ success: true, session })
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
@@ -45,6 +100,7 @@ progressRouter.post('/playback/stop', async (c) => {
       ...body,
       status: 'paused',
     })
+    broadcastPlaybackEvent(body.profileId, 'playback.stopped', session)
     return c.json({ success: true, session })
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
@@ -118,6 +174,11 @@ progressRouter.post('/scrobble', async (c) => {
         durationMs,
         status: (progress && progress >= 80) ? 'completed' : 'playing',
       })
+    }
+
+    if (session) {
+      const eventName = session.status === 'completed' ? 'playback.completed' : 'playback.progress'
+      broadcastPlaybackEvent(profileId, eventName, session)
     }
 
     return c.json({ success: true, session })

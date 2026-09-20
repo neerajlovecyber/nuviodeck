@@ -106,9 +106,20 @@ export interface StreamFilterOptions {
   excludedPicture?: string[]
   preferredCodecs?: string[]
   excludedCodecs?: string[]
+  sortCriteria?: StreamSortCriterion[]
 }
 
-export type StreamMergeStrategy = 'in_order' | 'interleaved' | 'priority'
+export type StreamSortCriterion =
+  | 'cached'
+  | 'resolution'
+  | 'visualTag'
+  | 'audioTag'
+  | 'quality'
+  | 'size'
+  | 'seeders'
+  | 'language'
+
+export type StreamMergeStrategy = 'in_order' | 'interleaved' | 'priority' | 'custom'
 
 export type StreamFormatterPreset =
   | 'nuvio'
@@ -155,6 +166,7 @@ export interface StreamsProfileConfig {
   sources: StreamSourceConfig[]
   debridKeys?: Record<string, string> // e.g. { torbox: '...', realdebrid: '...' }
   filters?: StreamFilterOptions
+  sortCriteria?: StreamSortCriterion[]
   mergeStrategy?: StreamMergeStrategy
   formatter?: StreamFormatterOptions
   proxy?: StreamProxyConfig
