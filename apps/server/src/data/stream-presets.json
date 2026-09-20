@@ -1,7 +1,7 @@
 {
-  "xperience": {
-    "id": "xperience",
-    "label": "Xperience",
+  "nuvio": {
+    "id": "nuvio",
+    "label": "Nuvio Deck",
     "nameTemplate": "{stream.resolution::=2160p[\"🖥️ UHD\"||\"\"]}{stream.resolution::=1440p[\"🖥️ QHD\"||\"\"]}{stream.resolution::=1080p[\"🖥️ FHD\"||\"\"]}{stream.resolution::=720p[\"🖥️ HD\"||\"\"]}{stream.resolution::=576p[\"🖥️ SD\"||\"\"]}{stream.resolution::=480p[\"🖥️ SD\"||\"\"]}{stream.resolution::=Unknown[\"🖥️ ?\"||\"\"]}{stream.resolution::exists[\"\"||\"🖥️ ?\"]}",
     "descriptionTemplate": "{stream.title::exists[\"📁 {stream.title}\"||\"\"]}{stream.year::exists[\" ({stream.year})\"||\"\"]}{stream.season::>=0[\" S\"||\"\"]}{stream.season::<=9[\"0\"||\"\"]}{stream.season::>0[\"{stream.season}\"||\"\"]}{stream.episode::>=0[\" • E\"||\"\"]}{stream.episode::<=9[\"0\"||\"\"]}{stream.episode::>0[\"{stream.episode}\"||\"\"]}\n{stream.size::>0[\"📦 {stream.size::bytes} \"||\"\"]}\n{service.cached::istrue[\"💚 \"||\"\"]}{service.cached::isfalse[\"💔 \"||\"\"]}{stream.type::=http[\"❤️ \"||\"\"]}{service.name::exists[\"{service.name} • \"||\"\"]}{addon.name}"
   },

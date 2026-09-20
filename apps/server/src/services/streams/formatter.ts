@@ -1,6 +1,11 @@
 import { ParsedStreamMetadata, StremioStream, StreamFormatterOptions } from './types'
+import streamPresets from '../../data/stream-presets.json'
 
 export class StreamFormatter {
+  static getPresets() {
+    return streamPresets
+  }
+
   static format(
     stream: ParsedStreamMetadata,
     options?: StreamFormatterOptions
@@ -13,20 +18,28 @@ export class StreamFormatter {
     }
 
     switch (preset) {
+      case 'nuvio':
       case 'xperience':
-        return this.formatXperience(stream, viewMode)
+        return this.formatNuvio(stream, viewMode)
       case 'charcoal':
         return this.formatCharcoal(stream, viewMode)
       case 'streamsense':
         return this.formatStreamSense(stream, viewMode)
       case 'neds':
+      case 'ned':
         return this.formatNeds(stream, viewMode)
       case 'linden':
         return this.formatLinden(stream, viewMode, false)
       case 'linden_monochrome':
+      case 'lindenmono':
         return this.formatLinden(stream, viewMode, true)
       case 'shota_simple':
+      case 'shota':
         return this.formatShotaSimple(stream, viewMode)
+      case 'tamtaro':
+        return this.formatTamtaro(stream, viewMode)
+      case 'plain':
+        return this.formatPlain(stream)
       case 'prism':
       default:
         return this.formatPrism(stream, viewMode)
@@ -92,8 +105,8 @@ export class StreamFormatter {
     }
   }
 
-  // --- 2. Xperience ---
-  private static formatXperience(
+  // --- 2. Nuvio Deck ---
+  private static formatNuvio(
     stream: ParsedStreamMetadata,
     viewMode: string
   ): StremioStream {
@@ -106,12 +119,19 @@ export class StreamFormatter {
     const name = resMap[stream.resolution] || `🖥️ ${stream.resolution.toUpperCase()}`
 
     const lines: string[] = []
-    const titleStr = stream.title
+    let titleStr = stream.title
       ? `${stream.title}${stream.year ? ` (${stream.year})` : ''}`
       : stream.filename || stream.rawTitle
 
+    if (stream.movieCut) {
+      titleStr += ` [${stream.movieCut}]`
+    }
     lines.push(`📦 ${titleStr}`)
-    if (stream.sizeFormatted) lines.push(`📦 ${stream.sizeFormatted}`)
+    
+    const details: string[] = []
+    if (stream.sizeFormatted) details.push(`📦 ${stream.sizeFormatted}`)
+    if (stream.ottPlatform) details.push(`📺 ${stream.ottPlatform}`)
+    if (details.length > 0) lines.push(details.join(' • '))
 
     const serviceName = stream.debridService || 'Debrid'
     lines.push(`💚 ${serviceName} • ${stream.sourceName}`)

@@ -84,6 +84,8 @@ export interface ParsedStreamMetadata {
   seeders?: number
   releaseGroup?: string
   indexer?: string
+  ottPlatform?: string
+  movieCut?: string
   url?: string
   infoHash?: string
   fileIdx?: number
@@ -104,14 +106,20 @@ export interface StreamFilterOptions {
 export type StreamMergeStrategy = 'in_order' | 'interleaved' | 'priority'
 
 export type StreamFormatterPreset =
+  | 'nuvio'
   | 'prism'
   | 'xperience'
   | 'charcoal'
   | 'streamsense'
   | 'neds'
+  | 'ned'
   | 'linden'
   | 'linden_monochrome'
+  | 'lindenmono'
   | 'shota_simple'
+  | 'shota'
+  | 'tamtaro'
+  | 'plain'
 
 export interface StreamFormatterOptions {
   preset?: StreamFormatterPreset

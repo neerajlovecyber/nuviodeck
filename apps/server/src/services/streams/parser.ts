@@ -29,6 +29,8 @@ export class StreamParser {
     const seeders = this.detectSeeders(rawText)
     const releaseGroup = this.detectReleaseGroup(rawText)
     const indexer = this.detectIndexer(rawText)
+    const ottPlatform = this.detectOttPlatform(rawText)
+    const movieCut = this.detectMovieCut(rawText)
     const cached = this.detectCached(rawText, stream)
     const filename = this.detectFilename(rawText)
     const { title, year, season, episode } = this.detectMediaTitle(rawText, filename)
@@ -58,6 +60,8 @@ export class StreamParser {
       seeders,
       releaseGroup,
       indexer,
+      ottPlatform,
+      movieCut,
       url: stream.url,
       infoHash: stream.infoHash,
       fileIdx: stream.fileIdx,
@@ -299,5 +303,37 @@ export class StreamParser {
     }
 
     return { title, year, season, episode }
+  }
+
+  private static detectOttPlatform(text: string): string | undefined {
+    const lower = text.toLowerCase()
+    if (/\b(amzn|prime\s*video|prme)\b/.test(lower)) return 'Prime Video'
+    if (/\b(netflix|\bnf\b)\b/.test(lower)) return 'Netflix'
+    if (/\b(disney\+?|dsnp)\b/.test(lower)) return 'Disney+'
+    if (/\b(hbo\s*max|hmax|max)\b/.test(lower)) return 'HBO Max'
+    if (/\b(apple\s*tv\+?|aptv)\b/.test(lower)) return 'Apple TV+'
+    if (/\bhulu\b/.test(lower)) return 'Hulu'
+    if (/\b(paramount\+?|pmtp)\b/.test(lower)) return 'Paramount+'
+    if (/\b(peacock|pckk)\b/.test(lower)) return 'Peacock'
+    if (/\b(crunchyroll|crtc)\b/.test(lower)) return 'Crunchyroll'
+    if (/\b(anime\s*plex|anpx)\b/.test(lower)) return 'Anime Plex'
+    if (/\b(starz|stz)\b/.test(lower)) return 'Starz'
+    if (/\b(discovery\+?|dscv)\b/.test(lower)) return 'Discovery+'
+    return undefined
+  }
+
+  private static detectMovieCut(text: string): string | undefined {
+    const lower = text.toLowerCase()
+    if (/\bextended(\s*cut|\s*edition)?\b/.test(lower)) return 'Extended Cut'
+    if (/\b(director'?s\s*cut|\.dc\.)\b/.test(lower)) return "Director's Cut"
+    if (/\btheatrical(\s*cut|\s*edition)?\b/.test(lower)) return 'Theatrical Cut'
+    if (/\bultimate(\s*cut|\s*edition)?\b/.test(lower)) return 'Ultimate Edition'
+    if (/\bremastered\b/.test(lower)) return 'Remastered'
+    if (/\bspecial\s*edition\b/.test(lower)) return 'Special Edition'
+    if (/\bcollector'?s\s*edition\b/.test(lower)) return "Collector's Edition"
+    if (/\bunrated(\s*cut)?\b/.test(lower)) return 'Unrated Cut'
+    if (/\buncensored\b/.test(lower)) return 'Uncensored'
+    if (/\bseadex\b/.test(lower)) return 'SeaDex'
+    return undefined
   }
 }
