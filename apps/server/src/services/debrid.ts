@@ -41,6 +41,14 @@ export class DebridService {
         case 'dl':
           return await this.validateDebridLink(cleanToken)
 
+        case 'offcloud':
+        case 'oc':
+          return await this.validateOffcloud(cleanToken)
+
+        case 'easydebrid':
+        case 'ed':
+          return await this.validateEasyDebrid(cleanToken)
+
         default:
           return {
             valid: false,
@@ -54,6 +62,78 @@ export class DebridService {
         provider: cleanProvider,
         error: err.message || 'Validation request failed',
       }
+    }
+  }
+
+  async checkHealth(
+    debridKeys: Record<string, string>
+  ): Promise<Record<string, DebridAccountInfo & { latencyMs: number }>> {
+    const results: Record<string, DebridAccountInfo & { latencyMs: number }> = {}
+
+    const entries = Object.entries(debridKeys)
+    await Promise.allSettled(
+      entries.map(async ([provider, token]) => {
+        const start = Date.now()
+        const info = await this.validateToken(provider, token)
+        const latencyMs = Date.now() - start
+        results[provider] = {
+          ...info,
+          latencyMs,
+        }
+      })
+    )
+
+    return results
+  }
+
+  private async validateOffcloud(token: string): Promise<DebridAccountInfo> {
+    const res = await fetch(`https://offcloud.com/api/account/me?key=${encodeURIComponent(token)}`, {
+      signal: AbortSignal.timeout(4000),
+    })
+
+    if (!res.ok) {
+      return {
+        valid: false,
+        provider: 'offcloud',
+        error: `Offcloud error (${res.status})`,
+      }
+    }
+
+    const data = (await res.json()) as any
+    return {
+      valid: true,
+      provider: 'offcloud',
+      username: data.email?.split('@')[0],
+      email: data.email,
+      isPremium: Boolean(data.is_paying),
+      expiresAt: data.subscription_expires ? new Date(data.subscription_expires * 1000).toISOString() : null,
+    }
+  }
+
+  private async validateEasyDebrid(token: string): Promise<DebridAccountInfo> {
+    const res = await fetch('https://easydebrid.com/api/v1/user/details', {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal: AbortSignal.timeout(4000),
+    })
+
+    if (!res.ok) {
+      return {
+        valid: false,
+        provider: 'easydebrid',
+        error: `EasyDebrid error (${res.status})`,
+      }
+    }
+
+    const data = (await res.json()) as any
+    return {
+      valid: true,
+      provider: 'easydebrid',
+      username: data.username || data.email?.split('@')[0],
+      email: data.email,
+      isPremium: Boolean(data.premium),
+      expiresAt: data.expires_at || null,
     }
   }
 

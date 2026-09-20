@@ -12,8 +12,21 @@ debridRouter.get('/providers', (c) => {
       { id: 'alldebrid', name: 'AllDebrid', supported: true },
       { id: 'premiumize', name: 'Premiumize.me', supported: true },
       { id: 'debridlink', name: 'Debrid-Link', supported: true },
+      { id: 'offcloud', name: 'Offcloud', supported: true },
+      { id: 'easydebrid', name: 'EasyDebrid', supported: true },
     ],
   })
+})
+
+// Check health and expiry across multiple debrid keys
+debridRouter.post('/health', async (c) => {
+  const { keys } = await c.req.json().catch(() => ({}))
+  if (!keys || typeof keys !== 'object') {
+    return c.json({ error: 'keys object is required' }, 400)
+  }
+
+  const report = await debridService.checkHealth(keys)
+  return c.json({ report })
 })
 
 // Validate an API token for a specific provider

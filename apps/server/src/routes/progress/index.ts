@@ -81,6 +81,51 @@ progressRouter.get('/continue-watching/:profileId', async (c) => {
   }
 })
 
+// Stremio-compatible Scrobble Ingestion Endpoint
+progressRouter.post('/scrobble', async (c) => {
+  try {
+    const body = await c.req.json().catch(() => ({}))
+    const { profileId, id, type, progress, time, duration, title } = body
+
+    if (!profileId || !id) {
+      return c.json({ error: 'profileId and id are required' }, 400)
+    }
+
+    const durationMs = duration ? duration * 1000 : 0
+    const positionMs = time ? time * 1000 : (progress ? (progress / 100) * durationMs : 0)
+
+    let session = await playbackTrackerService.handlePlaybackProgress({
+      profileId,
+      mediaId: id,
+      positionMs,
+      durationMs,
+      status: (progress && progress >= 80) ? 'completed' : 'playing',
+    })
+
+    if (!session) {
+      await playbackTrackerService.handlePlaybackStart({
+        profileId,
+        mediaId: id,
+        mediaType: type || 'movie',
+        title: title || id,
+        runtimeMinutes: duration ? Math.round(duration / 60) : 100,
+      })
+
+      session = await playbackTrackerService.handlePlaybackProgress({
+        profileId,
+        mediaId: id,
+        positionMs,
+        durationMs,
+        status: (progress && progress >= 80) ? 'completed' : 'playing',
+      })
+    }
+
+    return c.json({ success: true, session })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 // Manual or cron trigger to check Stremio runtime expirations
 progressRouter.post('/check-expirations', async (c) => {
   try {

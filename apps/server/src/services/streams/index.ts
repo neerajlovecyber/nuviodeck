@@ -8,6 +8,7 @@ import { StreamDeduplicator } from './deduplicator'
 import { StreamFilterer } from './filterer'
 import { StreamSorter } from './sorter'
 import { StreamFormatter } from './formatter'
+import { StreamProxyService } from './proxy'
 
 interface CachedStreamResult {
   timestamp: number
@@ -81,19 +82,25 @@ export class StreamAggregatorService {
       profileConfig.filters?.preferredLanguages
     )
 
-    // 6. Formatter Engine (Prism, Xperience, StreamSense, etc.)
+    // 6. Formatter Engine (Prism, Nuvio Deck, StreamSense, etc.)
     const formattedStreams = sorted.map((s) =>
       StreamFormatter.format(s, profileConfig.formatter)
     )
 
-    // 7. Save into in-memory cache
+    // 7. Proxy Engine (MediaFlow / StremThru URL rewriting)
+    const finalStreams = await StreamProxyService.proxyStreams(
+      formattedStreams,
+      profileConfig.proxy
+    )
+
+    // 8. Save into in-memory cache
     if (this.cache.size >= this.maxCacheSize) {
       const firstKey = this.cache.keys().next().value
       if (firstKey) this.cache.delete(firstKey)
     }
-    this.cache.set(key, { timestamp: Date.now(), streams: formattedStreams })
+    this.cache.set(key, { timestamp: Date.now(), streams: finalStreams })
 
-    return formattedStreams
+    return finalStreams
   }
 
   clearCache(): void {

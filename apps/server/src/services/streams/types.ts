@@ -136,6 +136,15 @@ export interface StreamSourceConfig {
   debridService?: 'torbox' | 'realdebrid' | 'alldebrid' | 'premiumize' | 'debridlink'
 }
 
+export interface StreamProxyConfig {
+  enabled: boolean
+  id: 'mediaflow' | 'stremthru' | 'generic'
+  url: string
+  apiPassword?: string
+  publicUrl?: string
+  proxiedServices?: string[]
+}
+
 export interface StreamsProfileConfig {
   enabled: boolean
   sources: StreamSourceConfig[]
@@ -143,4 +152,5 @@ export interface StreamsProfileConfig {
   filters?: StreamFilterOptions
   mergeStrategy?: StreamMergeStrategy
   formatter?: StreamFormatterOptions
+  proxy?: StreamProxyConfig
 }
