@@ -86,6 +86,14 @@ export interface ParsedStreamMetadata {
   indexer?: string
   ottPlatform?: string
   movieCut?: string
+  duration?: number
+  age?: string
+  message?: string
+  type?: string
+  proxied?: boolean
+  library?: boolean
+  seadex?: boolean
+  seadexBest?: boolean
   url?: string
   infoHash?: string
   fileIdx?: number

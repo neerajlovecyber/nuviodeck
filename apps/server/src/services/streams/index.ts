@@ -79,7 +79,8 @@ export class StreamAggregatorService {
       filtered,
       profileConfig.mergeStrategy || 'priority',
       sourceOrder,
-      profileConfig.filters?.preferredLanguages
+      profileConfig.filters?.preferredLanguages,
+      profileConfig.sortCriteria || profileConfig.filters?.sortCriteria
     )
 
     // 6. Formatter Engine (Prism, Nuvio Deck, StreamSense, etc.)

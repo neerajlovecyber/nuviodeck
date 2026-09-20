@@ -32,8 +32,16 @@ export class StreamParser {
     const ottPlatform = this.detectOttPlatform(rawText)
     const movieCut = this.detectMovieCut(rawText)
     const cached = this.detectCached(rawText, stream)
-    const filename = this.detectFilename(rawText)
-    const { title, year, season, episode } = this.detectMediaTitle(rawText, filename)
+    const filename = this.detectFilename(rawText, stream)
+    const { title, year, season, episode } = this.detectMediaTitle(rawText, filename, stream)
+    const seadex = this.detectSeaDex(rawText)
+    const seadexBest = this.detectSeaDexBest(rawText)
+    const duration = this.detectDuration(rawText)
+    const age = this.detectAge(rawText)
+    const streamType = this.detectStreamType(rawText, stream, cached)
+    const proxied = this.detectProxied(rawText)
+    const library = this.detectLibrary(rawText)
+    const message = this.detectMessage(rawText)
 
     return {
       id,
@@ -62,6 +70,14 @@ export class StreamParser {
       indexer,
       ottPlatform,
       movieCut,
+      duration,
+      age,
+      message,
+      type: streamType,
+      proxied,
+      library,
+      seadex,
+      seadexBest,
       url: stream.url,
       infoHash: stream.infoHash,
       fileIdx: stream.fileIdx,
@@ -272,21 +288,28 @@ export class StreamParser {
     return false
   }
 
-  private static detectFilename(text: string): string | undefined {
-    const fileMatch = text.match(/([a-zA-Z0-9_. -]+\.(?:mkv|mp4|avi|ts))/i)
+  private static detectFilename(text: string, stream?: StremioStream): string | undefined {
+    if (stream?.title) {
+      const fileMatch = stream.title.match(/([a-zA-Z0-9_. \-+()[\]]+\.(?:mkv|mp4|avi|ts|m4v|webm))/i)
+      if (fileMatch) return fileMatch[1].trim()
+    }
+    const fileMatch = text.match(/([a-zA-Z0-9_. \-+()[\]]+\.(?:mkv|mp4|avi|ts|m4v|webm))/i)
     if (fileMatch) return fileMatch[1].trim()
     return undefined
   }
 
   private static detectMediaTitle(
     text: string,
-    filename?: string
+    filename?: string,
+    stream?: StremioStream
   ): { title?: string; year?: number; season?: number; episode?: number } {
-    const src = filename || text
-    const yearMatch = src.match(/\b(19\d\d|20\d\d)\b/)
+    const rawTarget = filename || stream?.title || text
+    // Strip leading bracketed tags or addon names e.g. "Comet [TB+]\n", "[TB+]"
+    const target = rawTarget.replace(/^[a-zA-Z0-9_\-+]+\[.*?\]\s*/, '').replace(/^\[.*?\]\s*/, '')
+    const yearMatch = target.match(/\b(19\d\d|20\d\d)\b/)
     const year = yearMatch ? parseInt(yearMatch[1], 10) : undefined
 
-    const seMatch = src.match(/[Ss](\d{1,2})[Ee](\d{1,3})/)
+    const seMatch = target.match(/[Ss](\d{1,2})[Ee](\d{1,3})/)
     let season: number | undefined
     let episode: number | undefined
     if (seMatch) {
@@ -296,10 +319,17 @@ export class StreamParser {
 
     let title: string | undefined
     if (yearMatch) {
-      const idx = src.indexOf(yearMatch[1])
+      const idx = target.indexOf(yearMatch[1])
       if (idx > 0) {
-        title = src.substring(0, idx).replace(/[._]/g, ' ').trim()
+        title = target.substring(0, idx).replace(/[._]/g, ' ').trim()
       }
+    } else if (seMatch) {
+      const idx = target.indexOf(seMatch[0])
+      if (idx > 0) {
+        title = target.substring(0, idx).replace(/[._]/g, ' ').trim()
+      }
+    } else if (filename) {
+      title = filename.replace(/\.(mkv|mp4|avi|ts)$/i, '').replace(/[._]/g, ' ').trim()
     }
 
     return { title, year, season, episode }
@@ -328,12 +358,88 @@ export class StreamParser {
     if (/\b(director'?s\s*cut|\.dc\.)\b/.test(lower)) return "Director's Cut"
     if (/\btheatrical(\s*cut|\s*edition)?\b/.test(lower)) return 'Theatrical Cut'
     if (/\bultimate(\s*cut|\s*edition)?\b/.test(lower)) return 'Ultimate Edition'
+    if (/\balternate(\s*cut|\s*edition)?\b/.test(lower)) return 'Alternate Edition'
+    if (/\bredux\b/.test(lower)) return 'Redux'
+    if (/\bcomplete(\s*cut|\s*edition)?\b/.test(lower)) return 'Complete Edition'
+    if (/\banniversary(\s*cut|\s*edition)?\b/.test(lower)) return 'Anniversary Edition'
     if (/\bremastered\b/.test(lower)) return 'Remastered'
     if (/\bspecial\s*edition\b/.test(lower)) return 'Special Edition'
     if (/\bcollector'?s\s*edition\b/.test(lower)) return "Collector's Edition"
     if (/\bunrated(\s*cut)?\b/.test(lower)) return 'Unrated Cut'
     if (/\buncensored\b/.test(lower)) return 'Uncensored'
+    if (/\bworkprint\b/.test(lower)) return 'Workprint'
+    if (/\bpreview(\s*cut)?\b/.test(lower)) return 'Preview Cut'
+    if (/\bfestival(\s*cut)?\b/.test(lower)) return 'Festival Cut'
+    if (/\bsuperfan(\s*edition)?\b/.test(lower)) return 'Superfan Edition'
     if (/\bseadex\b/.test(lower)) return 'SeaDex'
     return undefined
   }
+
+  private static detectSeaDex(text: string): boolean {
+    const lower = text.toLowerCase()
+    return lower.includes('seadex') || text.includes('🌊') || text.includes('💦')
+  }
+
+  private static detectSeaDexBest(text: string): boolean {
+    const lower = text.toLowerCase()
+    return lower.includes('seadex best') || lower.includes('seadex-best') || text.includes('🌊')
+  }
+
+  private static detectDuration(text: string): number | undefined {
+    // Check 1h 45m or 105m or duration: 6300
+    const hmMatch = text.match(/(?:duration:?\s*|⏱️\s*)?(\d+)\s*h(?:ours?)?\s*(\d+)?\s*m(?:in(?:utes?)?)?/i)
+    if (hmMatch) {
+      const h = parseInt(hmMatch[1], 10)
+      const m = hmMatch[2] ? parseInt(hmMatch[2], 10) : 0
+      return h * 3600 + m * 60
+    }
+    const minMatch = text.match(/(?:duration:?\s*|⏱️\s*)(\d+)\s*m(?:in(?:utes?)?)?\b/i)
+    if (minMatch) {
+      return parseInt(minMatch[1], 10) * 60
+    }
+    return undefined
+  }
+
+  private static detectAge(text: string): string | undefined {
+    const match = text.match(/(?:📅\s*|age:?\s*)(\d+\s*[dwmy])\b/i)
+    if (match) return match[1].trim()
+    return undefined
+  }
+
+  private static detectStreamType(text: string, stream: StremioStream, cached: boolean): string {
+    const lower = text.toLowerCase()
+    if (lower.includes('usenet') || lower.includes('📰 usenet') || lower.includes('♻️ usenet')) return 'usenet'
+    if (lower.includes('live') || lower.includes('📡 live')) return 'live'
+    if (lower.includes('youtube') || lower.includes('▶️ youtube')) return 'youtube'
+    if (stream.url && (stream.url.startsWith('http://') || stream.url.startsWith('https://'))) {
+      if (cached) return 'debrid'
+      return 'http'
+    }
+    if (stream.infoHash) {
+      return cached ? 'debrid' : 'p2p'
+    }
+    return cached ? 'debrid' : 'external'
+  }
+
+  private static detectProxied(text: string): boolean {
+    const lower = text.toLowerCase()
+    return (
+      text.includes('🔒') ||
+      text.includes('🕵️‍♂️') ||
+      lower.includes('proxied') ||
+      text.includes('☷')
+    ) && !lower.includes('not proxied') && !text.includes('🔓')
+  }
+
+  private static detectLibrary(text: string): boolean {
+    const lower = text.toLowerCase()
+    return text.includes('📌') || text.includes('🔰') || text.includes('📚') || lower.includes('library')
+  }
+
+  private static detectMessage(text: string): string | undefined {
+    const match = text.match(/(?:ℹ️|⌗|ⓘ)\s*([^\n\r]+)/)
+    if (match) return match[1].trim()
+    return undefined
+  }
 }
+

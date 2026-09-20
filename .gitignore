@@ -50,3 +50,7 @@ Thumbs.db
 *.sqlite3
 *.db
 reference/
+
+# Internal Parity Working Documents
+XPERIENCE_PARITY_CHECKLIST.md
+
