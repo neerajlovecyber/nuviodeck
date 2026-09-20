@@ -42,6 +42,9 @@ export const config = {
     allDebridApiKey: process.env.ALL_DEBRID_API_KEY || '',
     premiumizeApiKey: process.env.PREMIUMIZE_API_KEY || '',
     debridLinkApiKey: process.env.DEBRID_LINK_API_KEY || '',
+    customAddonUrls: process.env.CUSTOM_STREAM_ADDONS
+      ? process.env.CUSTOM_STREAM_ADDONS.split(',').map((u) => u.trim()).filter(Boolean)
+      : [],
   },
 }
 

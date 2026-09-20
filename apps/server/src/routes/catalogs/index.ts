@@ -25,6 +25,14 @@ const defaultStreamsConfig: StreamsProfileConfig = {
     { id: 'torrentio_torbox', name: 'Torrentio', type: 'torrentio', enabled: true, debridService: 'torbox' },
     { id: 'comet_torbox', name: 'Comet', type: 'comet', enabled: true, debridService: 'torbox' },
     { id: 'stremthru_torbox', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'torbox' },
+    ...(config.debrid.customAddonUrls || []).map((url, idx) => ({
+      id: `custom_addon_${idx + 1}`,
+      name: `Custom Addon ${idx + 1}`,
+      type: 'custom' as const,
+      url,
+      enabled: true,
+      debridService: 'torbox' as const,
+    })),
   ],
   debridKeys: {
     torbox: config.debrid.torboxApiKey || '',

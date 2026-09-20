@@ -271,10 +271,11 @@ export class StreamParser {
     const lower = text.toLowerCase()
     if (
       text.includes('⚡') ||
-      text.includes('[+]') ||
+      /\[[A-Za-z0-9]+\+\]/.test(text) ||
       lower.includes('ready') ||
       lower.includes('instant') ||
-      lower.includes('cached')
+      lower.includes('cached') ||
+      (stream.url && stream.url.includes('/resolve/'))
     ) {
       return true
     }

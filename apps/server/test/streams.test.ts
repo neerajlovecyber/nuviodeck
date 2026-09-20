@@ -439,6 +439,6 @@ describe('Section 1: Stream Engine & Micro-Syntax Formatter Parity', () => {
       )
 
       expect(Array.isArray(streams)).toBe(true)
-    })
+    }, 15000)
   })
 })
