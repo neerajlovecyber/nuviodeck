@@ -57,6 +57,33 @@ export class MyAnimeListService {
       listStatus: item.list_status?.status,
     }))
   }
+
+  /**
+   * Update episode count and status on MyAnimeList
+   */
+  async updateProgress(
+    accessToken: string,
+    animeId: number,
+    episodeNumber: number,
+    status: 'watching' | 'completed' = 'watching'
+  ): Promise<any> {
+    const url = `${this.baseUrl}/anime/${animeId}/my_list_status`
+    const body = new URLSearchParams()
+    body.set('num_watched_episodes', String(episodeNumber))
+    body.set('status', status)
+
+    const res = await fetch(url, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: body.toString(),
+      signal: AbortSignal.timeout(4000),
+    })
+    return res.json().catch(() => ({}))
+  }
 }
 
 export const myAnimeListService = new MyAnimeListService()
+

@@ -143,6 +143,28 @@ export class AniListService {
     }
     return allEntries
   }
+
+  /**
+   * Update episode watch progress and status on AniList (matching AnilistStream implementation)
+   */
+  async updateProgress(
+    token: string,
+    mediaId: number,
+    progress: number,
+    status: 'CURRENT' | 'COMPLETED' = 'CURRENT'
+  ): Promise<any> {
+    const mutation = `
+      mutation ($mediaId: Int!, $progress: Int!, $status: MediaListStatus) {
+        SaveMediaListEntry(mediaId: $mediaId, progress: $progress, status: $status) {
+          id
+          status
+          progress
+        }
+      }
+    `
+    return this.query<any>(mutation, { mediaId, progress, status }, token)
+  }
 }
 
 export const anilistService = new AniListService()
+

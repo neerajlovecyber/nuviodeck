@@ -55,6 +55,28 @@ sqlite.run(`
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS playback_sessions (
+    id TEXT PRIMARY KEY,
+    profile_id TEXT NOT NULL,
+    media_id TEXT NOT NULL,
+    media_type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    poster_url TEXT,
+    season INTEGER,
+    episode INTEGER,
+    episode_title TEXT,
+    runtime_minutes INTEGER DEFAULT 24,
+    started_at INTEGER NOT NULL,
+    last_position_ms INTEGER DEFAULT 0,
+    duration_ms INTEGER DEFAULT 0,
+    progress_percent INTEGER DEFAULT 0,
+    completion_mode TEXT DEFAULT 'mark_as_watched',
+    status TEXT DEFAULT 'playing',
+    completed_at INTEGER,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 `)
 
 // Seed initial default profiles if empty (like Xperience)

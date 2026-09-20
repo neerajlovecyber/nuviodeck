@@ -7,9 +7,11 @@ import { accountConnections } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { tmdbAccountService } from './integrations/tmdb-account'
 import { traktService } from './integrations/trakt'
+import { playbackTrackerService } from './playback-tracker'
 
 export interface CatalogResolveOptions {
   page?: number
+  profileId?: string
   genre?: string
   search?: string
   tmdbToken?: string
@@ -329,6 +331,23 @@ export class CatalogResolver {
           }
         } catch {
           rawResults = []
+        }
+      } else if (catalogId === 'continue_watching' || catalogId.startsWith('continue_watching')) {
+        try {
+          const sessions = await playbackTrackerService.getContinueWatching(options?.profileId || 'default', 20)
+          return sessions.map((s) => ({
+            id: s.mediaId,
+            type: s.mediaType === 'series' || s.mediaType === 'anime' ? 'series' : 'movie',
+            name: s.episode ? `${s.title} S${s.season || 1}E${s.episode}` : s.title,
+            poster: s.posterUrl,
+            posterShape: 'poster',
+            description: s.episodeTitle
+              ? `${s.episodeTitle} • ${s.progressPercent}% watched`
+              : `${s.progressPercent}% watched`,
+            releaseInfo: `${s.progressPercent}%`,
+          }))
+        } catch {
+          return []
         }
       }
       // 5. Data-driven TMDB resolution based on Xperience source_params

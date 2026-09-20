@@ -190,6 +190,7 @@ async function handleCatalogRequest(
 
     const metas = await resolver.resolveCatalog(cleanCatalogId, cleanType, {
       page,
+      profileId,
       search,
       genre,
       ...options,

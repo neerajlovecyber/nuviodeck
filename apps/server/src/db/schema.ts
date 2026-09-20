@@ -49,6 +49,28 @@ export const accountConnections = sqliteTable('account_connections', {
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
+export const playbackSessions = sqliteTable('playback_sessions', {
+  id: text('id').primaryKey(), // `${profileId}:${mediaId}:${season || 0}:${episode || 0}`
+  profileId: text('profile_id').notNull(),
+  mediaId: text('media_id').notNull(),
+  mediaType: text('media_type').notNull(), // 'movie' | 'series' | 'anime'
+  title: text('title').notNull(),
+  posterUrl: text('poster_url'),
+  season: integer('season'),
+  episode: integer('episode'),
+  episodeTitle: text('episode_title'),
+  runtimeMinutes: integer('runtime_minutes').default(24),
+  startedAt: integer('started_at').notNull(),
+  lastPositionMs: integer('last_position_ms').default(0),
+  durationMs: integer('duration_ms').default(0),
+  progressPercent: integer('progress_percent').default(0),
+  completionMode: text('completion_mode').default('mark_as_watched'), // 'mark_as_watched' | 'only_when_finished'
+  status: text('status').default('playing'), // 'playing' | 'paused' | 'completed'
+  completedAt: integer('completed_at'),
+  createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString()),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 
@@ -60,3 +82,6 @@ export type NewDeckProfile = typeof deckProfiles.$inferInsert
 
 export type AccountConnection = typeof accountConnections.$inferSelect
 export type NewAccountConnection = typeof accountConnections.$inferInsert
+
+export type PlaybackSession = typeof playbackSessions.$inferSelect
+export type NewPlaybackSession = typeof playbackSessions.$inferInsert

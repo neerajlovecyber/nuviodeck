@@ -22,6 +22,7 @@ import { catalogsRouter } from './routes/catalogs'
 import { debridRouter } from './routes/debrid'
 import { postersRouter } from './routes/posters'
 import { integrationsRouter } from './routes/integrations'
+import { progressRouter } from './routes/progress'
 
 const app = new Hono()
 
@@ -92,6 +93,7 @@ app.get('/api/health', (c) => {
       debrid: '/api/debrid',
       posters: '/api/posters',
       integrations: '/api/integrations',
+      progress: '/api/progress',
     },
   })
 })
@@ -117,6 +119,9 @@ app.route('/api/posters', postersRouter)
 
 // 7. User Account Integrations (TMDB, Trakt, Simkl, AniList, MAL)
 app.route('/api/integrations', integrationsRouter)
+
+// 8. Playback Tracking & Continue Watching
+app.route('/api/progress', progressRouter)
 
 // Legacy / Users table endpoints
 app.get('/api/users', async (c) => {
