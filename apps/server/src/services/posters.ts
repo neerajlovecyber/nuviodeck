@@ -116,13 +116,24 @@ export class PosterEngineService {
               return val
                 .replace('{id}', String(imdbId || tmdbId))
                 .replace('{imdbId}', imdbId || '')
+                .replace('{imdb_id}', imdbId || '')
                 .replace('{tmdbId}', String(tmdbId || ''))
+                .replace('{tmdb_id}', String(tmdbId || ''))
                 .replace('{type}', type)
             }
             break
 
           case 'betterposters':
             if (imdbId || tmdbId) {
+              if (val.includes('{')) {
+                return val
+                  .replace('{id}', String(imdbId || tmdbId))
+                  .replace('{imdbId}', imdbId || '')
+                  .replace('{imdb_id}', imdbId || '')
+                  .replace('{tmdbId}', String(tmdbId || ''))
+                  .replace('{tmdb_id}', String(tmdbId || ''))
+                  .replace('{type}', type)
+              }
               const base = val.replace(/\/+$/, '')
               return `${base}/${type}/${imdbId || `tmdb-${tmdbId}`}.jpg`
             }
@@ -130,15 +141,31 @@ export class PosterEngineService {
 
           case 'easyrating':
             if (imdbId || tmdbId) {
+              const targetId = imdbId || `tmdb-${tmdbId}`
+              if (val.startsWith('Tk-') || !val.startsWith('http')) {
+                return `https://easyratingsdb.com/${val}/poster/${targetId}.jpg`
+              }
+              if (val.includes('{')) {
+                return val
+                  .replace('{id}', String(imdbId || tmdbId))
+                  .replace('{imdbId}', imdbId || '')
+                  .replace('{imdb_id}', imdbId || '')
+                  .replace('{tmdbId}', String(tmdbId || ''))
+                  .replace('{tmdb_id}', String(tmdbId || ''))
+                  .replace('{type}', type)
+              }
               const base = val.replace(/\/+$/, '')
-              return `${base}/${type}/${imdbId || tmdbId}.jpg`
+              return `${base}/poster/${targetId}.jpg`
             }
             break
 
           case 'topposters':
-            if (tmdbId) {
-              const prefix = isMovie ? '' : 'series-'
-              return `https://api.top-streaming.stream/${val}/tmdb/poster-default/${prefix}${tmdbId}.jpg`
+            if (tmdbId || imdbId) {
+              if (tmdbId) {
+                const prefix = isMovie ? '' : 'series-'
+                return `https://api.top-streaming.stream/${val}/tmdb/poster-default/${prefix}${tmdbId}.jpg`
+              }
+              return `https://api.top-streaming.stream/${val}/imdb/poster-default/${imdbId}.jpg`
             }
             break
 
@@ -287,14 +314,32 @@ export class PosterEngineService {
           sampleUrl = `https://img.omdbapi.com/?apikey=${cleanKeyOrUrl}&i=${testImdb}`
           break
         case 'betterposters':
-          sampleUrl = cleanKeyOrUrl.includes('{id}')
-            ? cleanKeyOrUrl.replace('{id}', testImdb)
-            : `${cleanKeyOrUrl.replace(/\/+$/, '')}/movie/${testImdb}.jpg`
+          if (cleanKeyOrUrl.includes('{')) {
+            sampleUrl = cleanKeyOrUrl
+              .replace('{id}', testImdb)
+              .replace('{imdbId}', testImdb)
+              .replace('{imdb_id}', testImdb)
+              .replace('{tmdbId}', String(testTmdb))
+              .replace('{tmdb_id}', String(testTmdb))
+              .replace('{type}', 'movie')
+          } else {
+            sampleUrl = `${cleanKeyOrUrl.replace(/\/+$/, '')}/movie/${testImdb}.jpg`
+          }
           break
         case 'easyrating':
-          sampleUrl = cleanKeyOrUrl.includes('{id}')
-            ? cleanKeyOrUrl.replace('{id}', testImdb)
-            : `${cleanKeyOrUrl.replace(/\/+$/, '')}/movie/${testImdb}.jpg`
+          if (cleanKeyOrUrl.startsWith('Tk-') || !cleanKeyOrUrl.startsWith('http')) {
+            sampleUrl = `https://easyratingsdb.com/${cleanKeyOrUrl}/poster/${testImdb}.jpg`
+          } else if (cleanKeyOrUrl.includes('{')) {
+            sampleUrl = cleanKeyOrUrl
+              .replace('{id}', testImdb)
+              .replace('{imdbId}', testImdb)
+              .replace('{imdb_id}', testImdb)
+              .replace('{tmdbId}', String(testTmdb))
+              .replace('{tmdb_id}', String(testTmdb))
+              .replace('{type}', 'movie')
+          } else {
+            sampleUrl = `${cleanKeyOrUrl.replace(/\/+$/, '')}/poster/${testImdb}.jpg`
+          }
           break
         case 'xrdb':
           sampleUrl = cleanKeyOrUrl.includes('{id}')
@@ -310,7 +355,9 @@ export class PosterEngineService {
           sampleUrl = cleanKeyOrUrl
             .replace('{id}', testImdb)
             .replace('{imdbId}', testImdb)
+            .replace('{imdb_id}', testImdb)
             .replace('{tmdbId}', String(testTmdb))
+            .replace('{tmdb_id}', String(testTmdb))
             .replace('{type}', 'movie')
           break
         default:
