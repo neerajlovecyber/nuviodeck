@@ -56,8 +56,8 @@ export class PosterEngineService {
 
   getDefaultOrder() {
     return [
-      'custom',
       'betterposters',
+      'custom',
       'easyrating',
       'topposters',
       'rpdb',
@@ -85,10 +85,10 @@ export class PosterEngineService {
 
     // Check flat configuration properties
     switch (provider) {
+      case 'betterposters':
+        return cfg.betterpostersUrl?.trim() || config.betterposters?.url?.trim() || null
       case 'custom':
         return cfg.customUrl?.trim() || null
-      case 'betterposters':
-        return cfg.betterpostersUrl?.trim() || null
       case 'easyrating':
         return cfg.easyratingUrl?.trim() || null
       case 'topposters':

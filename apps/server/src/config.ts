@@ -24,5 +24,8 @@ export const config = {
   rpdb: {
     apiKey: process.env.RPDB_API_KEY || '',
   },
+  betterposters: {
+    url: process.env.BETTERPOSTERS_URL || '',
+  },
 }
 
