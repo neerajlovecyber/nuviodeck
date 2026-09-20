@@ -23,6 +23,8 @@ import { debridRouter } from './routes/debrid'
 import { postersRouter } from './routes/posters'
 import { integrationsRouter } from './routes/integrations'
 import { progressRouter } from './routes/progress'
+import { streamingProvidersRouter } from './routes/streaming-providers'
+import { avatarsRouter } from './routes/avatars'
 
 const app = new Hono()
 
@@ -94,6 +96,8 @@ app.get('/api/health', (c) => {
       posters: '/api/posters',
       integrations: '/api/integrations',
       progress: '/api/progress',
+      streamingProviders: '/api/streaming-providers',
+      avatars: '/api/avatars',
     },
   })
 })
@@ -122,6 +126,12 @@ app.route('/api/integrations', integrationsRouter)
 
 // 8. Playback Tracking & Continue Watching
 app.route('/api/progress', progressRouter)
+
+// 9. Streaming Services & Regional Provider Matrix
+app.route('/api/streaming-providers', streamingProvidersRouter)
+
+// 10. Avatars Catalog
+app.route('/api/avatars', avatarsRouter)
 
 // Legacy / Users table endpoints
 app.get('/api/users', async (c) => {

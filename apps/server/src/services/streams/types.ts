@@ -94,6 +94,11 @@ export interface ParsedStreamMetadata {
 
 export interface StreamFilterOptions {
   mostPerResolution?: number // default: 10
+  maxPerService?: number // default: 0 (unlimited)
+  cachedOnly?: boolean // default: false
+  excludePreDigital?: boolean // default: false (filters CAM, TS, TC, HDTS, HDCAM, SCR, R5, DVDScr)
+  excludeMismatchedTitles?: boolean // default: false
+  targetTitle?: string // target movie/show title to match against
   excludedQualities?: string[] // default: ['CAM', 'TS', 'SCR']
   preferredLanguages?: string[]
   excludedLanguages?: string[]

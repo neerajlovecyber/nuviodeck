@@ -12,9 +12,12 @@ async function getBadgeSets(): Promise<any[]> {
   if (cachedBadgeSets) return cachedBadgeSets
   try {
     const possiblePaths = [
+      path.resolve(import.meta.dirname, '../data/badge-sets.json'),
       path.resolve(import.meta.dirname, '../../../apps/web/src/data/badge-sets-signature.json'),
       path.resolve(process.cwd(), '../web/src/data/badge-sets-signature.json'),
       path.resolve(process.cwd(), 'apps/web/src/data/badge-sets-signature.json'),
+      path.resolve(process.cwd(), 'apps/server/src/data/badge-sets.json'),
+      path.resolve(process.cwd(), 'src/data/badge-sets.json'),
     ]
     for (const p of possiblePaths) {
       const file = Bun.file(p)
