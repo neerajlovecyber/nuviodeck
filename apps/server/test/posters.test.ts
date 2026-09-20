@@ -146,6 +146,7 @@ describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, Better
         episode: 1,
         config: {
           toppostersKey: 'tp_key_123',
+          providerOrder: ['topposters'],
           showRatingsOnPosters: true,
           ratingBadgedEpisodeStills: true,
         },
