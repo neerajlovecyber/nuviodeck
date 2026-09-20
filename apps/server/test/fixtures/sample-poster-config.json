@@ -1,0 +1,47 @@
+{
+  "description": "Verified live credentials and URL templates for poster providers",
+  "lastVerified": "2026-09-20",
+  "providers": {
+    "custom": {
+      "name": "Custom (Pictorium)",
+      "url": "https://pictorium-nsp.vercel.app/api/poster/{type}/{imdb_id}",
+      "enabled": true
+    },
+    "betterposters": {
+      "name": "BetterPosters",
+      "url": "https://btttr.cc/poster-q/imdb/poster-default/{imdb_id}.jpg",
+      "enabled": true
+    },
+    "easyrating": {
+      "name": "EasyRatings (ERDB)",
+      "token": "Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd",
+      "url": "https://easyratingsdb.com/Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd/poster/{id}.jpg",
+      "enabled": true
+    },
+    "topposters": {
+      "name": "Top Posters",
+      "key": "TP-txrM3ckKjDNEKviNF4628FZBPZBXm1AA",
+      "enabled": true
+    }
+  },
+  "providerOrder": [
+    "custom",
+    "betterposters",
+    "easyrating",
+    "topposters"
+  ],
+  "sampleProfileConfig": {
+    "providerOrder": [
+      "topposters",
+      "easyrating",
+      "betterposters",
+      "custom"
+    ],
+    "customUrl": "https://pictorium-nsp.vercel.app/api/poster/{type}/{imdb_id}",
+    "betterpostersUrl": "https://btttr.cc/poster-q/imdb/poster-default/{imdb_id}.jpg",
+    "easyratingUrl": "Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd",
+    "toppostersKey": "TP-txrM3ckKjDNEKviNF4628FZBPZBXm1AA",
+    "showRatingsOnPosters": true,
+    "ratingBadgedEpisodeStills": true
+  }
+}

@@ -247,4 +247,54 @@ describe('Multi-Provider Poster Engine (RPDB, TopPosters, XRDB, Posters+, Better
     // Should skip disabled topposters card and resolve to rpdb
     expect(resolved).toContain('ratingposterdb.com/rp_active_key')
   })
+
+  it('correctly resolves real live fixture configuration from sample-poster-config.json', async () => {
+    const fixture = await import('./fixtures/sample-poster-config.json')
+    const cfg = fixture.sampleProfileConfig
+
+    // Test with TopPosters as #1
+    const resTop = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0137523',
+      tmdbId: 550,
+      type: 'movie',
+      config: cfg,
+    })
+    expect(resTop).toBe('https://api.top-streaming.stream/TP-txrM3ckKjDNEKviNF4628FZBPZBXm1AA/tmdb/poster-default/550.jpg')
+
+    // Drag EasyRatings to #1
+    const resEasy = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0137523',
+      tmdbId: 550,
+      type: 'movie',
+      config: {
+        ...cfg,
+        providerOrder: ['easyrating', 'topposters'],
+      },
+    })
+    expect(resEasy).toBe('https://easyratingsdb.com/Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd/poster/tt0137523.jpg')
+
+    // Drag BetterPosters to #1
+    const resBtttr = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0137523',
+      tmdbId: 550,
+      type: 'movie',
+      config: {
+        ...cfg,
+        providerOrder: ['betterposters'],
+      },
+    })
+    expect(resBtttr).toBe('https://btttr.cc/poster-q/imdb/poster-default/tt0137523.jpg')
+
+    // Drag Custom (Pictorium) to #1
+    const resCustom = posterEngineService.getPosterUrl(null, {
+      imdbId: 'tt0137523',
+      tmdbId: 550,
+      type: 'movie',
+      config: {
+        ...cfg,
+        providerOrder: ['custom'],
+      },
+    })
+    expect(resCustom).toBe('https://pictorium-nsp.vercel.app/api/poster/movie/tt0137523')
+  })
 })
