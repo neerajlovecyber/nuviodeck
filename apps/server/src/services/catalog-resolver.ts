@@ -3,7 +3,7 @@ import { MdbListService } from './mdblist'
 import { AiSearchService } from './ai-search'
 import { isMovieReleasedDigitally } from './release-filter'
 import { db } from '../db'
-import { accountConnections } from '../db/schema'
+import { accountConnections, playbackSessions } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { tmdbAccountService } from './integrations/tmdb-account'
 import { traktService } from './integrations/trakt'
@@ -17,13 +17,31 @@ export interface CatalogResolveOptions {
   tmdbToken?: string
   mdblistKey?: string
   geminiKey?: string
+  aiModel?: string
+  aiProvider?: string
+  enableAiRecs?: boolean
+  enableAiSearch?: boolean
   rpdbKey?: string
   posterConfig?: any
   language?: string
+  fallbackLanguage?: string
+  timezone?: string
   hideAdult?: boolean
   excludeUnreleased?: boolean
   moviesDigitalOnly?: boolean
   ageRating?: string
+  maxRating?: string
+  qualityFloor?: 'any' | 'good' | 'great'
+  originCountries?: string | string[]
+  excludeCountries?: string | string[]
+  hideWatched?: boolean
+  hideCaughtUp?: boolean
+  seriesEpisodeSource?: 'tvdb' | 'tmdb'
+  animeEpisodeSource?: 'tvdb' | 'tmdb' | 'kitsu' | 'anilist'
+  animeNumbering?: 'absolute' | 'standard'
+  animeStreamId?: 'imdb' | 'kitsu' | 'tmdb'
+  animeTitles?: 'default' | 'romaji' | 'japanese'
+  fillerEpisodes?: 'tag' | 'hide' | 'normal'
   region?: string
   proxyUrl?: string
 }
@@ -206,9 +224,50 @@ export class CatalogResolver {
         discoverParams['first_air_date.lte'] = today
       }
     }
-    if (options?.ageRating && options.ageRating !== 'NONE') {
+
+    // Quality Floor (Good: 6.5+ rating, 100+ votes / Great: 7.5+ rating, 500+ votes)
+    if (options?.qualityFloor === 'good') {
+      discoverParams['vote_average.gte'] = 6.5
+      discoverParams['vote_count.gte'] = 100
+    } else if (options?.qualityFloor === 'great') {
+      discoverParams['vote_average.gte'] = 7.5
+      discoverParams['vote_count.gte'] = 500
+    } else {
+      discoverParams['vote_count.gte'] = 10
+    }
+
+    // Origin countries and Exclude countries
+    if (options?.originCountries) {
+      discoverParams.with_origin_country = Array.isArray(options.originCountries)
+        ? options.originCountries.join('|')
+        : options.originCountries
+    }
+    if (options?.excludeCountries) {
+      discoverParams.without_origin_country = Array.isArray(options.excludeCountries)
+        ? options.excludeCountries.join('|')
+        : options.excludeCountries
+    }
+
+    // Max rating certification mapping (US standard)
+    const maxRating = options?.maxRating || options?.ageRating
+    if (maxRating && maxRating !== 'NONE' && maxRating !== 'any') {
       discoverParams.certification_country = 'US'
-      discoverParams.certification = options.ageRating
+      switch (maxRating) {
+        case 'G':
+          discoverParams.certification = isMovie ? 'G' : 'TV-G'
+          break
+        case 'PG':
+          discoverParams.certification = isMovie ? 'G|PG' : 'TV-G|TV-PG'
+          break
+        case 'PG-13':
+          discoverParams.certification = isMovie ? 'G|PG|PG-13' : 'TV-G|TV-PG|TV-14'
+          break
+        case 'R':
+          discoverParams.certification = isMovie ? 'G|PG|PG-13|R' : 'TV-G|TV-PG|TV-14|TV-MA'
+          break
+        default:
+          discoverParams.certification = maxRating
+      }
     }
 
     // 1. Search Query
@@ -218,6 +277,7 @@ export class CatalogResolver {
           rpdbKey: options?.rpdbKey,
           posterConfig: options?.posterConfig,
           language: options?.language,
+          model: options?.aiModel,
         })
       }
       const searchRes = await tmdb.search(options.search, tmdbType, page, !options?.hideAdult)
@@ -494,6 +554,54 @@ export class CatalogResolver {
         }
         rawResults = filtered
       }
+
+      // Apply hideWatched and hideCaughtUp filters (skips search and personal lists)
+      if (
+        options?.profileId &&
+        (options.hideWatched || options.hideCaughtUp) &&
+        rawResults.length > 0 &&
+        !catalogId.includes('watchlist') &&
+        !catalogId.includes('favorites') &&
+        !catalogId.includes('history') &&
+        !catalogId.includes('custom_list_')
+      ) {
+        try {
+          const sessions = await db
+            .select()
+            .from(playbackSessions)
+            .where(eq(playbackSessions.profileId, options.profileId))
+
+          const completedMediaIds = new Set(
+            sessions
+              .filter((s) => s.status === 'completed' || (s.progressPercent && s.progressPercent >= 90))
+              .map((s) => String(s.mediaId))
+          )
+
+          if (completedMediaIds.size > 0) {
+            rawResults = rawResults.filter((item) => {
+              const tmdbIdStr = String(item.id)
+              const imdbIdStr = item.imdb_id || item.external_ids?.imdb_id
+
+              const isCompleted =
+                completedMediaIds.has(tmdbIdStr) ||
+                completedMediaIds.has(`tmdb:${tmdbIdStr}`) ||
+                (imdbIdStr && completedMediaIds.has(imdbIdStr))
+
+              if (options.hideWatched && isCompleted) {
+                return false
+              }
+
+              if (options.hideCaughtUp && !isMovie && isCompleted) {
+                return false
+              }
+
+              return true
+            })
+          }
+        } catch (filterErr: any) {
+          console.warn('[CatalogResolver] Watched/CaughtUp filter error:', filterErr.message)
+        }
+      }
     } catch (err: any) {
       console.warn(`[CatalogResolver] Fetch error for catalog "${catalogId}":`, err.message)
       return []
@@ -507,3 +615,5 @@ export class CatalogResolver {
     )
   }
 }
+
+export const resolver = new CatalogResolver()

@@ -228,10 +228,25 @@ export class TmdbService {
   async formatFullMeta(
     details: any,
     type: 'movie' | 'series',
-    options?: { rpdbKey?: string; posterConfig?: PosterProviderConfig }
+    options?: {
+      rpdbKey?: string
+      posterConfig?: PosterProviderConfig
+      animeTitles?: 'default' | 'romaji' | 'japanese'
+      animeNumbering?: 'absolute' | 'standard'
+      animeStreamId?: 'imdb' | 'kitsu' | 'tmdb'
+      fillerEpisodes?: 'tag' | 'hide' | 'normal'
+    }
   ): Promise<any> {
     const isMovie = type === 'movie'
-    const title = details.title || details.name || 'Untitled'
+    let title = details.title || details.name || 'Untitled'
+    if (
+      (options?.animeTitles === 'romaji' || options?.animeTitles === 'japanese') &&
+      details.original_name &&
+      details.original_language === 'ja'
+    ) {
+      title = details.original_name
+    }
+
     const releaseDate = details.release_date || details.first_air_date || ''
     const year = releaseDate ? releaseDate.split('-')[0] : ''
     const tmdbId = details.id
@@ -293,6 +308,7 @@ export class TmdbService {
     if (!isMovie) {
       const episodes: any[] = []
       const customGroup = getCustomEpisodeGroup(tmdbId)
+      let absoluteCount = 1
 
       if (customGroup?.episodeGroupId) {
         // Fetch customized episode groups (e.g. One Piece, Money Heist, Star Wars Clone Wars)
@@ -305,6 +321,27 @@ export class TmdbService {
         if (groupData?.groups) {
           for (const grp of groupData.groups) {
             for (const ep of grp.episodes) {
+              const isFiller = Boolean(
+                ep.overview?.toLowerCase().includes('filler') ||
+                ep.name?.toLowerCase().includes('filler')
+              )
+              if (options?.fillerEpisodes === 'hide' && isFiller) {
+                continue
+              }
+
+              let epTitle = ep.name || `Episode ${ep.episode_number}`
+              if (options?.fillerEpisodes === 'tag' && isFiller && !epTitle.includes('[Filler]')) {
+                epTitle = `${epTitle} [Filler]`
+              }
+
+              const epNum = options?.animeNumbering === 'absolute' ? absoluteCount++ : ep.episode_number
+              let videoId = `${id}:${ep.season_number}:${ep.episode_number}`
+              if (options?.animeStreamId === 'tmdb') {
+                videoId = `tmdb:${tmdbId}:${ep.season_number}:${ep.episode_number}`
+              } else if (options?.animeStreamId === 'kitsu' && details.kitsu_id) {
+                videoId = `kitsu:${details.kitsu_id}:${epNum}`
+              }
+
               const epStill = posterEngineService.getEpisodeStillUrl(ep.still_path, {
                 tmdbId,
                 season: ep.season_number,
@@ -313,11 +350,11 @@ export class TmdbService {
               }) || getBackdropUrl(ep.still_path, 'w780')
 
               episodes.push({
-                id: `${id}:${ep.season_number}:${ep.episode_number}`,
-                title: ep.name || `Episode ${ep.episode_number}`,
+                id: videoId,
+                title: epTitle,
                 season: ep.season_number,
-                number: ep.episode_number,
-                episode: ep.episode_number,
+                number: epNum,
+                episode: epNum,
                 released: ep.air_date ? new Date(ep.air_date).toISOString() : undefined,
                 overview: ep.overview,
                 thumbnail: epStill,
@@ -335,6 +372,27 @@ export class TmdbService {
             const seasonData = await this.getTvSeason(tmdbId, season.season_number, this.defaultLanguage)
             if (seasonData.episodes) {
               for (const ep of seasonData.episodes) {
+                const isFiller = Boolean(
+                  ep.overview?.toLowerCase().includes('filler') ||
+                  ep.name?.toLowerCase().includes('filler')
+                )
+                if (options?.fillerEpisodes === 'hide' && isFiller) {
+                  continue
+                }
+
+                let epTitle = ep.name || `Episode ${ep.episode_number}`
+                if (options?.fillerEpisodes === 'tag' && isFiller && !epTitle.includes('[Filler]')) {
+                  epTitle = `${epTitle} [Filler]`
+                }
+
+                const epNum = options?.animeNumbering === 'absolute' ? absoluteCount++ : ep.episode_number
+                let videoId = `${id}:${ep.season_number}:${ep.episode_number}`
+                if (options?.animeStreamId === 'tmdb') {
+                  videoId = `tmdb:${tmdbId}:${ep.season_number}:${ep.episode_number}`
+                } else if (options?.animeStreamId === 'kitsu' && details.kitsu_id) {
+                  videoId = `kitsu:${details.kitsu_id}:${epNum}`
+                }
+
                 const epStill = posterEngineService.getEpisodeStillUrl(ep.still_path, {
                   tmdbId,
                   season: ep.season_number,
@@ -343,11 +401,11 @@ export class TmdbService {
                 }) || getBackdropUrl(ep.still_path, 'w780')
 
                 episodes.push({
-                  id: `${id}:${ep.season_number}:${ep.episode_number}`,
-                  title: ep.name || `Episode ${ep.episode_number}`,
+                  id: videoId,
+                  title: epTitle,
                   season: ep.season_number,
-                  number: ep.episode_number,
-                  episode: ep.episode_number,
+                  number: epNum,
+                  episode: epNum,
                   released: ep.air_date ? new Date(ep.air_date).toISOString() : undefined,
                   overview: ep.overview,
                   thumbnail: epStill,

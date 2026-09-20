@@ -13,7 +13,7 @@ export class AiSearchService {
   async searchWithAi(
     query: string,
     type: 'movie' | 'series' = 'movie',
-    options?: { rpdbKey?: string; posterConfig?: any; language?: string }
+    options?: { rpdbKey?: string; posterConfig?: any; language?: string; model?: string }
   ): Promise<any[]> {
     if (!this.geminiKey) {
       // If no AI key configured, fallback to standard TMDB search
@@ -27,32 +27,68 @@ export class AiSearchService {
     }
 
     try {
-      const prompt = `You are a film and TV expert search engine. The user entered the natural language search query: "${query}".
+      // Modern Gemini & Gemma models with automatic rate-limit failover pool
+      const selectedModel = options?.model || 'gemini-2.5-flash'
+    const modelPool = [
+      selectedModel,
+      'gemini-2.5-flash',
+      'gemini-2.0-flash',
+      'gemini-2.5-flash-lite',
+      'gemini-3.5-flash-lite',
+      'gemma-2-9b-it',
+      'gemma-2-27b-it',
+    ].filter((m, idx, arr) => arr.indexOf(m) === idx)
+
+    const prompt = `You are a film and TV expert search engine. The user entered the natural language search query: "${query}".
 Suggest 10 of the best matching real ${type === 'movie' ? 'movies' : 'TV series'} for this query.
 Respond ONLY with a JSON array of title strings, like:
 ["Inception", "Interstellar", "The Matrix", "Blade Runner 2049"]
 Do not add markdown backticks or any other text.`
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${this.geminiKey}`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2 },
-        }),
-      })
+    let titles: string[] = []
 
-      if (!res.ok) {
-        throw new Error(`Gemini responded with ${res.status}`)
+    for (const model of modelPool) {
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.geminiKey}`
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2 },
+          }),
+        })
+
+        if (!res.ok) {
+          // If rate limited (429) or temporary server error, failover to next model
+          if (res.status === 429 || res.status === 503) {
+            console.warn(`[AI Search] Model ${model} hit status ${res.status}. Failing over to next model...`)
+            continue
+          }
+          throw new Error(`Gemini responded with ${res.status}`)
+        }
+
+        const data = await res.json()
+        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
+        const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim()
+        titles = JSON.parse(cleaned)
+        if (Array.isArray(titles) && titles.length > 0) {
+          break
+        }
+      } catch (err: any) {
+        console.warn(`[AI Search] Model ${model} failed: ${err.message}`)
       }
+    }
 
-      const data = await res.json()
-      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
-      const cleaned = rawText.replace(/```json/g, '').replace(/```/g, '').trim()
-      const titles: string[] = JSON.parse(cleaned)
-
-      if (!Array.isArray(titles)) return []
+    if (!Array.isArray(titles) || titles.length === 0) {
+      const fallback = await this.tmdb.search(query, type === 'movie' ? 'movie' : 'tv')
+      return (fallback.results || []).map((item) =>
+        this.tmdb.formatMetaPreview(item, type, {
+          rpdbKey: options?.rpdbKey,
+          posterConfig: options?.posterConfig,
+        })
+      )
+    }
 
       // Resolve each title via TMDB search in parallel
       const searchPromises = titles.map(async (title) => {

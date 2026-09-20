@@ -121,6 +121,51 @@ deckProfilesRouter.post('/import', async (c) => {
   }
 })
 
+// Apply section defaults (preferences / AI / filters) to all existing profiles
+deckProfilesRouter.post('/apply-defaults', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { section, data } = body
+    const profiles = await db.select().from(deckProfiles)
+    let updatedCount = 0
+
+    for (const p of profiles) {
+      let cfg: Record<string, any> = {}
+      if (p.configJson) {
+        try {
+          cfg = JSON.parse(p.configJson)
+        } catch {
+          cfg = {}
+        }
+      }
+
+      if (section && data) {
+        cfg[section] = { ...(cfg[section] || {}), ...data }
+      } else if (data) {
+        cfg = { ...cfg, ...data }
+      } else if (body) {
+        if (body.preferences) cfg.preferences = { ...(cfg.preferences || {}), ...body.preferences }
+        if (body.ai) cfg.ai = { ...(cfg.ai || {}), ...body.ai }
+        if (body.anime) cfg.anime = { ...(cfg.anime || {}), ...body.anime }
+      }
+
+      await db
+        .update(deckProfiles)
+        .set({
+          configJson: JSON.stringify(cfg),
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(deckProfiles.id, p.id))
+
+      updatedCount++
+    }
+
+    return c.json({ success: true, updatedCount, message: `Applied defaults to ${updatedCount} profiles` })
+  } catch (err: any) {
+    return c.json({ error: err.message || 'Failed to apply defaults' }, 500)
+  }
+})
+
 // Multi-account, multi-profile deployment engine!
 deckProfilesRouter.post('/:id/deploy', async (c) => {
   try {
