@@ -237,11 +237,19 @@ function buildManifest(
     resources.push('stream')
   }
 
+  const manifestName =
+    !profileName ||
+    profileName === 'Curated Engine' ||
+    profileName === 'Nuviodeck Curated' ||
+    profileName === 'Nuviodeck'
+      ? 'Nuviodeck'
+      : `Nuviodeck (${profileName})`
+
   return {
     id: `org.nuviodeck.${profileId || 'default'}`,
     version: '1.2.0',
-    name: `Nuviodeck: ${profileName}`,
-    description: `Curated multi-source catalog and playback engine for Nuvio & Stremio`,
+    name: manifestName,
+    description: `Multi-source catalog and playback engine for Nuvio & Stremio`,
     resources,
     types: streamsEnabled ? ['movie', 'series', 'anime'] : ['movie', 'series'],
     idPrefixes: streamsEnabled ? ['tmdb:', 'tt', 'kitsu:'] : ['tmdb:', 'tt'],
