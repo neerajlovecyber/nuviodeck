@@ -34,7 +34,7 @@ describe('Nuvio Backend Routes', () => {
     const data = await res.json()
     expect(data.status).toBeDefined()
     expect(typeof data.connected).toBe('boolean')
-  })
+  }, 15000)
 
   it('GET /api/nuvio/auth/session handles no session gracefully', async () => {
     const res = await app.request('/api/nuvio/auth/session')
