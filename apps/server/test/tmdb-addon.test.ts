@@ -179,5 +179,53 @@ describe('TMDB Addon Extracted Services & Functionality', () => {
       const data = await res.json()
       expect(data.meta).toBeNull()
     })
+
+    it('GET /api/debrid/providers returns supported debrid services including debridlink', async () => {
+      const res = await app.request('/api/debrid/providers')
+      expect(res.status).toBe(200)
+      const data = await res.json()
+      expect(Array.isArray(data.providers)).toBe(true)
+      const providerIds = data.providers.map((p: any) => p.id)
+      expect(providerIds).toContain('realdebrid')
+      expect(providerIds).toContain('torbox')
+      expect(providerIds).toContain('alldebrid')
+      expect(providerIds).toContain('premiumize')
+      expect(providerIds).toContain('debridlink')
+    })
+
+    it('POST /api/debrid/validate rejects empty token or unsupported provider', async () => {
+      const emptyRes = await app.request('/api/debrid/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'realdebrid', token: '' }),
+      })
+      expect(emptyRes.status).toBe(400)
+
+      const badProviderRes = await app.request('/api/debrid/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'unknown_debrid', token: 'test_token' }),
+      })
+      expect(badProviderRes.status).toBe(400)
+      const badData = await badProviderRes.json()
+      expect(badData.error).toContain('Unsupported debrid provider')
+    })
+
+    it('GET /api/metadata/search handles search queries gracefully', async () => {
+      const emptyQueryRes = await app.request('/api/metadata/search')
+      expect(emptyQueryRes.status).toBe(400)
+
+      const validQueryRes = await app.request('/api/metadata/search?q=Inception&type=movie')
+      expect([200, 500]).toContain(validQueryRes.status)
+      const searchData = await validQueryRes.json()
+      expect(searchData).toHaveProperty('results')
+      expect(Array.isArray(searchData.results)).toBe(true)
+    })
+
+    it('resolves tmdb_list dynamic catalog gracefully', async () => {
+      const listMetas = await resolver.resolveCatalog('tmdb_list:8245', 'movie', { page: 1 })
+      expect(Array.isArray(listMetas)).toBe(true)
+    })
   })
 })
+

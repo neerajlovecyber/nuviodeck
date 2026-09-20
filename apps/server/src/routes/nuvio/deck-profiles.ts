@@ -209,6 +209,21 @@ deckProfilesRouter.post('/:id/deploy', async (c) => {
             }
           }
 
+          // 5. Automatically install / update this NuvioDeck Profile addon in Nuvio profile slot
+          if (options?.pushDeckAddon ?? true) {
+            try {
+              const reqUrl = new URL(c.req.url)
+              const manifestUrl = `${reqUrl.origin}/api/catalogs/${profile.id}/manifest.json`
+              await nuvioClient.appendOrUpdateAddon(token, slot, {
+                name: `Nuviodeck: ${profile.name}`,
+                url: manifestUrl,
+                enabled: true,
+              })
+            } catch (deckAddonErr: any) {
+              console.warn('Failed to auto-register deck addon in Nuvio:', deckAddonErr.message)
+            }
+          }
+
           deployReport.push({
             accountId: target.accountId,
             accountEmail: session.email,

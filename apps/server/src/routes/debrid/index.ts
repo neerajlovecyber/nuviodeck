@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { debridService } from '../../services/debrid'
 
 export const debridRouter = new Hono()
 
@@ -10,6 +11,7 @@ debridRouter.get('/providers', (c) => {
       { id: 'torbox', name: 'Torbox', supported: true },
       { id: 'alldebrid', name: 'AllDebrid', supported: true },
       { id: 'premiumize', name: 'Premiumize.me', supported: true },
+      { id: 'debridlink', name: 'Debrid-Link', supported: true },
     ],
   })
 })
@@ -21,10 +23,13 @@ debridRouter.post('/validate', async (c) => {
     return c.json({ error: 'provider and token are required' }, 400)
   }
 
-  // Token verification placeholder
+  const result = await debridService.validateToken(provider, token)
+  if (!result.valid) {
+    return c.json(result, 400)
+  }
+
   return c.json({
-    provider,
-    valid: true,
-    message: 'Token configured successfully',
+    ...result,
+    message: `${result.provider} token verified successfully`,
   })
 })

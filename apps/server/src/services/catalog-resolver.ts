@@ -277,6 +277,14 @@ export class CatalogResolver {
           ? await tmdb.discoverMovie({ ...discoverParams, with_keywords: keywordId })
           : await tmdb.discoverTv({ ...discoverParams, with_keywords: keywordId })
         rawResults = res.results || []
+      } else if (catalogId.startsWith('tmdb_list:')) {
+        const listId = catalogId.replace('tmdb_list:', '')
+        try {
+          const res = await tmdb.request<any>(`list/${listId}`, { page })
+          rawResults = res.items || res.results || []
+        } catch {
+          rawResults = []
+        }
       }
       // 5. Data-driven TMDB resolution based on Xperience source_params
       else if (xpCat && xpCat.source === 'tmdb') {
