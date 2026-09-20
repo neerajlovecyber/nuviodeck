@@ -13,10 +13,36 @@ import {
 } from '../../services/catalog-resolver'
 import { streamAggregatorService } from '../../services/streams'
 import { StreamsProfileConfig } from '../../services/streams/types'
+import { config } from '../../config'
 
 export const catalogsRouter = new Hono()
 
 const resolver = new CatalogResolver()
+
+const defaultStreamsConfig: StreamsProfileConfig = {
+  enabled: true,
+  sources: [
+    { id: 'torrentio_torbox', name: 'Torrentio', type: 'torrentio', enabled: true, debridService: 'torbox' },
+    { id: 'comet_torbox', name: 'Comet', type: 'comet', enabled: true, debridService: 'torbox' },
+    { id: 'stremthru_torbox', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'torbox' },
+  ],
+  debridKeys: {
+    torbox: config.debrid.torboxApiKey || '',
+    realdebrid: config.debrid.realDebridApiKey || '',
+    alldebrid: config.debrid.allDebridApiKey || '',
+    premiumize: config.debrid.premiumizeApiKey || '',
+    debridlink: config.debrid.debridLinkApiKey || '',
+  },
+  filters: {
+    mostPerResolution: 10,
+    excludedQualities: ['CAM', 'TS', 'SCR'],
+  },
+  mergeStrategy: 'priority',
+  formatter: {
+    preset: 'prism',
+    viewMode: 'full',
+  },
+}
 
 // Helper to extract profile configuration options
 async function getProfileConfig(profileId?: string) {
@@ -25,6 +51,7 @@ async function getProfileConfig(profileId?: string) {
       name: 'Nuviodeck Curated',
       rows: [],
       options: {},
+      streams: defaultStreamsConfig,
     }
   }
 
@@ -38,6 +65,7 @@ async function getProfileConfig(profileId?: string) {
         name: found?.name || 'Nuviodeck Profile',
         rows: [],
         options: {},
+        streams: defaultStreamsConfig,
       }
     }
 
@@ -87,31 +115,7 @@ async function getProfileConfig(profileId?: string) {
         region: cfg.preferences?.region || 'United States',
         proxyUrl: cfg.preferences?.proxyUrl || cfg.integrations?.proxyUrl,
       },
-      streams: (cfg.streams || {
-        enabled: false,
-        sources: [
-          { id: 'comet_torbox', name: 'Comet', type: 'comet', enabled: true, debridService: 'torbox' },
-          { id: 'stremthru_torbox', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'torbox' },
-          { id: 'comet_rd', name: 'Comet', type: 'comet', enabled: true, debridService: 'realdebrid' },
-          { id: 'stremthru_rd', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'realdebrid' },
-        ],
-        debridKeys: {
-          torbox: cfg.debrid?.torbox?.apiKey || cfg.debrid?.torboxKey || '',
-          realdebrid: cfg.debrid?.realdebrid?.apiKey || cfg.debrid?.realDebridKey || '',
-          alldebrid: cfg.debrid?.alldebrid?.apiKey || cfg.debrid?.allDebridKey || '',
-          premiumize: cfg.debrid?.premiumize?.apiKey || cfg.debrid?.premiumizeKey || '',
-          debridlink: cfg.debrid?.debridlink?.apiKey || cfg.debrid?.debridLinkKey || '',
-        },
-        filters: {
-          mostPerResolution: 10,
-          excludedQualities: ['CAM', 'TS', 'SCR'],
-        },
-        mergeStrategy: 'priority',
-        formatter: {
-          preset: 'prism',
-          viewMode: 'full',
-        },
-      }) as StreamsProfileConfig,
+      streams: (cfg.streams || defaultStreamsConfig) as StreamsProfileConfig,
     }
   } catch (err: any) {
     console.error('Error fetching profile config:', err.message)
@@ -119,7 +123,7 @@ async function getProfileConfig(profileId?: string) {
       name: 'Nuviodeck Profile',
       rows: [],
       options: {},
-      streams: { enabled: false, sources: [] } as StreamsProfileConfig,
+      streams: defaultStreamsConfig,
     }
   }
 }
@@ -247,7 +251,7 @@ function buildManifest(
 
 // Global default manifest
 catalogsRouter.get('/manifest.json', (c) => {
-  const manifest = buildManifest('deck', 'Curated Engine', [], false)
+  const manifest = buildManifest('deck', 'Curated Engine', [], true)
   c.header('Content-Type', 'application/json')
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=3600, public')
@@ -258,7 +262,7 @@ catalogsRouter.get('/manifest.json', (c) => {
 catalogsRouter.get('/:profileId/manifest.json', async (c) => {
   const profileId = c.req.param('profileId')
   const { name, rows, streams } = await getProfileConfig(profileId)
-  const manifest = buildManifest(profileId, name, rows, streams?.enabled ?? false)
+  const manifest = buildManifest(profileId, name, rows, streams?.enabled ?? true)
   c.header('Content-Type', 'application/json')
   c.header('Access-Control-Allow-Origin', '*')
   c.header('Cache-Control', 'max-age=1800, public')

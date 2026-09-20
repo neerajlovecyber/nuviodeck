@@ -1,3 +1,5 @@
+import { config } from '../../config'
+
 export interface ResolvedMediaId {
   tmdbId?: number
   imdbId?: string
@@ -9,6 +11,7 @@ export interface ResolvedMediaId {
   rawId?: string
   season?: number
   episode?: number
+  streamQueryId?: string // Canonical ID for stream scraping (e.g. tt1234567 or tt1234567:1:1)
 }
 
 interface CachedIdMapping {
@@ -23,13 +26,13 @@ export class IdResolverService {
   /**
    * Resolves any incoming media ID into its canonical IDs across TMDB, IMDb, Kitsu, AniList, and MAL.
    * Handles formats:
-   * - `tt1234567` (IMDb)
-   * - `tt1234567:1:2` (IMDb with season & episode)
-   * - `tmdb:12345` or `12345` (TMDB)
-   * - `tmdb:12345:1:2` (TMDB with season & episode)
-   * - `kitsu:1234` or `kitsu:1234:5` (Kitsu)
-   * - `anilist:1234` or `anilist:1234:5` (AniList)
-   * - `mal:1234` or `mal:1234:5` (MyAnimeList)
+   * - `tt1234567` (IMDb movie)
+   * - `tt1234567:1:2` (IMDb series with season & episode)
+   * - `tmdb:12345` or `12345` (TMDB movie)
+   * - `tmdb:12345:1:2` or `12345:1:2` (TMDB series with season & episode)
+   * - `kitsu:1234` or `kitsu:1234:5` (Kitsu anime)
+   * - `anilist:1234` or `anilist:1234:5` (AniList anime)
+   * - `mal:1234` or `mal:1234:5` (MyAnimeList anime)
    */
   async resolve(idString: string, defaultType: 'movie' | 'series' | 'anime' = 'movie'): Promise<ResolvedMediaId> {
     const cached = this.cache.get(idString)
@@ -41,21 +44,43 @@ export class IdResolverService {
     const prefix = parts[0]
     let season: number | undefined
     let episode: number | undefined
+    let tmdbNumeric: number | undefined
 
-    // Parse season & episode if present
-    if (parts.length >= 3 && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
-      season = Number(parts[1])
-      episode = Number(parts[2])
-    } else if (parts.length === 2 && (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal') && !isNaN(Number(parts[1]))) {
-      // anime ID without episode
-    } else if (parts.length === 3 && (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal') && !isNaN(Number(parts[2]))) {
-      // anime ID with episode
-      episode = Number(parts[2])
+    // 1. Check if prefix is 'tmdb' (e.g. tmdb:12345 or tmdb:12345:1:2)
+    if (prefix === 'tmdb') {
+      if (parts[1] && !isNaN(Number(parts[1]))) {
+        tmdbNumeric = Number(parts[1])
+      }
+      if (parts.length >= 4 && !isNaN(Number(parts[2])) && !isNaN(Number(parts[3]))) {
+        season = Number(parts[2])
+        episode = Number(parts[3])
+      }
+    }
+    // 2. Check if prefix is IMDb (e.g. tt1234567 or tt1234567:1:2)
+    else if (prefix.startsWith('tt')) {
+      if (parts.length >= 3 && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
+        season = Number(parts[1])
+        episode = Number(parts[2])
+      }
+    }
+    // 3. Check if prefix is Anime (kitsu/anilist/mal)
+    else if (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal') {
+      if (parts.length >= 3 && !isNaN(Number(parts[2]))) {
+        episode = Number(parts[2])
+      }
+    }
+    // 4. Pure numeric TMDB ID (e.g. 12345 or 12345:1:2)
+    else if (!isNaN(Number(prefix))) {
+      tmdbNumeric = Number(prefix)
+      if (parts.length >= 3 && !isNaN(Number(parts[1])) && !isNaN(Number(parts[2]))) {
+        season = Number(parts[1])
+        episode = Number(parts[2])
+      }
     }
 
     const mediaType = (prefix === 'kitsu' || prefix === 'anilist' || prefix === 'mal')
       ? 'anime'
-      : (season !== undefined || parts.length >= 3 ? 'series' : defaultType)
+      : (season !== undefined ? 'series' : defaultType)
 
     const result: ResolvedMediaId = {
       type: mediaType,
@@ -63,13 +88,17 @@ export class IdResolverService {
       rawId: idString,
       season,
       episode,
+      tmdbId: tmdbNumeric,
     }
 
-    // 1. If it's an IMDb ID: `tt1234567`
+    // A. If it's an IMDb ID: `tt1234567`
     if (prefix.startsWith('tt')) {
       result.imdbId = prefix
+      result.streamQueryId = season !== undefined && episode !== undefined
+        ? `${prefix}:${season}:${episode}`
+        : prefix
+
       try {
-        // Query TMDB /find/tt...
         const tmdbMatch = await this.findTmdbByImdb(prefix)
         if (tmdbMatch) {
           result.tmdbId = tmdbMatch.id
@@ -80,46 +109,45 @@ export class IdResolverService {
         // Graceful fallback
       }
     }
-    // 2. If it's a TMDB ID: `tmdb:12345`
-    else if (prefix === 'tmdb' && parts[1]) {
-      const tmdbNumeric = Number(parts[1])
-      if (!isNaN(tmdbNumeric)) {
-        result.tmdbId = tmdbNumeric
-        try {
-          const imdb = await this.findImdbByTmdb(tmdbNumeric, result.type)
-          if (imdb) result.imdbId = imdb
-        } catch {
-          // Graceful fallback
-        }
-      }
-    }
-    // 3. If it's pure numeric TMDB ID
-    else if (!isNaN(Number(prefix))) {
-      result.tmdbId = Number(prefix)
+    // B. If we have a TMDB ID
+    else if (result.tmdbId) {
       try {
         const imdb = await this.findImdbByTmdb(result.tmdbId, result.type)
-        if (imdb) result.imdbId = imdb
+        if (imdb) {
+          result.imdbId = imdb
+          result.streamQueryId = season !== undefined && episode !== undefined
+            ? `${imdb}:${season}:${episode}`
+            : imdb
+        }
       } catch {
         // Graceful fallback
       }
     }
-    // 4. If it's Kitsu: `kitsu:1234`
+    // C. If it's Kitsu: `kitsu:1234`
     else if (prefix === 'kitsu' && parts[1]) {
       result.kitsuId = Number(parts[1])
       result.type = 'anime'
       result.mediaType = 'anime'
+      result.streamQueryId = idString
     }
-    // 5. If it's AniList: `anilist:1234`
+    // D. If it's AniList: `anilist:1234`
     else if (prefix === 'anilist' && parts[1]) {
       result.anilistId = Number(parts[1])
       result.type = 'anime'
       result.mediaType = 'anime'
+      result.streamQueryId = idString
     }
-    // 6. If it's MAL: `mal:1234`
+    // E. If it's MAL: `mal:1234`
     else if (prefix === 'mal' && parts[1]) {
       result.malId = Number(parts[1])
       result.type = 'anime'
       result.mediaType = 'anime'
+      result.streamQueryId = idString
+    }
+
+    // Default streamQueryId to rawId if still empty
+    if (!result.streamQueryId) {
+      result.streamQueryId = idString
     }
 
     // Cache the resolved result
@@ -136,9 +164,10 @@ export class IdResolverService {
     imdbId: string
   ): Promise<{ id: number; type: 'movie' | 'series' } | null> {
     try {
-      const apiKey = process.env.TMDB_API_KEY || '4b7454f76cdb94098caebf7c00e1634a'
+      const apiKey = config.tmdb.apiKey
+      if (!apiKey) return null
       const res = await fetch(
-        `https://api.themoviedb.org/3/find/${imdbId}?api_key=${apiKey}&external_source=imdb_id`,
+        `${config.tmdb.baseUrl}/find/${imdbId}?api_key=${apiKey}&external_source=imdb_id`,
         { signal: AbortSignal.timeout(3500) }
       )
       if (!res.ok) return null
@@ -161,10 +190,11 @@ export class IdResolverService {
     type: 'movie' | 'series' | 'anime'
   ): Promise<string | null> {
     try {
-      const apiKey = process.env.TMDB_API_KEY || '4b7454f76cdb94098caebf7c00e1634a'
+      const apiKey = config.tmdb.apiKey
+      if (!apiKey) return null
       const endpoint = type === 'series' || type === 'anime' ? 'tv' : 'movie'
       const res = await fetch(
-        `https://api.themoviedb.org/3/${endpoint}/${tmdbId}/external_ids?api_key=${apiKey}`,
+        `${config.tmdb.baseUrl}/${endpoint}/${tmdbId}/external_ids?api_key=${apiKey}`,
         { signal: AbortSignal.timeout(3500) }
       )
       if (!res.ok) return null

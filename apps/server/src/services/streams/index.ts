@@ -9,6 +9,8 @@ import { StreamFilterer } from './filterer'
 import { StreamSorter } from './sorter'
 import { StreamFormatter } from './formatter'
 import { StreamProxyService } from './proxy'
+import { idResolverService } from '../metadata/id-resolver'
+import { config } from '../../config'
 
 interface CachedStreamResult {
   timestamp: number
@@ -36,22 +38,42 @@ export class StreamAggregatorService {
       return []
     }
 
-    // 1. Check in-memory cache
-    const key = cacheKey ? `${cacheKey}:${type}:${id}` : `${type}:${id}`
+    // 1. Resolve media ID to canonical format (e.g. tmdb:687163 -> tt12042730)
+    let queryId = id
+    try {
+      const resolved = await idResolverService.resolve(id, type as any)
+      if (resolved.streamQueryId) {
+        queryId = resolved.streamQueryId
+      }
+    } catch {
+      // Fallback to original id
+    }
+
+    // Merge debrid keys with environment fallback
+    const mergedDebridKeys: Record<string, string> = {
+      torbox: profileConfig.debridKeys?.torbox || config.debrid.torboxApiKey || '',
+      realdebrid: profileConfig.debridKeys?.realdebrid || config.debrid.realDebridApiKey || '',
+      alldebrid: profileConfig.debridKeys?.alldebrid || config.debrid.allDebridApiKey || '',
+      premiumize: profileConfig.debridKeys?.premiumize || config.debrid.premiumizeApiKey || '',
+      debridlink: profileConfig.debridKeys?.debridlink || config.debrid.debridLinkApiKey || '',
+    }
+
+    // 2. Check in-memory cache
+    const key = cacheKey ? `${cacheKey}:${type}:${queryId}` : `${type}:${queryId}`
     const cached = this.cache.get(key)
     if (cached && Date.now() - cached.timestamp < this.cacheTtlMs) {
       return cached.streams
     }
 
-    // 2. Parallel source dispatch with strict 3.5s timeout
+    // 3. Parallel source dispatch with 4s timeout
     const sourceOrder = enabledSources.map((s) => s.id)
     const fetchPromises = enabledSources.map((source) =>
       StreamAdapters.fetchFromSource(
         source,
         type,
-        id,
-        profileConfig.debridKeys,
-        3500
+        queryId,
+        mergedDebridKeys,
+        4000
       )
     )
 

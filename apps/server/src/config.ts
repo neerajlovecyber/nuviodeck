@@ -22,10 +22,26 @@ export const config = {
     groqApiKey: process.env.GROQ_API_KEY || '',
   },
   rpdb: {
-    apiKey: process.env.RPDB_API_KEY || '',
+    apiKey: process.env.RPDB_API_KEY || 't0-free-rpdb',
+  },
+  topposters: {
+    apiKey: process.env.TOPPOSTERS_API_KEY || 'TP-txrM3ckKjDNEKviNF4628FZBPZBXm1AA',
+  },
+  easyratings: {
+    token: process.env.EASYRATINGS_TOKEN || 'Tk-8c2499b5d3798025c236379a618ca6231be3d20837b5badd',
   },
   betterposters: {
-    url: process.env.BETTERPOSTERS_URL || '',
+    url:
+      process.env.BETTERPOSTERS_URL ||
+      'https://btttr.cc/poster-qa/imdb/poster-default/{imdb_id}.jpg',
+  },
+  debrid: {
+    // Private personal subscription keys - loaded securely from .env
+    torboxApiKey: process.env.TORBOX_API_KEY || '',
+    realDebridApiKey: process.env.REAL_DEBRID_API_KEY || '',
+    allDebridApiKey: process.env.ALL_DEBRID_API_KEY || '',
+    premiumizeApiKey: process.env.PREMIUMIZE_API_KEY || '',
+    debridLinkApiKey: process.env.DEBRID_LINK_API_KEY || '',
   },
 }
 

@@ -154,7 +154,7 @@ export interface StreamFormatterOptions {
 export interface StreamSourceConfig {
   id: string
   name: string
-  type: 'comet' | 'stremthru' | 'mediafusion' | 'custom'
+  type: 'comet' | 'torrentio' | 'stremthru' | 'mediafusion' | 'custom'
   url?: string
   enabled: boolean
   debridService?: 'torbox' | 'realdebrid' | 'alldebrid' | 'premiumize' | 'debridlink'

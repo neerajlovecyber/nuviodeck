@@ -11,10 +11,13 @@ export class StreamAdapters {
     type: string,
     id: string,
     debridKeys?: Record<string, string>,
-    timeoutMs: number = 3500
+    timeoutMs: number = 4000
   ): Promise<ParsedStreamMetadata[]> {
     try {
       switch (source.type) {
+        case 'torrentio':
+          return await this.fetchTorrentio(source, type, id, debridKeys, timeoutMs)
+
         case 'comet':
           return await this.fetchComet(source, type, id, debridKeys, timeoutMs)
 
@@ -34,26 +37,44 @@ export class StreamAdapters {
     }
   }
 
-  // --- 1. Comet Adapter ---
+  // --- 1. Torrentio Adapter ---
+  private static async fetchTorrentio(
+    source: StreamSourceConfig,
+    type: string,
+    id: string,
+    debridKeys?: Record<string, string>,
+    timeoutMs: number = 4000
+  ): Promise<ParsedStreamMetadata[]> {
+    const service = source.debridService || 'torbox'
+    const apiKey = debridKeys?.[service] || ''
+    if (!apiKey) return []
+
+    const baseUrl = (source.url || 'https://torrentio.strem.fun').replace(/\/manifest\.json$/, '').replace(/\/$/, '')
+    const fetchUrl = `${baseUrl}/${service}=${encodeURIComponent(apiKey)}/stream/${type}/${id}.json`
+
+    const streams = await this.fetchStreamJson(fetchUrl, timeoutMs)
+    return streams.map((s) => StreamParser.parse(s, source.id, source.name, service))
+  }
+
+  // --- 2. Comet Adapter ---
   private static async fetchComet(
     source: StreamSourceConfig,
     type: string,
     id: string,
     debridKeys?: Record<string, string>,
-    timeoutMs: number = 3500
+    timeoutMs: number = 4000
   ): Promise<ParsedStreamMetadata[]> {
     const service = source.debridService || 'torbox'
     const apiKey = debridKeys?.[service] || ''
+    if (!apiKey) return []
 
     const baseUrl = (source.url || DEFAULT_COMET_URL).replace(/\/manifest\.json$/, '').replace(/\/$/, '')
 
-    // Encode Comet config matching reference/aiostreams/packages/core/src/presets/comet.ts
     const configObj = {
       maxResultsPerResolution: 0,
       maxSize: 0,
       cachedOnly: false,
       removeTrash: true,
-      resultFormat: ['all'],
       debridServices: [
         {
           service: service === 'realdebrid' ? 'realdebrid' : service,
@@ -63,7 +84,7 @@ export class StreamAdapters {
       enableTorrent: false,
     }
 
-    const b64 = Buffer.from(JSON.stringify(configObj)).toString('base64url')
+    const b64 = Buffer.from(JSON.stringify(configObj)).toString('base64')
     const fetchUrl = `${baseUrl}/${b64}/stream/${type}/${id}.json`
 
     const streams = await this.fetchStreamJson(fetchUrl, timeoutMs)

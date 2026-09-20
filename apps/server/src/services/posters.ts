@@ -157,9 +157,21 @@ export class PosterEngineService {
 
           case 'betterposters':
             if (imdbId || tmdbId) {
+              let endpoint = val
+              if (endpoint.includes('/imdb/') || endpoint.includes('/tmdb/')) {
+                const parts = endpoint.split(/\/imdb\/|\/tmdb\//)
+                const base = parts[0].replace(/\/+$/, '')
+                if (imdbId) {
+                  return `${base}/imdb/poster-default/${imdbId}.jpg`
+                } else if (tmdbId) {
+                  const prefix = isMovie ? 'movie' : 'series'
+                  return `${base}/tmdb/poster-default/${prefix}-${tmdbId}.jpg`
+                }
+              }
               if (val.includes('{')) {
+                const targetId = imdbId || (tmdbId ? `${isMovie ? 'movie' : 'series'}-${tmdbId}` : '')
                 return val
-                  .replace('{id}', String(imdbId || tmdbId))
+                  .replace('{id}', String(targetId))
                   .replace('{imdbId}', imdbId || '')
                   .replace('{imdb_id}', imdbId || '')
                   .replace('{tmdbId}', String(tmdbId || ''))
@@ -167,7 +179,11 @@ export class PosterEngineService {
                   .replace('{type}', type)
               }
               const base = val.replace(/\/+$/, '')
-              return `${base}/${type}/${imdbId || `tmdb-${tmdbId}`}.jpg`
+              if (imdbId) {
+                return `${base}/imdb/poster-default/${imdbId}.jpg`
+              }
+              const prefix = isMovie ? 'movie' : 'series'
+              return `${base}/tmdb/poster-default/${prefix}-${tmdbId}.jpg`
             }
             break
 
