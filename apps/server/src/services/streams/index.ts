@@ -4,7 +4,6 @@ import {
   StreamsProfileConfig,
 } from './types'
 import { StreamAdapters } from './adapters'
-import { StreamParser } from './parser'
 import { StreamDeduplicator } from './deduplicator'
 import { StreamFilterer } from './filterer'
 import { StreamSorter } from './sorter'
@@ -87,7 +86,6 @@ export class StreamAggregatorService {
     const settled = await Promise.allSettled(fetchPromises)
     const allParsed: ParsedStreamMetadata[] = []
     let successfulSources = 0
-    StreamParser._debugCount = 0 // Reset debug counter for new request
 
     for (const res of settled) {
       if (res.status === 'fulfilled' && Array.isArray(res.value)) {
@@ -105,28 +103,12 @@ export class StreamAggregatorService {
     // 3. Deduplication ("When two sources offer the same file, the higher one wins")
     const deduped = StreamDeduplicator.deduplicate(allParsed, sourceOrder)
 
-    // DEBUG: Trace SeaDex streams through pipeline
-    const seaRaw = allParsed.filter(s => s.seadex || s.seadexBest)
-    const seaDedup = deduped.filter(s => s.seadex || s.seadexBest)
-    if (seaRaw.length > 0 || seaDedup.length > 0) {
-      console.log(`[SeaDex Debug] Raw: ${seaRaw.length} seadex streams (${seaRaw.filter(s=>s.seadexBest).length} best)`)
-      console.log(`[SeaDex Debug] After dedup: ${seaDedup.length} seadex streams (${seaDedup.filter(s=>s.seadexBest).length} best)`)
-      for (const s of seaDedup) {
-        console.log(`  → ${s.title} | ${s.resolution} | ${s.quality} | best=${s.seadexBest} | src=${s.sourceName}`)
-      }
-    }
-
     // 4. Hard Filtering (CAM/TS/SCR hidden by default, spam elimination, size limits, excluded codecs/languages, etc.)
     const filtered = StreamFilterer.filter(deduped, {
       ...profileConfig.filters,
       mostPerResolution: 0,
       maxPerService: 0,
     })
-
-    const seaFiltered = filtered.filter(s => s.seadex || s.seadexBest)
-    if (seaDedup.length > 0 && seaFiltered.length !== seaDedup.length) {
-      console.log(`[SeaDex Debug] After filter: ${seaFiltered.length} seadex streams (lost ${seaDedup.length - seaFiltered.length} during filtering!)`)
-    }
 
     // 5. Merge Strategy & Sorter (in_order, interleaved, or priority)
     const sorted = StreamSorter.sort(

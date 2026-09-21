@@ -9,24 +9,25 @@ import {
 } from './types'
 
 export class StreamParser {
-  static _debugCount = 0
+  private static normalizeText(text: string): string {
+    const map: Record<string, string> = {
+      'ᴀ': 'a', 'ʙ': 'b', 'ᴄ': 'c', 'ᴅ': 'd', 'ᴇ': 'e', 'ғ': 'f', 'ɢ': 'g', 'ʜ': 'h',
+      'ɪ': 'i', 'ᴊ': 'j', 'ᴋ': 'k', 'ʟ': 'l', 'ᴍ': 'm', 'ɴ': 'n', 'ᴏ': 'o', 'ᴘ': 'p',
+      'ǫ': 'q', 'ʀ': 'r', 's': 's', 'ᴛ': 't', 'ᴜ': 'u', 'ᴠ': 'v', 'ᴡ': 'w', 'x': 'x',
+      'ʏ': 'y', 'ᴢ': 'z',
+      '₁': '1', '₂': '2', '₃': '3', '₄': '4', '₅': '5', '₆': '6', '₇': '7', '₈': '8', '₉': '9', '₀': '0'
+    }
+    return text.split('').map(c => map[c] || c).join('').normalize('NFKD')
+  }
+
   static parse(
     stream: StremioStream,
     sourceId: string,
     sourceName: string,
     debridService?: string
   ): ParsedStreamMetadata {
-    const rawText = `${stream.name || ''} ${stream.title || ''} ${stream.description || ''}`
-    // DEBUG: Dump raw text for first few streams to see what addon sends
-    if (StreamParser._debugCount < 3) {
-      StreamParser._debugCount++
-      console.log(`\n[Parser Debug] Raw stream from "${sourceName}":`)
-      console.log(`  name: ${JSON.stringify(stream.name)}`)
-      console.log(`  title: ${JSON.stringify(stream.title)}`)
-      console.log(`  description: ${JSON.stringify(stream.description?.substring(0, 300))}`)
-      console.log(`  url: ${stream.url?.substring(0, 80)}`)
-      console.log(`  infoHash: ${stream.infoHash}`)
-    }
+    const originalText = `${stream.name || ''} ${stream.title || ''} ${stream.description || ''}`
+    const rawText = this.normalizeText(originalText)
     const id = stream.url || stream.infoHash || `${sourceId}:${Math.random().toString(36).substring(2, 9)}`
 
     const resolution = this.detectResolution(rawText)
@@ -49,6 +50,7 @@ export class StreamParser {
     const seadexBest = this.detectSeaDexBest(rawText)
     const duration = this.detectDuration(rawText)
     const age = this.detectAge(rawText)
+    const bitrate = this.detectBitrate(rawText)
     const streamType = this.detectStreamType(rawText, stream, cached)
     const proxied = this.detectProxied(rawText)
     const library = this.detectLibrary(rawText)
@@ -78,6 +80,7 @@ export class StreamParser {
       sizeFormatted,
       folderSizeBytes,
       folderSizeFormatted,
+      bitrate,
       seeders,
       releaseGroup,
       indexer,
@@ -132,7 +135,7 @@ export class StreamParser {
     else if (/\bhdr10\b/.test(lower)) tags.push('HDR10')
     else if (/\bhdr\b/.test(lower)) tags.push('HDR')
     if (/\bhlg\b/.test(lower)) tags.push('HLG')
-    if (/\b(10bit|10-bit|hi10p)\b/.test(lower)) tags.push('10bit')
+    if (/\b(10[- ._]?bit|10[- ._]?bits|hi10p)\b/.test(lower)) tags.push('10bit')
     if (/\bimax\b/.test(lower)) tags.push('IMAX')
     if (/\b3d\b/.test(lower)) tags.push('3D')
 
@@ -148,7 +151,7 @@ export class StreamParser {
     if (/\b(dts[- ._]?hd[- ._]?ma|dts[- ._]?ma)\b/.test(lower)) tags.push('DTS-HD MA')
     else if (/\bdts[- ._]?hd\b/.test(lower)) tags.push('DTS-HD')
     else if (/\bdts\b/.test(lower)) tags.push('DTS')
-    if (/\b(dd\+|eac3|e-ac-3|ddp)\b/.test(lower)) tags.push('DD+')
+    if (/\b(dd\+|eac3|e-ac-3|ddp|dd ?plus)\b/.test(lower) || /dd\+/.test(text)) tags.push('DD+')
     else if (/\b(dd|ac3|ac-3|dolby[- ._]?digital)\b/.test(lower)) tags.push('DD')
     if (/\baac\b/.test(lower)) tags.push('AAC')
     if (/\bflac\b/.test(lower)) tags.push('FLAC')
@@ -158,9 +161,9 @@ export class StreamParser {
   }
 
   private static detectAudioChannels(text: string): string | undefined {
-    if (/\b7\.1\b/.test(text)) return '7.1'
-    if (/\b5\.1\b/.test(text)) return '5.1'
-    if (/\b2\.0\b/.test(text)) return '2.0'
+    if (/\b7\.1\b/.test(text) || text.includes('🔊 7.1') || /7\.1[- ]?ch/i.test(text)) return '7.1'
+    if (/\b5\.1\b/.test(text) || text.includes('🔊 5.1') || /5\.1[- ]?ch/i.test(text)) return '5.1'
+    if (/\b2\.0\b/.test(text) || text.includes('🔊 2.0') || /2\.0[- ]?ch/i.test(text) || /stereo/i.test(text)) return '2.0'
     return undefined
   }
 
@@ -239,26 +242,51 @@ export class StreamParser {
     folderSizeBytes?: number
     folderSizeFormatted?: string
   } {
-    const match = text.match(
-      /(?:📦|💾|size:?\s*)?(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB|Gb|Mb)\b(?:\s*(?:\/|\band\b)\s*(?:📦|💾)?\s*(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB|Gb|Mb)\b)?/i
-    )
-    if (!match) return {}
+    // Match dual sizes: "2.02 GB / 21.9 GB" or "2.02 / 21.9 GB" or "💾 405.89 MB"
+    const sizePattern = /(?:📦|💾|⛁|size:?\s*)?(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB|Gb|Mb|KB)\b/gi
+    const allMatches: Array<{ value: number; unit: string; bytes: number }> = []
+    let m: RegExpExecArray | null
+    while ((m = sizePattern.exec(text)) !== null) {
+      const value = parseFloat(m[1])
+      const unit = m[2].toUpperCase().replace('IB', 'B')
+      allMatches.push({ value, unit, bytes: this.toBytes(value, unit) })
+    }
 
-    const value1 = parseFloat(match[1])
-    const unit1 = match[2].toUpperCase().replace('IB', 'B').replace('GB', 'GB').replace('MB', 'MB').replace('TB', 'TB')
-    const sizeBytes = this.toBytes(value1, unit1)
-    const sizeFormatted = `${value1.toFixed(2)} ${unit1}`
+    // Also try "2.02 / 21.9 GB" format (first number shares unit with second)
+    const sharedUnitMatch = text.match(/(?:📦|💾|⛁)?\s*(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*(GB|MB|TB|GiB|MiB)/i)
+    if (sharedUnitMatch) {
+      const v1 = parseFloat(sharedUnitMatch[1])
+      const v2 = parseFloat(sharedUnitMatch[2])
+      const unit = sharedUnitMatch[3].toUpperCase().replace('IB', 'B')
+      const b1 = this.toBytes(v1, unit)
+      const b2 = this.toBytes(v2, unit)
+      const smaller = Math.min(b1, b2)
+      const larger = Math.max(b1, b2)
+      return {
+        sizeBytes: smaller,
+        sizeFormatted: `${(smaller >= 1024*1024*1024 ? smaller / (1024*1024*1024) : smaller / (1024*1024)).toFixed(2)} ${smaller >= 1024*1024*1024 ? 'GB' : 'MB'}`,
+        folderSizeBytes: larger > smaller ? larger : undefined,
+        folderSizeFormatted: larger > smaller ? `${(larger >= 1024*1024*1024 ? larger / (1024*1024*1024) : larger / (1024*1024)).toFixed(2)} ${larger >= 1024*1024*1024 ? 'GB' : 'MB'}` : undefined,
+      }
+    }
+
+    if (allMatches.length === 0) return {}
+
+    // Sort by bytes ascending
+    allMatches.sort((a, b) => a.bytes - b.bytes)
+
+    const sizeBytes = allMatches[0].bytes
+    const sizeFormatted = `${allMatches[0].value.toFixed(2)} ${allMatches[0].unit}`
 
     let folderSizeBytes: number | undefined
     let folderSizeFormatted: string | undefined
 
-    if (match[3] && match[4]) {
-      const value2 = parseFloat(match[3])
-      const unit2 = match[4].toUpperCase().replace('IB', 'B')
-      const bytes2 = this.toBytes(value2, unit2)
-      if (bytes2 > sizeBytes) {
-        folderSizeBytes = bytes2
-        folderSizeFormatted = `${value2.toFixed(2)} ${unit2}`
+    // If there are multiple distinct sizes, the larger one is the folder/season size
+    if (allMatches.length >= 2) {
+      const last = allMatches[allMatches.length - 1]
+      if (last.bytes > sizeBytes * 1.5) {
+        folderSizeBytes = last.bytes
+        folderSizeFormatted = `${last.value.toFixed(2)} ${last.unit}`
       }
     }
 
@@ -274,58 +302,73 @@ export class StreamParser {
   }
 
   private static detectSeeders(text: string): number | undefined {
-    const match = text.match(/(?:👥|👤|🌱|🌿|seeders?:?)\s*(\d+)/i)
+    const match = text.match(/(?:👥|👤|🌱|🌿|⇋|seeders?:?)\s*(\d+)/i)
     if (match) return parseInt(match[1], 10)
     return undefined
   }
 
+  private static detectBitrate(text: string): number | undefined {
+    // Match patterns: "11.4 Mbps" "📊 11.4 Mbps" "5200 kbps" "5.2 Mbps"
+    const mMatch = text.match(/(?:📊|bitrate:?)?\s*(\d+(?:\.\d+)?)\s*(Mbps|Kbps|mbps|kbps|Mbit\/s|Kbit\/s)/i)
+    if (mMatch) {
+      const val = parseFloat(mMatch[1])
+      const unit = mMatch[2].toLowerCase()
+      if (unit.startsWith('m')) return val * 1000000  // Mbps -> bps
+      if (unit.startsWith('k')) return val * 1000      // Kbps -> bps
+    }
+    return undefined
+  }
+
   private static detectReleaseGroup(text: string): string | undefined {
+    // 1. Tagged with 🏷️ or 🏷 emoji: "🏷️ ZeroBuild" or "🏷 EMBER"
+    const tagMatch = text.match(/(?:🏷️|🏷)\s*([A-Za-z0-9][A-Za-z0-9._-]{0,20})/)
+    if (tagMatch) return tagMatch[1].trim()
+
+    // 2. Common known release groups
     const commonGroups = [
-      'FraMeSToR',
-      'FLUX',
-      'GalaxyRG',
-      'YTS',
-      'TGx',
-      'RARBG',
-      'BHDStudio',
-      'hallowed',
-      'SWTYBLZ',
-      'NTb',
-      'KONTRAST',
-      'playBD',
-      'CRFW',
-      'SiC',
-      'ION10',
+      'FraMeSToR', 'FLUX', 'GalaxyRG', 'YTS', 'TGx', 'RARBG', 'BHDStudio',
+      'hallowed', 'SWTYBLZ', 'NTb', 'KONTRAST', 'playBD', 'CRFW', 'SiC',
+      'ION10', 'ZeroBuild', 'EMBER', 'SubsPlease', 'Erai-raws', 'Judas',
+      'Tsundere-Raws', 'YURI', 'CBR', 'USURY', 'Chotab', 'D-Z0N3',
+      'CtrlHD', 'DON', 'TayTo', 'BMF', 'EPSILON', 'TheFarm', 'Bunny-Apocalypse',
+      'CometZ', 'Quantum', 'ZR', 'REMUX', 'playWEB', 'EVO', 'SPARKS',
+      'FGT', 'RARBG', 'STUTTERSHIT', 'PSA', 'QxR', 'MeGusta'
     ]
 
     for (const grp of commonGroups) {
-      const reg = new RegExp(`\\b${grp}\\b`, 'i')
+      const reg = new RegExp(`\\b${grp.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i')
       if (reg.test(text)) return grp
     }
 
-    const trailingMatch = text.match(/[-_]([A-Za-z0-9]+)(?:\.[a-z0-9]{2,4})?(?:\s|$)/)
+    // 3. Trailing group from filename: -GroupName.mkv or -GroupName
+    const trailingMatch = text.match(/[-_]([A-Za-z][A-Za-z0-9]{1,14})(?:\.[a-z0-9]{2,4})?(?:[\s\n]|$)/)
     if (trailingMatch && trailingMatch[1].length >= 2 && trailingMatch[1].length <= 15) {
-      return trailingMatch[1]
+      // Exclude common false positives
+      const fp = new Set(['mkv', 'mp4', 'avi', 'srt', 'idx', 'sub', 'nfo', 'txt', 'jpg', 'png'])
+      if (!fp.has(trailingMatch[1].toLowerCase())) {
+        return trailingMatch[1]
+      }
     }
 
     return undefined
   }
 
   private static detectIndexer(text: string): string | undefined {
+    // Check for ⚙️ tagged indexer first: "⚙️ NyaaSi"
+    const gearMatch = text.match(/(?:⚙️|📡|🔗)\s*([A-Za-z0-9][A-Za-z0-9 _.-]{1,25}?)(?:\s*[\n|·]|$)/m)
+    if (gearMatch) {
+      const name = gearMatch[1].trim()
+      if (name.length >= 2 && name.length <= 25) return name
+    }
+
     const indexers = [
-      'TorrentGalaxy',
-      '1337x',
-      'YTS',
-      'EZTV',
-      'ThePirateBay',
-      'Nyaa',
-      'AnimeTosho',
-      'BitSearch',
-      'SolidTorrents',
-      'MagnetDL',
+      'TorrentGalaxy', '1337x', 'YTS', 'EZTV', 'ThePirateBay', 'Nyaa', 'NyaaSi',
+      'AnimeTosho', 'BitSearch', 'SolidTorrents', 'MagnetDL', 'Torznab', 'Jackett',
+      'Prowlarr', 'RARBG', 'IPTorrents', 'TorrentLeech', 'BeyondHD', 'FileList',
+      'Zilean', 'Zilean DMM', 'BTDigg', 'Knaben', 'Cached',
     ]
     for (const idx of indexers) {
-      if (new RegExp(`\\b${idx}\\b`, 'i').test(text)) return idx
+      if (new RegExp(`\\b${idx.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(text)) return idx
     }
     return undefined
   }
@@ -548,8 +591,12 @@ export class StreamParser {
   }
 
   private static detectAge(text: string): string | undefined {
-    const match = text.match(/(?:📅\s*|age:?\s*)(\d+\s*[dwmy])\b/i)
-    if (match) return match[1].trim()
+    // Match various age formats: "📅 283d" "🕐 283d" "⏱️ 283d" "🌱 283d" "283d old" or just "283d" near context
+    const match = text.match(/(?:📅|🕐|⏱️|🌱|⏳|age:?|\b)\s*(\d+)\s*([dwmy])(?:\s*old)?\b/i)
+    if (match) return `${match[1]}${match[2]}`
+    // Standalone age format at word boundary (e.g. "· 283d" or "283d")
+    const standaloneMatch = text.match(/[·|\s](\d{1,5})([dwmy])(?:\s|$|[·|])/i)
+    if (standaloneMatch) return `${standaloneMatch[1]}${standaloneMatch[2]}`
     return undefined
   }
 

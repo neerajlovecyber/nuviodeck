@@ -73,15 +73,15 @@ export class StreamMicroSyntaxEngine {
 
     if (stream.seadexBest) {
       qualityScore = 100
-      seScore = 1000
+      seScore = 2000
       rseMatched.push('BEST RELEASE')
     } else if (stream.seadex) {
       qualityScore = 80
-      seScore = 800
+      seScore = 1500
       rseMatched.push('ALT BEST RELEASE')
     } else if (stream.quality === 'BluRay REMUX' && isTopTierGroup) {
       qualityScore = 100
-      seScore = 950
+      seScore = 1200
       rseMatched.push('Remux T1')
     } else if (
       stream.quality === 'BluRay REMUX' &&
@@ -89,15 +89,15 @@ export class StreamMicroSyntaxEngine {
       (audioTags.includes('Atmos') || audioTags.includes('TrueHD') || audioTags.includes('DTS-HD MA'))
     ) {
       qualityScore = 80
-      seScore = 800
+      seScore = 1000
       rseMatched.push('Remux T1')
     } else if (stream.quality === 'BluRay REMUX') {
       qualityScore = 75
-      seScore = 750
+      seScore = 900
       rseMatched.push('Remux T2')
     } else if (stream.resolution === '2160p' && isTopTierGroup && (visualTags.includes('DV') || visualTags.includes('HDR10+'))) {
       qualityScore = 70
-      seScore = 700
+      seScore = 800
       rseMatched.push('UHD Bluray T1')
     } else {
       // Standard streams: null score -> no star ratings rendered, matching official Tam-Taro
@@ -162,7 +162,7 @@ export class StreamMicroSyntaxEngine {
         seadex: stream.seadex ?? false,
         seadexBest: stream.seadexBest ?? false,
         nSeScore: qualityScore,
-        seScore: qualityScore,
+        seScore: seScore,
         type: streamType,
         proxied: stream.proxied ?? false,
         library: stream.library ?? false,
@@ -203,7 +203,7 @@ export class StreamMicroSyntaxEngine {
       codecs: stream.codecs?.join(' ') || '',
       languages: stream.languages || [],
       nSeScore: qualityScore,
-      seScore: qualityScore,
+      seScore: seScore,
     }
   }
 

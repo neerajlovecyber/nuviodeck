@@ -94,6 +94,36 @@ export class StreamDeduplicator {
           winner.message = existing.message || stream.message
         }
 
+        // Merge audioChannels: prefer the one that has it
+        if (!winner.audioChannels && (existing.audioChannels || stream.audioChannels)) {
+          winner.audioChannels = existing.audioChannels || stream.audioChannels
+        }
+
+        // Merge bitrate: prefer the higher value
+        const bitA = existing.bitrate || 0
+        const bitB = stream.bitrate || 0
+        if (bitA > 0 || bitB > 0) {
+          winner.bitrate = Math.max(bitA, bitB)
+        }
+
+        // Merge codecs: union of both
+        const mergedCodecs = Array.from(
+          new Set([...(existing.codecs || []), ...(stream.codecs || [])])
+        )
+        if (mergedCodecs.length > 0) winner.codecs = mergedCodecs
+
+        // Merge age: prefer whichever has it
+        if (!winner.age && (existing.age || stream.age)) {
+          winner.age = existing.age || stream.age
+        }
+
+        // Merge seeders: prefer higher value
+        const seedA = existing.seeders ?? 0
+        const seedB = stream.seeders ?? 0
+        if (seedA > 0 || seedB > 0) {
+          winner.seeders = Math.max(seedA, seedB)
+        }
+
         if (!winner.indexer && (existing.indexer || stream.indexer)) {
           winner.indexer = existing.indexer || stream.indexer
         }
