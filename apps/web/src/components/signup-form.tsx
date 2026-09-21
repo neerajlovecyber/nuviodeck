@@ -32,7 +32,7 @@ export function SignupForm({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
-  const setUser = useAppStore((s) => s.setUser)
+  const checkSession = useAppStore((s) => s.checkSession)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -53,13 +53,7 @@ export function SignupForm({
     try {
       const res = await nuvioApi.signup(email, password)
       if (res.success) {
-        const namePart = email.split("@")[0]
-        const userName = namePart ? namePart.charAt(0).toUpperCase() + namePart.slice(1) : "User"
-        setUser({
-          name: userName,
-          email: res.user?.email || email,
-          avatar: "/avatars/nuvio/avatar_gojo_1772826847969.png",
-        })
+        await checkSession()
         toast.success("Account created! Logged in successfully.")
         navigate({ to: "/dashboard" })
       } else {

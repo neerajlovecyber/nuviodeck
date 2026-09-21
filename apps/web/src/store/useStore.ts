@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { nuvioApi } from '@/lib/nuvio-api'
 
+import rawAvatars from '@/data/avatars.json'
+
 export interface UserProfile {
   name: string
   email: string
@@ -56,6 +58,13 @@ export const useAppStore = create<AppState>((set, get) => ({
             }
             if (primaryProfile.avatar_url) {
               avatar = primaryProfile.avatar_url
+            } else if (primaryProfile.avatar_id) {
+              const matched = (rawAvatars as any[]).find(
+                (a) => a.id === primaryProfile.avatar_id
+              )
+              if (matched?.remoteUrl || matched?.localUrl) {
+                avatar = matched.remoteUrl || matched.localUrl
+              }
             }
           }
         } catch (err) {
