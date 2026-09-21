@@ -42,7 +42,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         const email = res.session.email || 'User'
         const defaultName = email.split('@')[0]
         let name = defaultName.charAt(0).toUpperCase() + defaultName.slice(1)
-        let avatar = '/avatars/nuvio/avatar_gojo_1772826847969.png'
+        let avatar = ''
 
         try {
           // Fetch live profiles from connected Nuvio account

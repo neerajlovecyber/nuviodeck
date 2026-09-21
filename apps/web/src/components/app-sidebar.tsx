@@ -32,7 +32,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentUser = {
     name: user?.name || "Developer",
     email: user?.email || "dev@nuviodeck.com",
-    avatar: user?.avatar || "/avatars/nuvio/avatar_gojo_1772826847969.png",
+    avatar: user?.avatar || "",
   }
 
   const navMain = [
