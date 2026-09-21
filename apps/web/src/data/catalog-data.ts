@@ -60,54 +60,40 @@ export interface CoverSetInfo {
   supporterOnly?: boolean
 }
 
-// Lightweight immediate fallback categories while backend registry hydrates
-export const FALLBACK_CATEGORIES: CatalogCategory[] = [
-  {
-    id: 'for_you_trending',
-    name: 'For You & Trending',
-    count: 6,
-    items: [
-      { id: 'trending_movies', name: 'Trending Movies', category: 'For You & Trending', type: 'movie', source: 'tmdb' },
-      { id: 'trending_series', name: 'Trending Series', category: 'For You & Trending', type: 'series', source: 'tmdb' },
-      { id: 'snoak_top100_movies', name: 'Top 100 Movies Today', category: 'For You & Trending', type: 'movie', source: 'mdblist' },
-      { id: 'snoak_top100_series', name: 'Top 100 Shows Today', category: 'For You & Trending', type: 'series', source: 'mdblist' },
-      { id: 'top_rated_movies', name: 'Top Rated Movies', category: 'For You & Trending', type: 'movie', source: 'tmdb' },
-      { id: 'top_rated_series', name: 'Top Rated Series', category: 'For You & Trending', type: 'series', source: 'tmdb' },
-    ],
-  },
-  {
-    id: 'streaming_providers',
-    name: 'Streaming Services',
-    count: 8,
-    items: [
-      { id: 'streaming_netflix_movies', name: 'Netflix Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
-      { id: 'streaming_netflix_series', name: 'Netflix Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
-      { id: 'streaming_apple_movies', name: 'Apple TV+ Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
-      { id: 'streaming_apple_series', name: 'Apple TV+ Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
-      { id: 'streaming_disney_movies', name: 'Disney+ Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
-      { id: 'streaming_disney_series', name: 'Disney+ Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
-      { id: 'streaming_prime_movies', name: 'Prime Video Movies', category: 'Streaming Services', type: 'movie', source: 'tmdb' },
-      { id: 'streaming_prime_series', name: 'Prime Video Series', category: 'Streaming Services', type: 'series', source: 'tmdb' },
-    ],
-  },
-  {
-    id: 'studios',
-    name: 'Studios & Labels',
-    count: 6,
-    items: [
-      { id: 'studio_a24_movies', name: 'A24 Films', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-      { id: 'studio_marvel_movies', name: 'Marvel Studios', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-      { id: 'studio_pixar_movies', name: 'Pixar Animation', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-      { id: 'studio_ghibli_movies', name: 'Studio Ghibli', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-      { id: 'studio_warner_movies', name: 'Warner Bros. Pictures', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-      { id: 'studio_blumhouse_movies', name: 'Blumhouse Productions', category: 'Studios & Labels', type: 'movie', source: 'tmdb' },
-    ],
-  },
-]
+import xperienceRaw from './xperience-catalogs.json'
 
-export const CATALOG_CATEGORIES = FALLBACK_CATEGORIES
+const rawCategories = (xperienceRaw.categories || []) as string[]
+const rawCategoryLabels = (xperienceRaw.categoryLabels || {}) as Record<string, string>
+const rawCatalogs = (xperienceRaw.catalogs || []) as any[]
 
-export const ALL_CATALOGS = FALLBACK_CATEGORIES.flatMap((c) => c.items)
+export const PARSED_CATEGORIES: CatalogCategory[] = rawCategories
+  .map((catId) => {
+    const items: CatalogItem[] = rawCatalogs
+      .filter((c) => c.category === catId)
+      .map((c) => ({
+        id: c.id,
+        name: c.label,
+        category: rawCategoryLabels[catId] || catId,
+        type: c.kind === 'series' ? 'series' : 'movie',
+        source: c.source,
+        requires: c.requires,
+        sourceParams: c.source_params,
+        personalized: c.personalized,
+      }))
+    return {
+      id: catId,
+      name: rawCategoryLabels[catId] || catId,
+      count: items.length,
+      items,
+    }
+  })
+  .filter((c) => c.items.length > 0)
+
+export const FALLBACK_CATEGORIES: CatalogCategory[] = PARSED_CATEGORIES
+
+export const CATALOG_CATEGORIES = PARSED_CATEGORIES
+
+export const ALL_CATALOGS = PARSED_CATEGORIES.flatMap((c) => c.items)
 export const CATALOG_MAP = new Map<string, CatalogItem>(ALL_CATALOGS.map((c) => [c.id, c]))
 
 // Starting Point Presets

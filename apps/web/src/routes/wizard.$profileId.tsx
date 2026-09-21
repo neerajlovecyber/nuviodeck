@@ -40,7 +40,30 @@ import {
   RotateCcw,
   Copy,
   Globe,
+  ListOrdered,
+  SlidersHorizontal,
+  ChevronsUpDown,
+  ListPlus,
+  GripVertical,
+  EllipsisVertical,
 } from 'lucide-react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { Button } from '@workspace/ui/components/button'
 import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
@@ -104,6 +127,57 @@ const GEMINI_MODELS = [
   { id: 'gemma-4-31b-it', label: 'gemma-4-31b-it' },
   { id: 'gemma-4-26b-a4b-it', label: 'gemma-4-26b-a4b-it' },
 ]
+
+function SortableHomeRowItem({
+  row,
+  onRemove,
+}: {
+  row: CatalogItem
+  onRemove: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: row.id,
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 20 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center justify-between p-2.5 rounded-lg border border-border bg-card gap-2 select-none"
+    >
+      <div className="flex items-center gap-2 truncate">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground p-1"
+          aria-label={`Reorder ${row.name}`}
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <div className="truncate">
+          <p className="text-xs font-medium text-foreground truncate">{row.name}</p>
+          <p className="text-[10px] text-muted-foreground">{row.category}</p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-muted-foreground hover:text-destructive p-1 rounded-md transition-colors"
+        aria-label={`Remove ${row.name}`}
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
+  )
+}
 
 export const Route = createFileRoute('/wizard/$profileId')({
   component: ProfileWizardPage,
@@ -215,6 +289,140 @@ function ProfileWizardPage() {
     'streaming',
   ])
   const [selectedRows, setSelectedRows] = React.useState<CatalogItem[]>(() => getPresetRows('balanced'))
+  const [arrangeHomeOpen, setArrangeHomeOpen] = React.useState(false)
+  const [editingRow, setEditingRow] = React.useState<CatalogItem | null>(null)
+  const [rowFilters, setRowFilters] = React.useState<
+    Record<
+      string,
+      {
+        minRating?: number
+        minVotes?: number
+        yearFrom?: number
+        yearTo?: number
+        sortBy?: string
+        customTitle?: string
+      }
+    >
+  >({
+    ai_series_for_you: { minRating: 7.0, minVotes: 500 },
+    ai_movies_for_you: { minRating: 7.5, minVotes: 1000, sortBy: 'popularity' },
+    recs_movies_for_you: { minRating: 7.0, minVotes: 300 },
+    genre_bollywood_latest_movies: { yearFrom: 2023 },
+    genre_bollywood_latest_series: { yearFrom: 2023 },
+    trending_movies: { minRating: 6.5 },
+    trending_series: { minRating: 6.5, minVotes: 200 },
+    snoak_top100_movies: { minRating: 7.0, minVotes: 500 },
+    awards_imdb_top250_movies: { minRating: 8.0 },
+  })
+  const [aiPromptOpen, setAiPromptOpen] = React.useState(false)
+  const [aiPromptInput, setAiPromptInput] = React.useState('')
+  const [customListOpen, setCustomListOpen] = React.useState(false)
+
+  const getFilterCount = (rowId: string) => {
+    const f = rowFilters[rowId]
+    if (!f) return 0
+    let count = 0
+    if (f.customTitle && f.customTitle.trim().length > 0) count++
+    if (f.minRating !== undefined && f.minRating > 0) count++
+    if (f.minVotes !== undefined && f.minVotes > 0) count++
+    if (f.yearFrom !== undefined && f.yearFrom > 1900) count++
+    if (f.yearTo !== undefined && f.yearTo < 2026) count++
+    if (f.sortBy && f.sortBy !== 'default') count++
+    return count
+  }
+
+  const [tempFilters, setTempFilters] = React.useState<{
+    customTitle: string
+    minRating: number
+    minVotes: number
+    yearFrom: number
+    yearTo: number
+    sortBy: string
+  }>({
+    customTitle: '',
+    minRating: 0,
+    minVotes: 0,
+    yearFrom: 1900,
+    yearTo: 2026,
+    sortBy: 'default',
+  })
+
+  React.useEffect(() => {
+    if (editingRow) {
+      const existing = rowFilters[editingRow.id] || {}
+      setTempFilters({
+        customTitle: existing.customTitle || '',
+        minRating: existing.minRating || 0,
+        minVotes: existing.minVotes || 0,
+        yearFrom: existing.yearFrom || 1900,
+        yearTo: existing.yearTo || 2026,
+        sortBy: existing.sortBy || 'default',
+      })
+    }
+  }, [editingRow, rowFilters])
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  )
+
+  const handleArrangeDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setSelectedRows((items) => {
+        const oldIndex = items.findIndex((i) => i.id === active.id)
+        const newIndex = items.findIndex((i) => i.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
+
+  const toggleAllCategories = () => {
+    if (expandedCategories.length > 0) {
+      setExpandedCategories([])
+    } else {
+      setExpandedCategories(activeCategories.map((c) => c.id))
+    }
+  }
+
+  const handleSelectAllCategory = (catId: string) => {
+    const cat = activeCategories.find((c) => c.id === catId)
+    if (!cat) return
+    const itemsToAdd = cat.items.filter((item) => !selectedRows.some((r) => r.id === item.id))
+    if (itemsToAdd.length > 0) {
+      setSelectedRows((prev) => [...prev, ...itemsToAdd])
+      toast.success(`Added ${itemsToAdd.length} rows from ${cat.name}`)
+    }
+  }
+
+  const handleClearCategory = (catId: string) => {
+    const cat = activeCategories.find((c) => c.id === catId)
+    if (!cat) return
+    const catItemIds = new Set(cat.items.map((i) => i.id))
+    setSelectedRows((prev) => prev.filter((r) => !catItemIds.has(r.id)))
+    toast.info(`Removed ${cat.name} rows`)
+  }
+
+  const handleCreateAiRow = () => {
+    if (!aiPromptInput.trim()) return
+    const id = `ai_prompt_${Date.now()}`
+    const newRow: CatalogItem = {
+      id,
+      name: aiPromptInput.trim(),
+      category: 'AI generated',
+      type: 'both',
+      isAi: true,
+      personalized: true,
+    }
+    setSelectedRows((prev) => [newRow, ...prev])
+    setRowFilters((prev) => ({
+      ...prev,
+      [id]: { customTitle: aiPromptInput.trim() },
+    }))
+    setAiPromptInput('')
+    setAiPromptOpen(false)
+    toast.success(`Generated AI Catalog row: "${newRow.name}"`)
+  }
 
   // Step 3: Collections State
   const [collections, setCollections] = React.useState<CollectionConfig[]>(DEFAULT_COLLECTIONS)
@@ -442,79 +650,33 @@ function ProfileWizardPage() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset className="bg-background text-foreground min-h-screen flex flex-col">
-        {/* Unified Top Header Bar */}
-        <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6 bg-background/95 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center gap-2">
+      <SidebarInset>
+        {/* Top Header Bar matching SiteHeader */}
+        <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
+          <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
             <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="mx-1 h-4" />
+            <Separator
+              orientation="vertical"
+              className="mx-1 h-4 data-vertical:self-auto"
+            />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate({ to: '/dashboard' })}
-              className="h-8 w-8 rounded-lg"
+              className="size-8 text-muted-foreground hover:text-foreground rounded-lg"
               title="Back to Profiles"
+              aria-label="Back to Profiles"
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="size-4" />
             </Button>
-            <div>
-              <h1 className="text-sm font-semibold text-foreground leading-tight">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <h1 className="text-base font-medium truncate text-foreground">
                 {profileName || 'New Profile'}
               </h1>
-              <p className="text-[11px] text-muted-foreground font-normal">Step {step} of 4</p>
             </div>
           </div>
 
-          {/* Stepper Center Indicator */}
-          <div className="hidden md:flex items-center gap-3 text-sm">
-            {[
-              { num: 1, label: 'Setup' },
-              { num: 2, label: 'Home rows' },
-              { num: 3, label: 'Collections' },
-              { num: 4, label: 'Finalize' },
-            ].map((s, idx) => (
-              <React.Fragment key={s.num}>
-                <button
-                  onClick={() => {
-                    saveProfileConfig()
-                    setStep(s.num as any)
-                  }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                    step === s.num
-                      ? 'bg-accent text-accent-foreground border border-border shadow-xs'
-                      : step > s.num
-                      ? 'text-foreground/80 hover:text-foreground'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  <span
-                    className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      step === s.num
-                        ? 'bg-primary text-primary-foreground'
-                        : step > s.num
-                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {step > s.num ? '✓' : s.num}
-                  </span>
-                  <span>{s.label}</span>
-                </button>
-                {idx < 3 && <div className="w-6 h-px bg-border" />}
-              </React.Fragment>
-            ))}
-          </div>
-
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setPreviewOpen(true)}
-              className="text-xs gap-1.5 h-8"
-            >
-              <Play className="size-3 text-primary" />
-              Preview
-            </Button>
             <ThemeToggle />
           </div>
         </header>
@@ -523,7 +685,7 @@ function ProfileWizardPage() {
         <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0">
           {/* Center Work Area */}
           <div className="flex-1 min-w-0 flex flex-col items-center">
-            <div className="w-full max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12">
+            <div className={`w-full ${step === 2 ? 'max-w-6xl xl:max-w-7xl px-4 py-6 sm:px-6 sm:py-8' : 'max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12'}`}>
             {/* ================= STEP 1: SETUP ================= */}
             {step === 1 && (
               <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -1256,22 +1418,33 @@ function ProfileWizardPage() {
 
             {/* ================= STEP 2: HOME ROWS ================= */}
             {step === 2 && (
-              <div className="space-y-6 animate-in fade-in-50 duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground tracking-tight">Home rows</h2>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Pick rows for the Nuvio home screen. Suggested around 15. Reorder anytime with Arrange home.
+              <div className="flex flex-col h-full w-full animate-in fade-in-50 duration-200">
+                {/* Desktop Section Header */}
+                <header className="hidden shrink-0 items-start justify-between gap-3 border-b border-border pb-4 lg:flex">
+                  <div className="min-w-0">
+                    <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl text-foreground">Home rows</h2>
+                    <p className="mt-1.5 text-sm text-muted-foreground">
+                      Pick rows for the Nuvio home screen. Suggested around 15. Reorder them anytime with{' '}
+                      <button
+                        type="button"
+                        onClick={() => setArrangeHomeOpen(true)}
+                        className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                      >
+                        Arrange home
+                      </button>.
                     </p>
                   </div>
-
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
-                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-                          <Sparkles className="size-3.5 text-purple-500 dark:text-purple-400" />
-                          Apply preset
-                          <ChevronDown className="size-3 ml-1" />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 rounded-lg px-2.5 text-xs font-medium shrink-0 border-border bg-background hover:bg-muted"
+                        >
+                          <Sparkles className="size-3.5 text-purple-500" />
+                          <span className="hidden sm:inline">Apply preset</span>
+                          <ChevronDown className="size-3 text-muted-foreground" />
                         </Button>
                       }
                     />
@@ -1301,98 +1474,134 @@ function ProfileWizardPage() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </div>
+                </header>
 
-                {/* Counter progress */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground">Home rows</span>
-                    <span className="text-muted-foreground font-mono">{selectedRows.length} / 50</span>
+                {/* Home Row Cap Meter */}
+                <div data-testid="home-row-cap-meter" className="flex flex-col gap-2 shrink-0 pt-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-medium text-foreground">Home rows</span>
+                    <span className="text-sm font-medium tabular-nums text-muted-foreground" data-testid="home-row-cap-count">
+                      {selectedRows.length} / 50
+                    </span>
                   </div>
-                  <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full bg-primary rounded-full transition-all duration-300"
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        selectedRows.length > 45 ? 'bg-amber-500' : 'bg-primary'
+                      }`}
                       style={{ width: `${Math.min(100, (selectedRows.length / 50) * 100)}%` }}
                     />
                   </div>
                 </div>
 
-                {/* 2-Column Row Picker: Categories Accordion (Left) + Selected List (Right) */}
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 pt-2">
-                  {/* Left Column: Categories */}
-                  <div className="md:col-span-6 space-y-3">
-                    {/* Custom Dynamic Ad-Hoc Row Input */}
-                    <div className="p-3.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                          <Plus className="size-3.5 text-primary" />
-                          <span>Add Custom Dynamic Row</span>
+                {/* Two-Column Responsive Layout */}
+                <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden pb-6 sm:gap-6 lg:flex-row lg:overflow-visible lg:pt-6 lg:pb-0">
+                  {/* Mobile section title (hidden on desktop) */}
+                  <div className="shrink-0 lg:hidden">
+                    <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl text-foreground">Home rows</h2>
+                    <p className="mt-1.5 text-sm text-muted-foreground">
+                      Pick rows for the Nuvio home screen. Suggested around 15. Reorder them anytime with{' '}
+                      <button
+                        type="button"
+                        onClick={() => setArrangeHomeOpen(true)}
+                        className="cursor-pointer font-medium text-primary underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+                      >
+                        Arrange home
+                      </button>.
+                    </p>
+                  </div>
+
+                  {/* Left Column: Catalog Picker */}
+                  <div className="flex flex-col lg:h-full lg:min-h-0 lg:min-w-0 lg:flex-1">
+                    {/* Sticky Search & Actions toolbar */}
+                    <div className="sticky top-0 z-10 flex shrink-0 flex-col gap-2 border-b border-border bg-background pt-2 pb-3 sm:flex-row sm:items-center lg:static lg:pt-0">
+                      <div className="flex flex-1 items-center gap-2">
+                        <div className="relative flex-1">
+                          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            value={catalogSearch}
+                            onChange={(e) => setCatalogSearch(e.target.value)}
+                            placeholder="Search catalogs..."
+                            className="h-10 w-full min-w-0 rounded-lg border border-input bg-transparent pl-9 text-xs placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+                          />
                         </div>
-                        <span className="text-[10px] text-muted-foreground">MDBList · TMDB Person / Studio</span>
-                      </div>
-                      <div className="grid grid-cols-12 gap-2">
-                        <select
-                          value={customRowPrefix}
-                          onChange={(e) => setCustomRowPrefix(e.target.value as any)}
-                          className="col-span-5 h-8 rounded-lg border border-input bg-background px-2 text-xs"
-                        >
-                          <option value="mdblist">MDBList List / Slug</option>
-                          <option value="tmdb_actor">TMDB Actor ID</option>
-                          <option value="tmdb_director">TMDB Director ID</option>
-                          <option value="tmdb_company">TMDB Studio ID</option>
-                        </select>
-                        <select
-                          value={customRowType}
-                          onChange={(e) => setCustomRowType(e.target.value as any)}
-                          className="col-span-3 h-8 rounded-lg border border-input bg-background px-2 text-xs"
-                        >
-                          <option value="movie">Movies</option>
-                          <option value="series">Series</option>
-                        </select>
-                        <Input
-                          value={customRowInput}
-                          onChange={(e) => setCustomRowInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleAddCustomRow()
-                            }
-                          }}
-                          placeholder={
-                            customRowPrefix === 'mdblist'
-                              ? 'e.g. 164547 or username/list'
-                              : 'e.g. 500 (Tom Cruise)'
-                          }
-                          className="col-span-4 h-8 text-xs px-2.5"
-                        />
-                      </div>
-                      <div className="flex justify-end">
+
+                        {/* Mobile Preset Trigger */}
+                        <div className="lg:hidden">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-10 px-2.5 text-xs gap-1 border-border bg-background"
+                                  title="Apply preset"
+                                >
+                                  <Sparkles className="size-4 text-purple-500" />
+                                  <ChevronDown className="size-3" />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent align="end" className="w-60 max-h-80 overflow-y-auto">
+                              {activePresets.map((preset) => (
+                                <DropdownMenuItem
+                                  key={preset.id}
+                                  onClick={() => {
+                                    const rows = getPresetRows(preset.id, activeCategories)
+                                    setSelectedRows(rows)
+                                    toast.success(`Applied ${preset.label}`)
+                                  }}
+                                  className="text-xs py-2"
+                                >
+                                  {preset.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        {/* Create with AI Button */}
                         <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={handleAddCustomRow}
-                          className="h-7 text-xs px-3 gap-1"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setAiPromptOpen(true)}
+                          className="size-10 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          title="Create with AI"
+                          aria-label="Create with AI"
                         >
-                          <Plus className="size-3" />
-                          Add Row
+                          <Sparkles className="size-[17px] text-purple-500 hover:text-purple-400" />
+                        </Button>
+
+                        {/* Add Catalog List Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setCustomListOpen(true)}
+                          className="size-10 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          title="Add Catalog List"
+                          aria-label="Add Catalog List"
+                          data-testid="add-custom-list-trigger"
+                        >
+                          <ListPlus className="size-4" />
+                        </Button>
+
+                        {/* Expand / Collapse All Button */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={toggleAllCategories}
+                          className="size-10 shrink-0 text-muted-foreground hover:text-foreground hover:bg-muted"
+                          title={expandedCategories.length > 0 ? 'Collapse all' : 'Expand all'}
+                          aria-label={expandedCategories.length > 0 ? 'Collapse all' : 'Expand all'}
+                          data-testid="picker-toggle-all"
+                        >
+                          <ChevronsUpDown className="size-4" />
                         </Button>
                       </div>
                     </div>
 
-                    {/* Search Input */}
-                    <div className="relative">
-                      <Search className="size-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
-                      <Input
-                        value={catalogSearch}
-                        onChange={(e) => setCatalogSearch(e.target.value)}
-                        placeholder="Search catalogs..."
-                        className="pl-9 text-xs h-10"
-                      />
-                    </div>
-
-                    {/* Categories Accordion */}
-                    <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                    {/* Scrollable Categories List */}
+                    <div className="flex-1 overflow-y-auto pr-2 pt-4 space-y-3 max-h-[720px]">
                       {activeCategories.map((cat) => {
                         const isExpanded = expandedCategories.includes(cat.id)
                         const filteredItems = cat.items.filter((i) =>
@@ -1400,119 +1609,200 @@ function ProfileWizardPage() {
                         )
                         if (catalogSearch && filteredItems.length === 0) return null
 
-                        const selectedCount = cat.items.filter((i) =>
+                        const selectedInCat = cat.items.filter((i) =>
                           selectedRows.some((r) => r.id === i.id)
-                        ).length
+                        )
+                        const selectedCount = selectedInCat.length
 
                         return (
-                          <div key={cat.id} className="rounded-xl border border-border bg-card overflow-hidden">
-                            <div
-                              onClick={() => toggleCategory(cat.id)}
-                              className="p-3.5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs font-semibold text-foreground tracking-wide">
-                                  {cat.name}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[11px] text-muted-foreground font-mono">
-                                  {selectedCount} / {cat.items.length}
-                                </span>
-                                <ChevronRight
-                                  className={`size-3.5 text-muted-foreground transition-transform ${
-                                    isExpanded ? 'rotate-90' : ''
+                          <section key={cat.id} className="flex flex-col border border-border/70 rounded-xl bg-card/60 overflow-hidden">
+                            <header className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-card/90 hover:bg-accent/40 transition-colors">
+                              <button
+                                type="button"
+                                onClick={() => toggleCategory(cat.id)}
+                                className="group flex cursor-pointer items-center gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase hover:text-foreground focus-visible:outline-none"
+                                data-testid="picker-section-toggle"
+                                aria-expanded={isExpanded}
+                              >
+                                <span>{cat.name}</span>
+                                <ChevronDown
+                                  className={`size-3.5 text-muted-foreground/70 transition-transform duration-200 ${
+                                    isExpanded ? '' : '-rotate-90'
                                   }`}
                                 />
+                              </button>
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-[11px] text-muted-foreground tabular-nums font-mono">
+                                  {selectedCount} / {cat.items.length}
+                                </span>
+                                {selectedCount > 0 ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleClearCategory(cat.id)}
+                                    className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                                  >
+                                    Clear
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectAllCategory(cat.id)}
+                                    className="text-[11px] font-medium text-primary transition-colors hover:text-primary/80 cursor-pointer"
+                                  >
+                                    Select all
+                                  </button>
+                                )}
                               </div>
-                            </div>
+                            </header>
 
                             {isExpanded && (
-                              <div className="px-3 pb-3 pt-1 border-t border-border/40 space-y-1">
+                              <div className="p-2 space-y-1 border-t border-border/40 bg-background/50">
                                 {filteredItems.map((item) => {
                                   const isSelected = selectedRows.some((r) => r.id === item.id)
+                                  const filterCount = getFilterCount(item.id)
                                   return (
                                     <div
                                       key={item.id}
                                       onClick={() => toggleRow(item)}
-                                      className={`p-2.5 rounded-lg flex items-center justify-between cursor-pointer text-xs transition-colors ${
+                                      className={`px-3 py-2 rounded-lg flex items-center justify-between cursor-pointer text-xs transition-colors select-none ${
                                         isSelected
-                                          ? 'bg-primary/10 border border-primary/30 text-foreground'
+                                          ? 'bg-primary/10 border border-primary/30 text-foreground font-medium'
                                           : 'hover:bg-accent/50 text-muted-foreground hover:text-foreground'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-2 truncate pr-2">
+                                      <div className="flex items-center gap-2.5 truncate pr-2">
                                         <Checkbox checked={isSelected} />
                                         <span className="truncate">{item.name}</span>
                                       </div>
-                                      <span className="text-[10px] text-muted-foreground shrink-0 font-medium">
-                                        {item.category}
-                                      </span>
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {filterCount > 0 && (
+                                          <span className="grid min-w-4 place-items-center rounded-full bg-primary/20 text-primary px-1 text-[10px] font-bold">
+                                            {filterCount}
+                                          </span>
+                                        )}
+                                        <span className="text-[10px] text-muted-foreground/70 font-mono">
+                                          {item.type === 'movie' ? 'Movies' : item.type === 'series' ? 'Series' : 'Both'}
+                                        </span>
+                                      </div>
                                     </div>
                                   )
                                 })}
                               </div>
                             )}
-                          </div>
+                          </section>
                         )
                       })}
                     </div>
                   </div>
 
-                  {/* Right Column: Selected Rows */}
-                  <div className="md:col-span-6 rounded-2xl border border-border bg-card p-4 flex flex-col h-[650px]">
-                    <div className="flex items-center justify-between pb-3 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-foreground">Selected</span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {selectedRows.length} / 15 suggested
+                  {/* Right Column: Selected Rows Rail (aside) */}
+                  <aside className="flex flex-col overflow-hidden rounded-xl border border-border bg-card shrink-0 lg:w-80 xl:w-96 max-h-[780px]" aria-label="Selected rows">
+                    <header className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3 bg-card/90">
+                      <h3 className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                        Selected
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={`text-xs font-medium tabular-nums ${
+                            selectedRows.length > 15 ? 'text-amber-500 font-semibold' : 'text-muted-foreground'
+                          }`}
+                          title={selectedRows.length > 15 ? `${selectedRows.length - 15} over the suggested 15` : undefined}
+                        >
+                          {selectedRows.length}{' '}
+                          <span className="font-normal text-muted-foreground/70">/ 15 suggested</span>
                         </span>
+                        <button
+                          type="button"
+                          data-testid="selected-rail-clear"
+                          onClick={() => setSelectedRows([])}
+                          className="text-[11px] font-medium text-muted-foreground transition-colors hover:text-foreground cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="selected-rail-select-mode"
+                          onClick={() => setArrangeHomeOpen(true)}
+                          className="text-[11px] font-medium text-primary transition-colors hover:text-primary/80 cursor-pointer"
+                        >
+                          Arrange
+                        </button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedRows([])}
-                        className="text-xs h-7 px-2 text-muted-foreground hover:text-destructive"
-                      >
-                        Clear
-                      </Button>
-                    </div>
+                    </header>
 
-                    <div className="flex-1 overflow-y-auto space-y-2 py-3 pr-1">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
                       {selectedRows.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
-                          <Layers className="size-8 stroke-1 mb-2" />
-                          <p className="text-xs">No home rows selected yet</p>
-                          <p className="text-[11px] text-muted-foreground/70 mt-1">Pick categories on the left to add rows</p>
+                        <div className="py-12 flex flex-col items-center justify-center text-center text-muted-foreground">
+                          <Layers className="size-8 stroke-1 mb-2 text-muted-foreground/50" />
+                          <p className="text-xs font-medium">No home rows selected</p>
+                          <p className="text-[11px] text-muted-foreground/70 mt-1">
+                            Choose catalogs from the left to populate your home feed
+                          </p>
                         </div>
                       ) : (
-                        selectedRows.map((row, idx) => (
-                          <div
-                            key={row.id}
-                            className="p-3 rounded-xl border border-border bg-background flex items-center justify-between group hover:border-border/80 transition-all"
-                          >
-                            <div className="flex items-center gap-2.5 truncate pr-2">
-                              <span className="size-5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center shrink-0">
-                                {idx + 1}
-                              </span>
-                              <div className="truncate">
-                                <div className="text-xs font-medium text-foreground truncate">{row.name}</div>
-                                <div className="text-[10px] text-muted-foreground">{row.category}</div>
+                        selectedRows.map((row) => {
+                          const filterCount = getFilterCount(row.id)
+                          const isAi = row.isAi || row.category === 'AI generated'
+                          return (
+                            <div
+                              key={row.id}
+                              data-testid="selected-row"
+                              data-catalog-id={row.id}
+                              className={`group flex items-center gap-1.5 rounded-lg border py-1.5 pr-1.5 pl-2.5 transition-all ${
+                                isAi
+                                  ? 'border-primary/30 bg-primary/10 hover:border-primary/50'
+                                  : 'border-border/80 bg-background hover:border-border'
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-xs font-medium text-foreground">
+                                  {rowFilters[row.id]?.customTitle || row.name}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                                  <span className="truncate">{row.category}</span>
+                                  {rowFilters[row.id]?.minRating && (
+                                    <span>· ★ {rowFilters[row.id]?.minRating}+</span>
+                                  )}
+                                  {rowFilters[row.id]?.yearFrom && (
+                                    <span>· {rowFilters[row.id]?.yearFrom}+</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0">
+                                {/* Filter Sliders Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingRow(row)}
+                                  className="relative grid size-8 place-items-center rounded-md text-muted-foreground/70 hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                                  title={`Edit ${row.name}`}
+                                  aria-label={`Edit ${row.name}`}
+                                >
+                                  <SlidersHorizontal className="size-3.5" />
+                                  {filterCount > 0 && (
+                                    <span className="absolute -top-0.5 -right-0.5 grid min-w-4 h-4 place-items-center rounded-full bg-primary px-1 text-[9px] font-bold text-primary-foreground leading-none">
+                                      {filterCount}
+                                    </span>
+                                  )}
+                                </button>
+
+                                {/* Remove Button */}
+                                <button
+                                  type="button"
+                                  onClick={() => toggleRow(row)}
+                                  className="grid size-8 place-items-center rounded-md text-muted-foreground/70 hover:bg-destructive/10 hover:text-destructive transition-colors cursor-pointer"
+                                  title={`Remove ${row.name}`}
+                                  aria-label={`Remove ${row.name}`}
+                                >
+                                  <X className="size-3.5" />
+                                </button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <button
-                                onClick={() => toggleRow(row)}
-                                className="size-6 rounded-md hover:bg-muted text-muted-foreground hover:text-destructive flex items-center justify-center transition-colors"
-                              >
-                                <X className="size-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        ))
+                          )
+                        })
                       )}
                     </div>
-                  </div>
+                  </aside>
                 </div>
               </div>
             )}
@@ -1797,190 +2087,604 @@ function ProfileWizardPage() {
               </div>
             )}
 
-            {/* Bottom Persistent Step Navigation */}
-            <div className="pt-10 pb-6 border-t border-border mt-10 flex items-center justify-between">
+            <div className="pb-6" />
+          </div>
+        </div>
+
+          {/* ================= RIGHT PERSISTENT SIDEBAR ("Profile Setup") ================= */}
+          {step !== 2 && (
+            <aside className="w-full lg:w-80 lg:shrink-0 border-t lg:border-t-0 lg:border-l border-border p-6 bg-card/40 space-y-6 lg:sticky lg:top-(--header-height) lg:h-[calc(100vh-var(--header-height))] lg:overflow-y-auto">
+              <div className="flex items-center justify-between pb-4 border-b border-border">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                  Profile Setup
+                </h3>
+                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  Saved
+                </span>
+              </div>
+
+              {/* Live Preview Card */}
+              <div className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
+                <h4 className="text-sm font-semibold text-foreground">Live preview</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  See how Nuvio renders this profile layout on TVs and streaming devices right now.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewOpen(true)}
+                  className="w-full text-xs gap-1.5"
+                >
+                  <Play className="size-3 text-primary" />
+                  Open preview
+                </Button>
+              </div>
+
+              {/* Setup Completion Progress */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-foreground">Setup completion</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">100%</span>
+                </div>
+                <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full w-full" />
+                </div>
+              </div>
+
+              {/* Home Layout Arrange */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Home Layout
+                </h4>
+                <button
+                  onClick={() => setArrangeHomeOpen(true)}
+                  className="w-full p-3 rounded-xl border border-border bg-background hover:bg-accent text-left flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                    <Sliders className="size-3.5 text-muted-foreground" />
+                    Arrange home
+                  </div>
+                  <span className="text-xs text-muted-foreground font-mono">{selectedRows.length} items</span>
+                </button>
+              </div>
+
+              {/* Required Providers Checklist */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Required
+                </h4>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>MDBList</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>TMDB</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional Trackers Checklist */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Optional
+                </h4>
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Trakt</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Simkl</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground">
+                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>AniList</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Sparkles className="size-3.5 text-purple-500 dark:text-purple-400" />
+                    <span>AI Recommendations</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Catalog Metrics */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Catalog
+                </h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="p-2.5 rounded-xl bg-background border border-border">
+                    <div className="text-muted-foreground text-[10px]">Rows</div>
+                    <div className="text-foreground font-mono font-bold text-base">{selectedRows.length}</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-background border border-border">
+                    <div className="text-muted-foreground text-[10px]">Collections</div>
+                    <div className="text-foreground font-mono font-bold text-base">{collections.length}</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-background border border-border">
+                    <div className="text-muted-foreground text-[10px]">Folders</div>
+                    <div className="text-foreground font-mono font-bold text-base">28</div>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-background border border-border">
+                    <div className="text-muted-foreground text-[10px]">Sources</div>
+                    <div className="text-foreground font-mono font-bold text-base">96</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Posters Checklist */}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Posters
+                </h4>
+                <div className="space-y-1.5 text-xs">
+                  {['Custom URL', 'BetterPosters', 'EasyRatings', 'Top Posters', 'RPDB'].map((p) => (
+                    <div key={p} className="flex items-center gap-2 text-foreground">
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                      <span>{p}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          )}
+        </div>
+
+        {/* Sticky Glass Bottom Navigation Footer */}
+        <footer className="z-20 shrink-0 border-t border-border bg-background/95 backdrop-blur-md sticky bottom-0">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6">
+            <div className="flex items-center justify-between gap-3 py-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => {
                   if (step > 1) setStep((step - 1) as any)
                   else navigate({ to: '/dashboard' })
                 }}
-                className="text-xs px-5"
+                className="h-10 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground shrink-0"
               >
-                &lt; Back
+                <ChevronLeft className="size-4" />
+                Back
               </Button>
 
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-muted-foreground hidden sm:inline">
-                  {step === 1 && 'Next: Home rows'}
-                  {step === 2 && 'Next: Collections'}
-                  {step === 3 && 'Next: Finalize'}
-                  {step === 4 && 'Complete'}
-                </span>
+              {/* Stepper in Bottom Bar */}
+              <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
+                {[
+                  { num: 1, label: 'Setup' },
+                  { num: 2, label: 'Home rows' },
+                  { num: 3, label: 'Collections' },
+                  { num: 4, label: 'Finalize' },
+                ].map((s, idx) => (
+                  <React.Fragment key={s.num}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveProfileConfig()
+                        setStep(s.num as any)
+                      }}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                        step === s.num
+                          ? 'bg-accent text-accent-foreground border border-border shadow-xs'
+                          : step > s.num
+                          ? 'text-foreground hover:bg-accent/50'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <span
+                        className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          step === s.num
+                            ? 'bg-primary text-primary-foreground'
+                            : step > s.num
+                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                            : 'bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {step > s.num ? '✓' : s.num}
+                      </span>
+                      <span className="hidden sm:inline">{s.label}</span>
+                    </button>
+                    {idx < 3 && <div className="w-2 sm:w-4 h-px bg-border" />}
+                  </React.Fragment>
+                ))}
+              </div>
 
+              <div className="flex items-center gap-3 shrink-0">
                 {step < 4 ? (
                   <Button
                     onClick={() => {
                       saveProfileConfig()
                       setStep((step + 1) as any)
                     }}
-                    className="font-semibold text-xs px-6"
+                    className="h-10 gap-1.5 px-4 text-xs font-semibold"
                   >
-                    Continue &gt;
+                    Continue
+                    <ChevronRight className="size-4" />
                   </Button>
                 ) : (
                   <Button
-                    onClick={() => navigate({ to: '/dashboard' })}
-                    className="font-semibold text-xs px-6"
+                    onClick={handlePushToNuvio}
+                    disabled={isPushing}
+                    className="h-10 gap-1.5 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
                   >
-                    Return to Dashboard
+                    {isPushing ? 'Pushing...' : 'Push to Nuvio'}
                   </Button>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </footer>
 
-          {/* ================= RIGHT PERSISTENT SIDEBAR ("Profile Setup") ================= */}
-          <aside className="w-full lg:w-80 lg:shrink-0 border-t lg:border-t-0 lg:border-l border-border p-6 bg-card/40 space-y-6 lg:sticky lg:top-(--header-height) lg:h-[calc(100vh-var(--header-height))] lg:overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                Profile Setup
-              </h3>
-              <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
-                <span className="size-1.5 rounded-full bg-emerald-500" />
-                Saved
-              </span>
-            </div>
-
-            {/* Live Preview Card */}
-            <div className="p-4 rounded-2xl border border-border bg-card space-y-3 shadow-xs">
-              <h4 className="text-sm font-semibold text-foreground">Live preview</h4>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                See how Nuvio renders this profile layout on TVs and streaming devices right now.
+        {/* ================= ARRANGE HOME DIALOG ================= */}
+        <Dialog open={arrangeHomeOpen} onOpenChange={setArrangeHomeOpen}>
+          <DialogContent className="sm:max-w-lg bg-card border-border text-foreground max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <ListOrdered className="size-4 text-primary" />
+                Arrange Home Rows
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Drag and drop to reorder how rows appear on your Nuvio home screen.
               </p>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto pr-1 py-2 space-y-2">
+              <DndContext
+                sensors={dndSensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleArrangeDragEnd}
+              >
+                <SortableContext
+                  items={selectedRows.map((r) => r.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {selectedRows.map((row) => (
+                    <SortableHomeRowItem
+                      key={row.id}
+                      row={row}
+                      onRemove={() => toggleRow(row)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedRows(getPresetRows('balanced', activeCategories))}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Reset to Default
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setArrangeHomeOpen(false)}
+                className="text-xs px-4"
+              >
+                Done
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ================= ROW FILTER CONFIGURATION DIALOG ================= */}
+        <Dialog open={!!editingRow} onOpenChange={(open) => !open && setEditingRow(null)}>
+          <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <SlidersHorizontal className="size-4 text-primary" />
+                Configure Row: {editingRow?.name}
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Customize title override, rating thresholds, and display filters for this row.
+              </p>
+            </DialogHeader>
+            <div className="space-y-4 py-2 text-xs">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Custom Display Title</Label>
+                <Input
+                  value={tempFilters.customTitle}
+                  onChange={(e) => setTempFilters((prev) => ({ ...prev, customTitle: e.target.value }))}
+                  placeholder={editingRow?.name || 'e.g. Featured Hits'}
+                  className="h-9 text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground">Overrides row name on Nuvio home screen.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Min IMDb / TMDB Rating</Label>
+                  <select
+                    value={tempFilters.minRating}
+                    onChange={(e) => setTempFilters((prev) => ({ ...prev, minRating: parseFloat(e.target.value) }))}
+                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs"
+                  >
+                    <option value="0">Any Rating</option>
+                    <option value="6.0">★ 6.0+</option>
+                    <option value="6.5">★ 6.5+</option>
+                    <option value="7.0">★ 7.0+</option>
+                    <option value="7.5">★ 7.5+</option>
+                    <option value="8.0">★ 8.0+</option>
+                    <option value="8.5">★ 8.5+</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Min Vote Count</Label>
+                  <select
+                    value={tempFilters.minVotes}
+                    onChange={(e) => setTempFilters((prev) => ({ ...prev, minVotes: parseInt(e.target.value, 10) }))}
+                    className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs"
+                  >
+                    <option value="0">Any Votes</option>
+                    <option value="100">100+ votes</option>
+                    <option value="300">300+ votes</option>
+                    <option value="500">500+ votes</option>
+                    <option value="1000">1,000+ votes</option>
+                    <option value="5000">5,000+ votes</option>
+                    <option value="25000">25,000+ votes</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Year From</Label>
+                  <Input
+                    type="number"
+                    value={tempFilters.yearFrom}
+                    onChange={(e) => setTempFilters((prev) => ({ ...prev, yearFrom: parseInt(e.target.value, 10) || 1900 }))}
+                    min={1900}
+                    max={2026}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium">Year To</Label>
+                  <Input
+                    type="number"
+                    value={tempFilters.yearTo}
+                    onChange={(e) => setTempFilters((prev) => ({ ...prev, yearTo: parseInt(e.target.value, 10) || 2026 }))}
+                    min={1900}
+                    max={2026}
+                    className="h-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Sort Order</Label>
+                <select
+                  value={tempFilters.sortBy}
+                  onChange={(e) => setTempFilters((prev) => ({ ...prev, sortBy: e.target.value }))}
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs"
+                >
+                  <option value="default">Default / Recommended</option>
+                  <option value="rating">Highest Rated (IMDb / TMDB)</option>
+                  <option value="popularity">Most Popular</option>
+                  <option value="release_date">Newest Release Date</option>
+                  <option value="title">Alphabetical (A-Z)</option>
+                </select>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  if (editingRow) {
+                    setRowFilters((prev) => {
+                      const updated = { ...prev }
+                      delete updated[editingRow.id]
+                      return updated
+                    })
+                    setEditingRow(null)
+                    toast.info(`Reset filters for ${editingRow.name}`)
+                  }
+                }}
+                className="text-xs text-muted-foreground hover:text-destructive"
+              >
+                Clear Filters
+              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingRow(null)}
+                  className="text-xs"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (editingRow) {
+                      setRowFilters((prev) => ({
+                        ...prev,
+                        [editingRow.id]: {
+                          customTitle: tempFilters.customTitle.trim() || undefined,
+                          minRating: tempFilters.minRating > 0 ? tempFilters.minRating : undefined,
+                          minVotes: tempFilters.minVotes > 0 ? tempFilters.minVotes : undefined,
+                          yearFrom: tempFilters.yearFrom > 1900 ? tempFilters.yearFrom : undefined,
+                          yearTo: tempFilters.yearTo < 2026 ? tempFilters.yearTo : undefined,
+                          sortBy: tempFilters.sortBy !== 'default' ? tempFilters.sortBy : undefined,
+                        },
+                      }))
+                      setEditingRow(null)
+                      toast.success(`Saved filters for ${editingRow.name}`)
+                    }
+                  }}
+                  className="text-xs"
+                >
+                  Save Filters
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* ================= CREATE WITH AI DIALOG ================= */}
+        <Dialog open={aiPromptOpen} onOpenChange={setAiPromptOpen}>
+          <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <Sparkles className="size-4 text-purple-500" />
+                Create Home Row with AI
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Enter a natural language prompt or pick a preset theme to curate a custom row.
+              </p>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <Input
+                value={aiPromptInput}
+                onChange={(e) => setAiPromptInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleCreateAiRow()
+                  }
+                }}
+                placeholder="e.g. 90s Cyberpunk anime, Gritty Nordic Noir, Fast-paced Heist movies..."
+                className="h-10 text-xs"
+              />
+              <div>
+                <Label className="text-[11px] text-muted-foreground mb-1.5 block">Theme Inspirations</Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    '90s Cyberpunk Thrillers',
+                    'Mind-Bending Psychological Sci-Fi',
+                    'Studio Ghibli Aesthetic Anime',
+                    'High-Stakes Heist Cinema',
+                    'Cozy British Murder Mysteries',
+                    'Critically Acclaimed Dark Comedy',
+                  ].map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => setAiPromptInput(sugg)}
+                      className="text-[11px] px-2.5 py-1 rounded-full border border-border bg-accent/30 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors cursor-pointer"
+                    >
+                      + {sugg}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPreviewOpen(true)}
-                className="w-full text-xs gap-1.5"
+                onClick={() => setAiPromptOpen(false)}
+                className="text-xs"
               >
-                <Play className="size-3 text-primary" />
-                Open preview
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreateAiRow}
+                disabled={!aiPromptInput.trim()}
+                className="text-xs gap-1.5"
+              >
+                <Sparkles className="size-3.5" />
+                Generate & Add Row
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            {/* Setup Completion Progress */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground">Setup completion</span>
-                <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">100%</span>
+        {/* ================= ADD CUSTOM LIST DIALOG ================= */}
+        <Dialog open={customListOpen} onOpenChange={setCustomListOpen}>
+          <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold">
+                <ListPlus className="size-4 text-primary" />
+                Add Custom Catalog List
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">
+                Connect any MDBList public list, or TMDB actor, director, or production company as a home row.
+              </p>
+            </DialogHeader>
+            <div className="space-y-3.5 py-2 text-xs">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Source Type</Label>
+                <select
+                  value={customRowPrefix}
+                  onChange={(e) => setCustomRowPrefix(e.target.value as any)}
+                  className="w-full h-9 rounded-lg border border-input bg-background px-3 text-xs"
+                >
+                  <option value="mdblist">MDBList List / Slug</option>
+                  <option value="tmdb_actor">TMDB Actor ID</option>
+                  <option value="tmdb_director">TMDB Director ID</option>
+                  <option value="tmdb_company">TMDB Studio / Company ID</option>
+                </select>
               </div>
-              <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-500 rounded-full w-full" />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Media Type</Label>
+                <div className="flex items-center gap-4">
+                  {(['movie', 'series'] as const).map((t) => (
+                    <label key={t} className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="customRowTypeModal"
+                        checked={customRowType === t}
+                        onChange={() => setCustomRowType(t)}
+                        className="accent-primary"
+                      />
+                      <span className="capitalize">{t === 'movie' ? 'Movies' : 'Series'}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">
+                  {customRowPrefix === 'mdblist' ? 'MDBList Slug or List URL' : 'TMDB Entity ID'}
+                </Label>
+                <Input
+                  value={customRowInput}
+                  onChange={(e) => setCustomRowInput(e.target.value)}
+                  placeholder={
+                    customRowPrefix === 'mdblist'
+                      ? 'e.g. 164547 or username/list'
+                      : 'e.g. 500 (Tom Cruise)'
+                  }
+                  className="h-9 text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {customRowPrefix === 'mdblist'
+                    ? 'Enter list ID, slug, or paste full mdblist.com URL.'
+                    : 'Find the ID from the TMDB person/company page URL.'}
+                </p>
               </div>
             </div>
-
-            {/* Home Layout Arrange */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Home Layout
-              </h4>
-              <button
-                onClick={() => setStep(2)}
-                className="w-full p-3 rounded-xl border border-border bg-background hover:bg-accent text-left flex items-center justify-between transition-colors"
+            <div className="pt-3 border-t border-border flex items-center justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCustomListOpen(false)}
+                className="text-xs"
               >
-                <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                  <Sliders className="size-3.5 text-muted-foreground" />
-                  Arrange home
-                </div>
-                <span className="text-xs text-muted-foreground font-mono">{selectedRows.length} items</span>
-              </button>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  handleAddCustomRow()
+                  setCustomListOpen(false)
+                }}
+                disabled={!customRowInput.trim()}
+                className="text-xs gap-1.5"
+              >
+                <Plus className="size-3.5" />
+                Add Row
+              </Button>
             </div>
-
-            {/* Required Providers Checklist */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Required
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2 text-foreground">
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>MDBList</span>
-                </div>
-                <div className="flex items-center gap-2 text-foreground">
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>TMDB</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Optional Trackers Checklist */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Optional
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex items-center gap-2 text-foreground">
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Trakt</span>
-                </div>
-                <div className="flex items-center gap-2 text-foreground">
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>Simkl</span>
-                </div>
-                <div className="flex items-center gap-2 text-foreground">
-                  <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                  <span>AniList</span>
-                </div>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Sparkles className="size-3.5 text-purple-500 dark:text-purple-400" />
-                  <span>AI Recommendations</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Catalog Metrics */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Catalog
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2.5 rounded-xl bg-background border border-border">
-                  <div className="text-muted-foreground text-[10px]">Rows</div>
-                  <div className="text-foreground font-mono font-bold text-base">{selectedRows.length}</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-background border border-border">
-                  <div className="text-muted-foreground text-[10px]">Collections</div>
-                  <div className="text-foreground font-mono font-bold text-base">{collections.length}</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-background border border-border">
-                  <div className="text-muted-foreground text-[10px]">Folders</div>
-                  <div className="text-foreground font-mono font-bold text-base">28</div>
-                </div>
-                <div className="p-2.5 rounded-xl bg-background border border-border">
-                  <div className="text-muted-foreground text-[10px]">Sources</div>
-                  <div className="text-foreground font-mono font-bold text-base">96</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Posters Checklist */}
-            <div className="space-y-2 pt-2 border-t border-border">
-              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                Posters
-              </h4>
-              <div className="space-y-1.5 text-xs">
-                {['Custom URL', 'BetterPosters', 'EasyRatings', 'Top Posters', 'RPDB'].map((p) => (
-                  <div key={p} className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>{p}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
-        </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ================= LIVE PREVIEW MODAL ================= */}
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
