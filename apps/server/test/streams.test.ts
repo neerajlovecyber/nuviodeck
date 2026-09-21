@@ -190,6 +190,37 @@ describe('Section 1: Stream Engine & Micro-Syntax Formatter Parity', () => {
       expect(cutStream.movieCut).toBe('Theatrical Cut')
       expect(cutStream.ottPlatform).toBe('Prime Video')
     })
+
+    it('sanitizes multiline pre-formatted scraper descriptions (Sootio/Torrentio/AIOStreams)', () => {
+      const sootioStream: StremioStream = {
+        name: '🔥 4K UHD',
+        title:
+          '🔥 4k ⟨web⟩ ⟨web-DI⟩ ★★★★★ ✏️ Itaewon Class S01·E01\n🎞️ Hevc 📺 10bit · Sdr\n🎧 Aac · Dd+ 🔊 2.0\n📦 8.38 Gb · 📊 15.1 Mbps\n🌐 Sootio\n🌎 HI ➡️ ASIAN T2 TVING 3524',
+        url: 'https://stream.example.com/play/1',
+      }
+      const parsed = StreamParser.parse(sootioStream, 'custom_1', 'Custom Addon 1', 'torbox')
+
+      expect(parsed.title).toBe('Itaewon Class')
+      expect(parsed.season).toBe(1)
+      expect(parsed.episode).toBe(1)
+      expect(parsed.resolution).toBe('2160p')
+      expect(parsed.quality).toBe('WEB-DL')
+      expect(parsed.visualTags).toContain('10bit')
+      expect(parsed.audioTags).toContain('AAC')
+      expect(parsed.codecs).toContain('HEVC')
+      expect(parsed.sizeBytes).toBeGreaterThan(0)
+      expect(parsed.folderSizeBytes).toBeUndefined()
+
+      // When formatted with Prism preset, description should be clean without duplicate scraper text or duplicated size
+      const formatted = StreamFormatter.format(parsed, { preset: 'prism' })
+      expect(formatted.name).toContain('🔥4K UHD')
+      expect(formatted.description).toContain('🎬 Itaewon Class')
+      expect(formatted.description).toContain('S01')
+      expect(formatted.description).toContain('E01')
+      expect(formatted.description).toContain('8.38 GB')
+      expect(formatted.description).not.toContain('8.38 GB/ 📦 8.38 GB')
+      expect(formatted.description).not.toContain('🌐 Sootio')
+    })
   })
 
   // ----------------------------------------------------

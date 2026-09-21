@@ -25,7 +25,7 @@ export class StreamParser {
     const audioChannels = this.detectAudioChannels(rawText)
     const codecs = this.detectCodecs(rawText)
     const { languages, languageEmojis } = this.detectLanguages(rawText)
-    const { sizeBytes, sizeFormatted } = this.detectSize(rawText)
+    const { sizeBytes, sizeFormatted, folderSizeBytes, folderSizeFormatted } = this.detectSize(rawText)
     const seeders = this.detectSeeders(rawText)
     const releaseGroup = this.detectReleaseGroup(rawText)
     const indexer = this.detectIndexer(rawText)
@@ -65,6 +65,8 @@ export class StreamParser {
       languageEmojis,
       sizeBytes,
       sizeFormatted,
+      folderSizeBytes,
+      folderSizeFormatted,
       seeders,
       releaseGroup,
       indexer,
@@ -100,7 +102,7 @@ export class StreamParser {
     const lower = text.toLowerCase()
     if (/\b(remux|bluray[- ._]?remux|bdremux)\b/.test(lower)) return 'BluRay REMUX'
     if (/\b(bluray|bdrip|brrip)\b/.test(lower)) return 'BluRay'
-    if (/\b(web[- ._]?dl|webdl)\b/.test(lower)) return 'WEB-DL'
+    if (/\b(web[- ._]?dl|webdl)\b|[⟨<]web(?:[- ._]?(?:dl|di))?[⟩>]|\bweb\b/i.test(lower)) return 'WEB-DL'
     if (/\b(web[- ._]?rip|webrip)\b/.test(lower)) return 'WEBRip'
     if (/\b(hdtv|pdtv|dsr)\b/.test(lower)) return 'HDTV'
     if (/\b(dvdrip|dvd[- ._]?r)\b/.test(lower)) return 'DVDRip'
@@ -220,20 +222,44 @@ export class StreamParser {
     return { languages, languageEmojis }
   }
 
-  private static detectSize(text: string): { sizeBytes?: number; sizeFormatted?: string } {
-    const match = text.match(/(?:📦|💾|size:?\s*)?(\d+(?:\.\d+)?)\s*(?:\/\s*(\d+(?:\.\d+)?)\s*)?(GB|MB|GiB|MiB|TB)\b/i)
+  private static detectSize(text: string): {
+    sizeBytes?: number
+    sizeFormatted?: string
+    folderSizeBytes?: number
+    folderSizeFormatted?: string
+  } {
+    const match = text.match(
+      /(?:📦|💾|size:?\s*)?(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB|Gb|Mb)\b(?:\s*(?:\/|\band\b)\s*(?:📦|💾)?\s*(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB|Gb|Mb)\b)?/i
+    )
     if (!match) return {}
 
-    const value = parseFloat(match[1])
-    const unit = (match[3] || match[2] || 'GB').toUpperCase()
-    let sizeBytes = 0
+    const value1 = parseFloat(match[1])
+    const unit1 = match[2].toUpperCase().replace('IB', 'B').replace('GB', 'GB').replace('MB', 'MB').replace('TB', 'TB')
+    const sizeBytes = this.toBytes(value1, unit1)
+    const sizeFormatted = `${value1.toFixed(2)} ${unit1}`
 
-    if (unit.startsWith('TB')) sizeBytes = value * 1024 * 1024 * 1024 * 1024
-    else if (unit.startsWith('GB') || unit.startsWith('GIB')) sizeBytes = value * 1024 * 1024 * 1024
-    else if (unit.startsWith('MB') || unit.startsWith('MIB')) sizeBytes = value * 1024 * 1024
+    let folderSizeBytes: number | undefined
+    let folderSizeFormatted: string | undefined
 
-    const formatted = `${value.toFixed(2)} ${unit.replace('IB', 'B')}`
-    return { sizeBytes, sizeFormatted: formatted }
+    if (match[3] && match[4]) {
+      const value2 = parseFloat(match[3])
+      const unit2 = match[4].toUpperCase().replace('IB', 'B')
+      const bytes2 = this.toBytes(value2, unit2)
+      if (bytes2 > sizeBytes) {
+        folderSizeBytes = bytes2
+        folderSizeFormatted = `${value2.toFixed(2)} ${unit2}`
+      }
+    }
+
+    return { sizeBytes, sizeFormatted, folderSizeBytes, folderSizeFormatted }
+  }
+
+  private static toBytes(val: number, unit: string): number {
+    const u = unit.toUpperCase()
+    if (u.startsWith('TB')) return val * 1024 * 1024 * 1024 * 1024
+    if (u.startsWith('GB')) return val * 1024 * 1024 * 1024
+    if (u.startsWith('MB')) return val * 1024 * 1024
+    return val * 1024
   }
 
   private static detectSeeders(text: string): number | undefined {
@@ -316,12 +342,15 @@ export class StreamParser {
   }
 
   private static detectFilename(text: string, stream?: StremioStream): string | undefined {
-    if (stream?.title) {
-      const fileMatch = stream.title.match(/([a-zA-Z0-9_. \-+()[\]]+\.(?:mkv|mp4|avi|ts|m4v|webm))/i)
-      if (fileMatch) return fileMatch[1].trim()
+    const candidates = [stream?.title, text]
+    for (const cand of candidates) {
+      if (!cand) continue
+      const lines = cand.split('\n')
+      for (const line of lines) {
+        const fileMatch = line.match(/([a-zA-Z0-9_. \-+()[\]]+\.(?:mkv|mp4|avi|ts|m4v|webm))/i)
+        if (fileMatch) return fileMatch[1].trim()
+      }
     }
-    const fileMatch = text.match(/([a-zA-Z0-9_. \-+()[\]]+\.(?:mkv|mp4|avi|ts|m4v|webm))/i)
-    if (fileMatch) return fileMatch[1].trim()
     return undefined
   }
 
@@ -330,36 +359,102 @@ export class StreamParser {
     filename?: string,
     stream?: StremioStream
   ): { title?: string; year?: number; season?: number; episode?: number } {
-    const rawTarget = filename || stream?.title || text
-    // Strip leading bracketed tags or addon names e.g. "Comet [TB+]\n", "[TB+]"
-    const target = rawTarget.replace(/^[a-zA-Z0-9_\-+]+\[.*?\]\s*/, '').replace(/^\[.*?\]\s*/, '')
-    const yearMatch = target.match(/\b(19\d\d|20\d\d)\b/)
-    const year = yearMatch ? parseInt(yearMatch[1], 10) : undefined
+    let targetLine = ''
 
-    const seMatch = target.match(/[Ss](\d{1,2})[Ee](\d{1,3})/)
+    // 1. Pick the single line that represents the media/show release
+    const candidates = [stream?.title, stream?.description, filename, text].filter(Boolean) as string[]
+    for (const cand of candidates) {
+      const lines = cand.split('\n').map((l) => l.trim()).filter((l) => l.length > 0)
+      for (const line of lines) {
+        if (
+          /[✏️🎬📁🎟️]/.test(line) ||
+          /[Ss](\d{1,2})[·.\s_-]?[Ee](\d{1,3})/.test(line) ||
+          /\b(19\d\d|20\d\d)\b/.test(line) ||
+          /\.(?:mkv|mp4|avi|ts)/i.test(line)
+        ) {
+          targetLine = line
+          break
+        }
+      }
+      if (targetLine) break
+      if (lines.length > 0 && !targetLine) {
+        targetLine = lines[0]
+      }
+    }
+
+    if (!targetLine && filename) {
+      targetLine = filename
+    }
+    if (!targetLine) {
+      targetLine = text.split('\n')[0]?.trim() || ''
+    }
+
+    // 2. Strip leading scraper/metadata badges, bracketed tags, rating stars, and emojis
+    let clean = targetLine
+      .replace(/^[a-zA-Z0-9_\-+]+\[.*?\]\s*/, '')
+      .replace(/^\[.*?\]\s*/, '')
+      .replace(/^[🔥⚡⭐🌟★✨🎬📁🎟️✏️📽️📺🎞️📦💾🌐🌎]+\s*/u, '')
+      .replace(/^(?:\d+k|\d+p|\([^)]*\)|\[[^\]]*\]|⟨[^⟩]*⟩|[★☆·•\-|\s])+/iu, '')
+      .replace(/^[🔥⚡⭐🌟★✨🎬📁🎟️✏️📽️📺🎞️📦💾🌐🌎]+\s*/u, '')
+      .trim()
+
+    // 3. Detect Season & Episode: S01E01, S01·E01, s1 e1, 1x01
     let season: number | undefined
     let episode: number | undefined
+    const seMatch = clean.match(/[Ss](\d{1,2})[·.\s_-]?[Ee](\d{1,3})/)
+    const xMatch = clean.match(/\b(\d{1,2})x(\d{1,3})\b/)
     if (seMatch) {
       season = parseInt(seMatch[1], 10)
       episode = parseInt(seMatch[2], 10)
+    } else if (xMatch) {
+      season = parseInt(xMatch[1], 10)
+      episode = parseInt(xMatch[2], 10)
     }
 
+    // 4. Detect Year: 19xx or 20xx
+    const yearMatch = clean.match(/\b(19\d\d|20\d\d)\b/)
+    const year = yearMatch ? parseInt(yearMatch[1], 10) : undefined
+
+    // 5. Extract clean Title
     let title: string | undefined
-    if (yearMatch) {
-      const idx = target.indexOf(yearMatch[1])
+    if (seMatch) {
+      const idx = clean.indexOf(seMatch[0])
       if (idx > 0) {
-        title = target.substring(0, idx).replace(/[._]/g, ' ').trim()
+        title = clean.substring(0, idx)
       }
-    } else if (seMatch) {
-      const idx = target.indexOf(seMatch[0])
+    } else if (xMatch) {
+      const idx = clean.indexOf(xMatch[0])
       if (idx > 0) {
-        title = target.substring(0, idx).replace(/[._]/g, ' ').trim()
+        title = clean.substring(0, idx)
+      }
+    } else if (yearMatch) {
+      const idx = clean.indexOf(yearMatch[1])
+      if (idx > 0) {
+        title = clean.substring(0, idx)
       }
     } else if (filename) {
-      title = filename.replace(/\.(mkv|mp4|avi|ts)$/i, '').replace(/[._]/g, ' ').trim()
+      title = filename.replace(/\.(?:mkv|mp4|avi|ts|m4v|webm)$/i, '')
+    } else {
+      title = clean
     }
 
-    return { title, year, season, episode }
+    if (title) {
+      title = title
+        .replace(/\b(2160p|1440p|1080p|720p|576p|480p|4k|uhd|fhd|hd|sd)\b/gi, '')
+        .replace(/\b(web[- ._]?dl|webrip|bluray|remux|hdtv|dvdrip|cam|ts|scr)\b/gi, '')
+        .replace(/\b(hevc|avc|x265|x264|h265|h264|10bit|hdr|dv|ddp|dd\+|aac|dts)\b/gi, '')
+        .replace(/\.(mkv|mp4|avi|ts)$/i, '')
+        .replace(/[._]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/^[^\w\s]+|[^\w\s]+$/g, '')
+        .trim()
+    }
+
+    if (title && title.includes('\n')) {
+      title = title.split('\n')[0].trim()
+    }
+
+    return { title: title || undefined, year, season, episode }
   }
 
   private static detectOttPlatform(text: string): string | undefined {

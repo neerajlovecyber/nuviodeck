@@ -81,6 +81,8 @@ export interface ParsedStreamMetadata {
   languageEmojis: string[]
   sizeBytes?: number
   sizeFormatted?: string
+  folderSizeBytes?: number
+  folderSizeFormatted?: string
   seeders?: number
   releaseGroup?: string
   indexer?: string

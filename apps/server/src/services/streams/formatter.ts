@@ -47,6 +47,16 @@ export class StreamMicroSyntaxEngine {
     }
 
     const sizeFormatted = stream.sizeFormatted || (stream.sizeBytes ? this.formatBytes(stream.sizeBytes) : '')
+    const cleanTitle =
+      stream.title ||
+      (stream.filename ? stream.filename.replace(/\.[a-z0-9]+$/i, '').replace(/[._]/g, ' ') : '') ||
+      (stream.rawTitle ? stream.rawTitle.split('\n')[0].replace(/^[^\w\s]+|[^\w\s]+$/g, '').trim() : '') ||
+      'Media'
+
+    const folderSize =
+      stream.folderSizeBytes && stream.folderSizeBytes > (stream.sizeBytes || 0)
+        ? stream.folderSizeBytes
+        : 0
 
     return {
       stream: {
@@ -63,12 +73,12 @@ export class StreamMicroSyntaxEngine {
         languageEmojis: stream.languageEmojis || [],
         size: stream.sizeBytes ?? (sizeFormatted ? this.parseBytes(sizeFormatted) : 0),
         sizeFormatted,
-        folderSize: stream.sizeBytes || 0,
+        folderSize,
         seeders: stream.seeders ?? 0,
         releaseGroup: stream.releaseGroup || '',
         indexer: stream.indexer || '',
-        title: stream.title || stream.filename || stream.rawTitle || 'Media',
-        filename: stream.filename || stream.rawTitle || '',
+        title: cleanTitle,
+        filename: stream.filename || cleanTitle,
         year: stream.year,
         season: stream.season,
         episode: stream.episode,
@@ -108,8 +118,8 @@ export class StreamMicroSyntaxEngine {
       audioChannels: stream.audioChannels || '',
       size: sizeFormatted,
       indexer: stream.indexer || '',
-      torrentTitle: stream.title || stream.rawTitle,
-      title: stream.title || stream.rawTitle,
+      torrentTitle: cleanTitle,
+      title: cleanTitle,
       seeders: stream.seeders ?? 0,
       releaseGroup: stream.releaseGroup || '',
       codecs: stream.codecs?.join(' ') || '',
