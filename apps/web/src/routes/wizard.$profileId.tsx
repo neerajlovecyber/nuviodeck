@@ -650,7 +650,7 @@ function ProfileWizardPage() {
       }
     >
       <AppSidebar variant="inset" />
-      <SidebarInset>
+      <SidebarInset className="h-screen md:h-[calc(100vh-1rem)] max-h-screen md:max-h-[calc(100vh-1rem)] overflow-hidden flex flex-col">
         {/* Top Header Bar matching SiteHeader */}
         <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
           <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
@@ -682,10 +682,12 @@ function ProfileWizardPage() {
         </header>
 
         {/* Main Grid: Content (Center) + Persistent Sidebar (Right) */}
-        <div className="flex-1 flex flex-col lg:flex-row w-full min-h-0">
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row w-full overflow-hidden">
           {/* Center Work Area */}
-          <div className="flex-1 min-w-0 flex flex-col items-center">
-            <div className={`w-full ${step === 2 ? 'max-w-6xl xl:max-w-7xl px-4 py-6 sm:px-6 sm:py-8' : 'max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12'}`}>
+          <div className="flex-1 min-w-0 flex flex-col h-full min-h-0 overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <div className="flex-1 flex flex-col items-center w-full">
+                <div className={`w-full ${step === 2 ? 'max-w-6xl xl:max-w-7xl px-4 py-6 sm:px-6 sm:py-8' : 'max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12'}`}>
             {/* ================= STEP 1: SETUP ================= */}
             {step === 1 && (
               <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -2088,12 +2090,97 @@ function ProfileWizardPage() {
             )}
 
             <div className="pb-6" />
+                </div>
+              </div>
+            </div>
+
+            {/* Sticky Glass Bottom Navigation Footer (cut before right sidebar) */}
+            <footer className="z-20 shrink-0 border-t border-border bg-background/95 backdrop-blur-md">
+              <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
+                <div className="flex items-center justify-between gap-3 py-3">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      if (step > 1) setStep((step - 1) as any)
+                      else navigate({ to: '/dashboard' })
+                    }}
+                    className="h-10 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                  >
+                    <ChevronLeft className="size-4" />
+                    Back
+                  </Button>
+
+                  {/* Stepper in Bottom Bar */}
+                  <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
+                    {[
+                      { num: 1, label: 'Setup' },
+                      { num: 2, label: 'Home rows' },
+                      { num: 3, label: 'Collections' },
+                      { num: 4, label: 'Finalize' },
+                    ].map((s, idx) => (
+                      <React.Fragment key={s.num}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            saveProfileConfig()
+                            setStep(s.num as any)
+                          }}
+                          className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
+                            step === s.num
+                              ? 'bg-accent text-accent-foreground border border-border shadow-xs'
+                              : step > s.num
+                              ? 'text-foreground hover:bg-accent/50'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          <span
+                            className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                              step === s.num
+                                ? 'bg-primary text-primary-foreground'
+                                : step > s.num
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
+                            {step > s.num ? '✓' : s.num}
+                          </span>
+                          <span className="hidden sm:inline">{s.label}</span>
+                        </button>
+                        {idx < 3 && <div className="w-2 sm:w-4 h-px bg-border" />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0">
+                    {step < 4 ? (
+                      <Button
+                        onClick={() => {
+                          saveProfileConfig()
+                          setStep((step + 1) as any)
+                        }}
+                        className="h-10 gap-1.5 px-4 text-xs font-semibold"
+                      >
+                        Continue
+                        <ChevronRight className="size-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handlePushToNuvio}
+                        disabled={isPushing}
+                        className="h-10 gap-1.5 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
+                      >
+                        {isPushing ? 'Pushing...' : 'Push to Nuvio'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </footer>
           </div>
-        </div>
 
           {/* ================= RIGHT PERSISTENT SIDEBAR ("Profile Setup") ================= */}
           {step !== 2 && (
-            <aside className="w-full lg:w-80 lg:shrink-0 border-t lg:border-t-0 lg:border-l border-border p-6 bg-card/40 space-y-6 lg:sticky lg:top-(--header-height) lg:h-[calc(100vh-var(--header-height))] lg:overflow-y-auto">
+            <aside className="w-full lg:w-80 lg:shrink-0 border-t lg:border-t-0 lg:border-l border-border p-6 bg-card/40 space-y-6 lg:h-full overflow-y-auto">
               <div className="flex items-center justify-between pb-4 border-b border-border">
                 <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
                   Profile Setup
@@ -2233,89 +2320,6 @@ function ProfileWizardPage() {
             </aside>
           )}
         </div>
-
-        {/* Sticky Glass Bottom Navigation Footer */}
-        <footer className="z-20 shrink-0 border-t border-border bg-background/95 backdrop-blur-md sticky bottom-0">
-          <div className="mx-auto max-w-5xl px-4 sm:px-6">
-            <div className="flex items-center justify-between gap-3 py-3">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  if (step > 1) setStep((step - 1) as any)
-                  else navigate({ to: '/dashboard' })
-                }}
-                className="h-10 gap-1.5 px-3 text-xs text-muted-foreground hover:text-foreground shrink-0"
-              >
-                <ChevronLeft className="size-4" />
-                Back
-              </Button>
-
-              {/* Stepper in Bottom Bar */}
-              <div className="flex items-center gap-1.5 sm:gap-2 text-sm">
-                {[
-                  { num: 1, label: 'Setup' },
-                  { num: 2, label: 'Home rows' },
-                  { num: 3, label: 'Collections' },
-                  { num: 4, label: 'Finalize' },
-                ].map((s, idx) => (
-                  <React.Fragment key={s.num}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        saveProfileConfig()
-                        setStep(s.num as any)
-                      }}
-                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium transition-colors cursor-pointer ${
-                        step === s.num
-                          ? 'bg-accent text-accent-foreground border border-border shadow-xs'
-                          : step > s.num
-                          ? 'text-foreground hover:bg-accent/50'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      <span
-                        className={`size-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                          step === s.num
-                            ? 'bg-primary text-primary-foreground'
-                            : step > s.num
-                            ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
-                            : 'bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {step > s.num ? '✓' : s.num}
-                      </span>
-                      <span className="hidden sm:inline">{s.label}</span>
-                    </button>
-                    {idx < 3 && <div className="w-2 sm:w-4 h-px bg-border" />}
-                  </React.Fragment>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0">
-                {step < 4 ? (
-                  <Button
-                    onClick={() => {
-                      saveProfileConfig()
-                      setStep((step + 1) as any)
-                    }}
-                    className="h-10 gap-1.5 px-4 text-xs font-semibold"
-                  >
-                    Continue
-                    <ChevronRight className="size-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handlePushToNuvio}
-                    disabled={isPushing}
-                    className="h-10 gap-1.5 px-4 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
-                  >
-                    {isPushing ? 'Pushing...' : 'Push to Nuvio'}
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </footer>
 
         {/* ================= ARRANGE HOME DIALOG ================= */}
         <Dialog open={arrangeHomeOpen} onOpenChange={setArrangeHomeOpen}>
