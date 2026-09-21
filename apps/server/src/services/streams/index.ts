@@ -15,10 +15,11 @@ import { config } from '../../config'
 interface CachedStreamResult {
   timestamp: number
   streams: StremioStream[]
+  ttl?: number
 }
 
 export class StreamAggregatorService {
-  // In-memory cache for fast repeat requests (15-minute TTL)
+  // In-memory cache for fast repeat requests (15-minute TTL for full results, 30s for partials)
   private cache = new Map<string, CachedStreamResult>()
   private maxCacheSize = 500
   private cacheTtlMs = 15 * 60 * 1000
@@ -27,7 +28,8 @@ export class StreamAggregatorService {
     type: string,
     id: string,
     profileConfig: StreamsProfileConfig,
-    cacheKey?: string
+    cacheKey?: string,
+    forceRefresh?: boolean
   ): Promise<StremioStream[]> {
     if (!profileConfig.enabled) {
       return []
@@ -58,14 +60,18 @@ export class StreamAggregatorService {
       debridlink: profileConfig.debridKeys?.debridlink || config.debrid.debridLinkApiKey || '',
     }
 
-    // 2. Check in-memory cache
+    // 2. Check in-memory cache (unless forceRefresh is requested)
     const key = cacheKey ? `${cacheKey}:${type}:${queryId}` : `${type}:${queryId}`
-    const cached = this.cache.get(key)
-    if (cached && Date.now() - cached.timestamp < this.cacheTtlMs) {
-      return cached.streams
+    if (!forceRefresh) {
+      const cached = this.cache.get(key)
+      const effectiveTtl = cached?.ttl || this.cacheTtlMs
+      if (cached && Date.now() - cached.timestamp < effectiveTtl) {
+        return cached.streams
+      }
     }
 
-    // 3. Parallel source dispatch with 4s timeout
+    // 3. Parallel source dispatch with configurable timeout (default 7s)
+    const timeoutMs = profileConfig.timeoutMs || 7000
     const sourceOrder = enabledSources.map((s) => s.id)
     const fetchPromises = enabledSources.map((source) =>
       StreamAdapters.fetchFromSource(
@@ -73,15 +79,19 @@ export class StreamAggregatorService {
         type,
         queryId,
         mergedDebridKeys,
-        4000
+        timeoutMs
       )
     )
 
     const settled = await Promise.allSettled(fetchPromises)
     const allParsed: ParsedStreamMetadata[] = []
+    let successfulSources = 0
 
     for (const res of settled) {
       if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+        if (res.value.length > 0) {
+          successfulSources++
+        }
         allParsed.push(...res.value)
       }
     }
@@ -121,7 +131,10 @@ export class StreamAggregatorService {
       const firstKey = this.cache.keys().next().value
       if (firstKey) this.cache.delete(firstKey)
     }
-    this.cache.set(key, { timestamp: Date.now(), streams: finalStreams })
+
+    // If only partial sources responded, cache for only 30s so a reload will re-query all sources
+    const ttl = successfulSources < enabledSources.length ? 30 * 1000 : this.cacheTtlMs
+    this.cache.set(key, { timestamp: Date.now(), streams: finalStreams, ttl })
 
     return finalStreams
   }

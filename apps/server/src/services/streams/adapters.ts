@@ -11,7 +11,7 @@ export class StreamAdapters {
     type: string,
     id: string,
     debridKeys?: Record<string, string>,
-    timeoutMs: number = 2500
+    timeoutMs: number = 7000
   ): Promise<ParsedStreamMetadata[]> {
     try {
       switch (source.type) {
@@ -43,7 +43,7 @@ export class StreamAdapters {
     type: string,
     id: string,
     debridKeys?: Record<string, string>,
-    timeoutMs: number = 4000
+    timeoutMs: number = 7000
   ): Promise<ParsedStreamMetadata[]> {
     const service = source.debridService || 'torbox'
     const apiKey = debridKeys?.[service] || ''

@@ -192,4 +192,5 @@ export interface StreamsProfileConfig {
   mergeStrategy?: StreamMergeStrategy
   formatter?: StreamFormatterOptions
   proxy?: StreamProxyConfig
+  timeoutMs?: number // timeout for fetching scrapers in ms (default: 7000ms)
 }
