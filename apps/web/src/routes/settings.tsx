@@ -11,6 +11,7 @@ import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
 import { Switch } from '@workspace/ui/components/switch'
 import { Checkbox } from '@workspace/ui/components/checkbox'
+import { PostersConfigSection } from '@/components/posters-config-section'
 import { RadioGroup, RadioGroupItem } from '@workspace/ui/components/radio-group'
 import {
   DropdownMenu,
@@ -191,132 +192,6 @@ const INFO_DESCRIPTIONS: Record<string, { title: string; description: string; de
   },
 }
 
-// Sortable Item Component for Poster Providers
-function SortablePosterItem({
-  provider,
-  showKey,
-  toggleShowKey,
-  onKeyChange,
-  onVerify,
-}: {
-  provider: PosterProvider
-  showKey: boolean
-  toggleShowKey: () => void
-  onKeyChange: (val: string) => void
-  onVerify: () => void
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: provider.id,
-  })
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.6 : 1,
-    zIndex: isDragging ? 20 : 1,
-  }
-
-  const [expanded, setExpanded] = React.useState(false)
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-3 rounded-lg p-3 border transition-colors ${
-        provider.active
-          ? 'bg-card border-border'
-          : 'border-dashed bg-card/40 opacity-75'
-      }`}
-    >
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="relative grid h-6 w-7 shrink-0 cursor-grab touch-none place-items-center self-start rounded-md text-muted-foreground/70 transition-colors hover:text-foreground active:cursor-grabbing"
-        aria-label={`Drag to reorder: ${provider.name}`}
-      >
-        <GripVertical className="size-4" />
-      </button>
-
-      <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2">
-        <div className="flex min-h-6 flex-wrap items-center gap-2">
-          <Label className="text-sm font-semibold leading-none">{provider.name}</Label>
-          {provider.linkUrl && (
-            <a
-              href={provider.linkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex shrink-0 items-center gap-1 text-xs whitespace-nowrap text-primary underline-offset-4 hover:underline"
-            >
-              {provider.linkText || 'Configure'}{' '}
-              <ExternalLink className="size-3 shrink-0" />
-            </a>
-          )}
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {provider.verified ? (
-              <span className="inline-flex h-5 items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                <CircleCheck className="size-3 shrink-0" /> verified
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">not in use</span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex min-h-6 items-center justify-end">
-          {provider.hasConfig && (
-            <button
-              type="button"
-              onClick={() => setExpanded(!expanded)}
-              aria-label={`Options for ${provider.name}`}
-              className="relative grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground/70 transition-colors hover:text-foreground"
-            >
-              <ChevronDown
-                className={`size-4 transition-transform duration-200 ${
-                  expanded ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-          )}
-        </div>
-
-        <div className="relative min-w-0">
-          <Input
-            type={showKey ? 'text' : 'password'}
-            placeholder={provider.placeholder}
-            value={provider.key}
-            onChange={(e) => onKeyChange(e.target.value)}
-            className="h-9 pr-10 text-sm"
-          />
-          <button
-            type="button"
-            onClick={toggleShowKey}
-            aria-label={`Show ${provider.name} key`}
-            className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-          </button>
-        </div>
-
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onVerify}
-          className="h-9 shrink-0 gap-1 rounded-lg px-2.5 text-xs font-medium"
-        >
-          Verify
-        </Button>
-
-        {expanded && (
-          <div className="col-span-2 pt-2 border-t mt-1 text-xs text-muted-foreground">
-            <p>Custom formatting and caching rules can be configured directly with BetterPosters provider.</p>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function SettingsPage() {
   const { theme, toggleTheme } = useAppStore()
   const {
@@ -346,29 +221,12 @@ function SettingsPage() {
   const [showGroq, setShowGroq] = React.useState(false)
   const [showDeepseek, setShowDeepseek] = React.useState(false)
   const [showLetterboxd, setShowLetterboxd] = React.useState(false)
-  const [providerKeyVisibility, setProviderKeyVisibility] = React.useState<Record<string, boolean>>({})
 
   // Sheet State for Info
   const [infoSheetKey, setInfoSheetKey] = React.useState<string | null>(null)
 
   // Dialog State for Delete Account
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
-
-  // Setup DnD for Posters
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  )
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-    if (over && active.id !== over.id) {
-      const oldIndex = posterProviders.findIndex((p) => p.id === active.id)
-      const newIndex = posterProviders.findIndex((p) => p.id === over.id)
-      setPosterProviders(arrayMove(posterProviders, oldIndex, newIndex))
-      toast.success('Poster provider order updated')
-    }
-  }
 
   const handleVerify = (name: string) => {
     toast.success(`${name} verified successfully`)
@@ -758,78 +616,22 @@ function SettingsPage() {
                 </p>
               </div>
 
-              {/* Draggable Provider Rows */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={posterProviders.map((p) => p.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className="flex flex-col gap-1.5">
-                    {posterProviders.map((provider) => (
-                      <SortablePosterItem
-                        key={provider.id}
-                        provider={provider}
-                        showKey={Boolean(providerKeyVisibility[provider.id])}
-                        toggleShowKey={() =>
-                          setProviderKeyVisibility((prev) => ({
-                            ...prev,
-                            [provider.id]: !prev[provider.id],
-                          }))
-                        }
-                        onKeyChange={(val) => updatePosterProviderKey(provider.id, val)}
-                        onVerify={() => handleVerify(provider.name)}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
-
-              {/* Posters Checkboxes */}
-              <div className="flex items-start gap-3 rounded-lg border bg-card p-3">
-                <Checkbox
-                  id="default-rpdb-rated"
-                  checked={showRatingsOnPosters}
-                  onCheckedChange={(c) => setShowRatingsOnPosters(Boolean(c))}
-                />
-                <Label htmlFor="default-rpdb-rated" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Show ratings on posters</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Use the rated poster variant. Which ratings appear (IMDb, MyAnimeList, AniList…) and how they look follow your RPDB / Top Posters account settings.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-lg border bg-card p-3">
-                <Checkbox
-                  id="default-episode-thumbnails"
-                  checked={badgedEpisodeStills}
-                  onCheckedChange={(c) => setBadgedEpisodeStills(Boolean(c))}
-                />
-                <Label htmlFor="default-episode-thumbnails" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Rating-badged episode stills</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    When your poster provider can render episode stills (Top Posters, EasyRatings, XRDB), use its badged version on the season list. Turn this off to keep the plain TMDB / TheTVDB still and use the provider for posters only, which is the fix if your episode images stop loading after a provider plan change.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 border-t pt-4">
-                <p className="min-w-0 text-xs text-muted-foreground">
-                  Apply this section to your existing profiles.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleApplyToAll('Posters')}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  <RefreshCw className="size-4" /> Apply to all profiles
-                </Button>
-              </div>
+              <PostersConfigSection
+                providers={posterProviders}
+                onProvidersChange={(newProviders) => {
+                  setPosterProviders(newProviders)
+                  toast.success('Poster provider order updated')
+                }}
+                onProviderKeyChange={(id, val) => updatePosterProviderKey(id, val)}
+                showRatingsOnPosters={showRatingsOnPosters}
+                onShowRatingsChange={setShowRatingsOnPosters}
+                badgedEpisodeStills={badgedEpisodeStills}
+                onBadgedEpisodeStillsChange={setBadgedEpisodeStills}
+                onVerify={(name) => handleVerify(name)}
+                showApplyToAll={true}
+                onApplyToAll={() => handleApplyToAll('Posters')}
+                showSectionHeader={false}
+              />
             </section>
 
             {/* 3. Profile defaults */}

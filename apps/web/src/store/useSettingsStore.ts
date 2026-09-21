@@ -88,7 +88,7 @@ export interface SettingsState {
   ) => void
 }
 
-const INITIAL_PROVIDERS: PosterProvider[] = [
+export const INITIAL_POSTER_PROVIDERS: PosterProvider[] = [
   {
     id: 'custom_url',
     name: 'Custom URL',
@@ -197,7 +197,7 @@ export const useSettingsStore = create<SettingsState>()(
           apiKeys: { ...state.apiKeys, [key]: value },
         })),
 
-      posterProviders: INITIAL_PROVIDERS,
+      posterProviders: INITIAL_POSTER_PROVIDERS,
       setPosterProviders: (posterProviders) => set({ posterProviders }),
       updatePosterProviderKey: (id, key) =>
         set((state) => ({

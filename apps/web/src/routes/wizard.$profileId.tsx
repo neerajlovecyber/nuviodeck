@@ -14,6 +14,9 @@ import {
   Sparkles,
   Search,
   Key,
+  KeyRound,
+  Zap,
+  Lock,
   Sliders,
   Tv,
   Film,
@@ -94,6 +97,8 @@ import {
 import languagesData from '@/data/languages.json'
 import { AGE_RATINGS } from '@/data/age-ratings'
 import { STREAMING_REGIONS } from '@/data/streamings'
+import { PostersConfigSection } from '@/components/posters-config-section'
+import { INITIAL_POSTER_PROVIDERS, PosterProvider } from '@/store/useSettingsStore'
 
 const POPULAR_LANGUAGES = [
   { code: 'en-US', name: 'English (United States)' },
@@ -221,6 +226,7 @@ function ProfileWizardPage() {
   const [discoverSeriesName, setDiscoverSeriesName] = React.useState('')
 
   // Posters & Preferences
+  const [posterProviders, setPosterProviders] = React.useState<PosterProvider[]>(INITIAL_POSTER_PROVIDERS)
   const [showRatingsOnPosters, setShowRatingsOnPosters] = React.useState(true)
   const [ratingBadgedStills, setRatingBadgedStills] = React.useState(true)
   const [hideAdult, setHideAdult] = React.useState(true)
@@ -234,6 +240,10 @@ function ProfileWizardPage() {
   const [proxyUrl, setProxyUrl] = React.useState('')
   const [excludedGenres, setExcludedGenres] = React.useState<string[]>([])
   const [animeEpisodeOrdering, setAnimeEpisodeOrdering] = React.useState('TheTVDB')
+  const [animeSource, setAnimeSource] = React.useState('TheTVDB')
+  const [animeNumbering, setAnimeNumbering] = React.useState('Absolute (1137)')
+  const [fillerEpisodes, setFillerEpisodes] = React.useState('Tag ([Filler])')
+  const [animeStreamId, setAnimeStreamId] = React.useState('IMDb')
 
   // Dynamic Catalog Registry (Server Single Source of Truth)
   const { data: registryData } = useCatalogRegistry()
@@ -483,6 +493,11 @@ function ProfileWizardPage() {
                 if (cfg.preferences.moviesDigitalOnly !== undefined) setMoviesDigitalOnly(cfg.preferences.moviesDigitalOnly)
                 if (cfg.preferences.hideAdult !== undefined) setHideAdult(cfg.preferences.hideAdult)
               }
+              if (cfg.posters) {
+                if (cfg.posters.providers && Array.isArray(cfg.posters.providers)) setPosterProviders(cfg.posters.providers)
+                if (cfg.posters.showRatingsOnPosters !== undefined) setShowRatingsOnPosters(cfg.posters.showRatingsOnPosters)
+                if (cfg.posters.ratingBadgedStills !== undefined) setRatingBadgedStills(cfg.posters.ratingBadgedStills)
+              }
               if (cfg.integrations?.proxyUrl && !cfg.preferences?.proxyUrl) {
                 setProxyUrl(cfg.integrations.proxyUrl)
               }
@@ -559,6 +574,7 @@ function ProfileWizardPage() {
           seriesName: discoverSeriesName,
         },
         posters: {
+          providers: posterProviders,
           showRatingsOnPosters,
           ratingBadgedStills,
         },
@@ -574,6 +590,10 @@ function ProfileWizardPage() {
           hideCaughtUp,
           excludedGenres,
           animeEpisodeOrdering,
+          animeSource,
+          animeNumbering,
+          fillerEpisodes,
+          animeStreamId,
         },
       }
 
@@ -687,95 +707,71 @@ function ProfileWizardPage() {
           <div className="flex-1 min-w-0 flex flex-col h-full min-h-0 overflow-hidden">
             <div className="flex-1 min-h-0 overflow-y-auto">
               <div className="flex-1 flex flex-col items-center w-full">
-                <div className={`w-full ${step === 2 ? 'max-w-6xl xl:max-w-7xl px-4 py-6 sm:px-6 sm:py-8' : 'max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12'}`}>
+                <div className={`w-full ${step === 1 ? 'max-w-2xl px-4 py-6 sm:px-6 sm:py-8' : step === 2 ? 'max-w-6xl xl:max-w-7xl px-4 py-6 sm:px-6 sm:py-8' : 'max-w-4xl lg:max-w-5xl px-6 py-8 md:px-10 lg:px-12'}`}>
             {/* ================= STEP 1: SETUP ================= */}
             {step === 1 && (
-              <div className="space-y-8 animate-in fade-in-50 duration-200">
-                <div>
-                  <h2 className="text-2xl font-bold text-foreground tracking-tight">Setup</h2>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Name your profile and connect the catalog providers.
-                  </p>
-                </div>
+              <div className="mx-auto flex h-full w-full max-w-2xl flex-col animate-in fade-in-50 duration-200">
+                <header className="shrink-0 border-b pb-4">
+                  <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl text-foreground">Setup</h2>
+                  <p className="mt-1.5 text-sm text-muted-foreground">Name your profile and connect the catalog providers.</p>
+                </header>
 
-                {/* Profile Name Card */}
-                <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="prof-name" className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                      Profile name
-                      <Info className="size-3.5 text-muted-foreground" />
-                    </Label>
-                  </div>
-                  <Input
-                    id="prof-name"
-                    value={profileName}
-                    onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="e.g. Cinema 4K, Late-night vibes"
-                    className="h-11 text-sm"
-                  />
-                </div>
-
-                {/* Integrations Drawer Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden transition-all">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'integrations' ? null : 'integrations')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <Key className="size-4" />
+                <div className="flex flex-col gap-4 pt-4 pb-6 sm:gap-6 sm:pt-6 lg:pb-10">
+                  {/* 1. Profile Name */}
+                  <section className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:p-6">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex min-h-5 items-center gap-1">
+                        <Label htmlFor="pname" className="flex items-center gap-2 text-sm font-medium text-foreground select-none">
+                          Profile name
+                        </Label>
+                        <button
+                          type="button"
+                          className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+                          title="About Profile name"
+                        >
+                          <Info className="size-3.5" />
+                        </button>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">Integrations</h3>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">Both keys verified. You can continue.</p>
-                      </div>
+                      <Input
+                        id="pname"
+                        value={profileName}
+                        onChange={(e) => setProfileName(e.target.value)}
+                        placeholder="Late-night vibes"
+                        className="h-11 w-full min-w-0 rounded-lg border border-input bg-transparent px-3 py-2 text-base md:text-sm"
+                      />
                     </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform duration-200 ${
-                        openSection === 'integrations' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
+                  </section>
 
-                  {openSection === 'integrations' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-6 text-sm">
-                      {/* MDBList */}
-                      <div className="space-y-2 pt-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-foreground">MDBList Key</span>
-                          <a
-                            href="https://mdblist.com/preferences/"
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                          >
-                            Get a key <ExternalLink className="size-3" />
-                          </a>
-                        </div>
-                        <Input
-                          value={mdbListKey}
-                          onChange={(e) => setMdbListKey(e.target.value)}
-                          className="font-mono text-xs"
-                        />
-                        <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-1">
-                          <Checkbox
-                            checked={scrobbleMdbList}
-                            onCheckedChange={(c) => setScrobbleMdbList(!!c)}
-                          />
-                          <span>Scrobble now watching to MDBList</span>
-                        </label>
-                      </div>
+                  {/* 2. Integrations */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'integrations' ? null : 'integrations')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'integrations'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <KeyRound className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Integrations</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">Both keys verified. You can continue.</span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'integrations' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
 
-                      {/* TMDB */}
-                      <div className="space-y-2 border-t border-border/40 pt-4">
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-foreground">TMDB Read Access Token</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
-                              Verified
-                            </span>
+                    {openSection === 'integrations' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-6 text-sm">
+                        {/* MDBList */}
+                        <div className="space-y-2 pt-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-foreground text-xs">MDBList Key</span>
                             <a
-                              href="https://www.themoviedb.org/settings/api"
+                              href="https://mdblist.com/preferences/"
                               target="_blank"
                               rel="noreferrer"
                               className="text-xs text-primary hover:underline inline-flex items-center gap-1"
@@ -783,637 +779,741 @@ function ProfileWizardPage() {
                               Get a key <ExternalLink className="size-3" />
                             </a>
                           </div>
+                          <Input
+                            value={mdbListKey}
+                            onChange={(e) => setMdbListKey(e.target.value)}
+                            className="font-mono text-xs"
+                          />
+                          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-1">
+                            <Checkbox
+                              checked={scrobbleMdbList}
+                              onCheckedChange={(c) => setScrobbleMdbList(!!c)}
+                            />
+                            <span>Scrobble now watching to MDBList</span>
+                          </label>
                         </div>
-                        <Input
-                          value={tmdbToken}
-                          onChange={(e) => setTmdbToken(e.target.value)}
-                          className="font-mono text-xs"
-                        />
-                        <p className="text-[11px] text-muted-foreground">
-                          On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ", not the short API key.
-                        </p>
 
-                        {/* TMDB Reverse Proxy / Mirror URL */}
-                        <div className="space-y-1.5 pt-3 border-t border-border/40">
+                        {/* TMDB */}
+                        <div className="space-y-2 border-t border-border/40 pt-4">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground text-xs">TMDB Reverse Proxy / Mirror (Optional)</span>
-                            <span className="text-[10px] text-muted-foreground">ISP bypass</span>
+                            <span className="font-medium text-foreground text-xs">TMDB Read Access Token</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                                Verified
+                              </span>
+                              <a
+                                href="https://www.themoviedb.org/settings/api"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Get a key <ExternalLink className="size-3" />
+                              </a>
+                            </div>
                           </div>
                           <Input
-                            value={proxyUrl}
-                            onChange={(e) => setProxyUrl(e.target.value)}
-                            placeholder="https://tmdb-proxy.example.com/3 (optional)"
+                            value={tmdbToken}
+                            onChange={(e) => setTmdbToken(e.target.value)}
                             className="font-mono text-xs"
                           />
                           <p className="text-[11px] text-muted-foreground">
-                            Optional proxy URL to bypass regional blocks (e.g., in India or restricted networks).
+                            On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ", not the short API key.
                           </p>
-                        </div>
-                      </div>
 
-                      {/* Connected Trackers */}
-                      <div className="border-t border-border/40 pt-4 space-y-3">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Connected Trackers
-                        </h4>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                            <div>
-                              <div className="font-medium text-foreground text-xs">Trakt</div>
-                              <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neerajlovecyber</div>
+                          {/* TMDB Reverse Proxy / Mirror URL */}
+                          <div className="space-y-1.5 pt-3 border-t border-border/40">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-foreground text-xs">TMDB Reverse Proxy / Mirror (Optional)</span>
+                              <span className="text-[10px] text-muted-foreground">ISP bypass</span>
                             </div>
-                            <Checkbox checked={scrobbleTrakt} onCheckedChange={(c) => setScrobbleTrakt(!!c)} />
-                          </div>
-
-                          <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                            <div>
-                              <div className="font-medium text-foreground text-xs">Simkl</div>
-                              <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neeraj Singh</div>
-                            </div>
-                            <Checkbox checked={scrobbleSimkl} onCheckedChange={(c) => setScrobbleSimkl(!!c)} />
-                          </div>
-
-                          <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                            <div>
-                              <div className="font-medium text-foreground text-xs">AniList</div>
-                              <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
-                            </div>
-                            <Checkbox checked={scrobbleAniList} onCheckedChange={(c) => setScrobbleAniList(!!c)} />
-                          </div>
-
-                          <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                            <div>
-                              <div className="font-medium text-foreground text-xs">MyAnimeList</div>
-                              <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
-                            </div>
-                            <Checkbox checked={scrobbleMal} onCheckedChange={(c) => setScrobbleMal(!!c)} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* When Playback Ends */}
-                      <div className="border-t border-border/40 pt-4 space-y-2">
-                        <Label className="text-xs font-semibold text-foreground">When playback ends</Label>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          <div
-                            onClick={() => setPlaybackEndRule('watched')}
-                            className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                              playbackEndRule === 'watched'
-                                ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
-                                : 'border-border bg-background text-muted-foreground hover:border-border/80'
-                            }`}
-                          >
-                            <div className="font-medium text-xs text-foreground">Mark as watched</div>
-                            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                              After the title's runtime, mark it watched on every tracker immediately.
-                            </p>
-                          </div>
-
-                          <div
-                            onClick={() => setPlaybackEndRule('finished')}
-                            className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                              playbackEndRule === 'finished'
-                                ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
-                                : 'border-border bg-background text-muted-foreground hover:border-border/80'
-                            }`}
-                          >
-                            <div className="font-medium text-xs text-foreground">Only when finished</div>
-                            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                              Mark watched only when it played through completely or next episode starts.
+                            <Input
+                              value={proxyUrl}
+                              onChange={(e) => setProxyUrl(e.target.value)}
+                              placeholder="https://tmdb-proxy.example.com/3 (optional)"
+                              className="font-mono text-xs"
+                            />
+                            <p className="text-[11px] text-muted-foreground">
+                              Optional proxy URL to bypass regional blocks (e.g., in India or restricted networks).
                             </p>
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                {/* AI Recommendations Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'ai' ? null : 'ai')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <Sparkles className="size-4 text-purple-500 dark:text-purple-400" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">AI Recommendations</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">{aiProvider}</p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform ${
-                        openSection === 'ai' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
+                        {/* Connected Trackers */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Connected Trackers
+                          </h4>
 
-                  {openSection === 'ai' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-4 text-sm">
-                      {/* Provider Selector */}
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-foreground">AI Provider</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAiProvider('Google Gemini')
-                              setAiModel('gemini-3.5-flash-lite')
-                            }}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
-                              aiProvider === 'Google Gemini'
-                                ? 'border-primary bg-primary/10 text-foreground'
-                                : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                            }`}
-                          >
-                            <span>Google Gemini</span>
-                            {aiProvider === 'Google Gemini' && <Check className="size-3 text-primary" />}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setAiProvider('Groq')
-                              setAiModel('openai/gpt-oss-120b')
-                            }}
-                            className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
-                              aiProvider === 'Groq'
-                                ? 'border-primary bg-primary/10 text-foreground'
-                                : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                            }`}
-                          >
-                            <span>Groq</span>
-                            {aiProvider === 'Groq' && <Check className="size-3 text-primary" />}
-                          </button>
-                        </div>
-                      </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-foreground text-xs">Trakt</div>
+                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neerajlovecyber</div>
+                              </div>
+                              <Checkbox checked={scrobbleTrakt} onCheckedChange={(c) => setScrobbleTrakt(!!c)} />
+                            </div>
 
-                      {/* Model Selector matching Xperience UI */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs text-foreground">Model</Label>
-                          <span className="text-[11px] font-mono text-muted-foreground">{aiModel}</span>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                variant="outline"
-                                className="w-full justify-between font-mono text-xs h-9 bg-background/50 border-input"
-                              >
-                                <span className="truncate">{aiModel}</span>
-                                <ChevronDown className="size-3.5 opacity-50 ml-2 shrink-0" />
-                              </Button>
-                            }
-                          />
-                          <DropdownMenuContent align="start" className="w-[calc(100vw-3rem)] max-w-[420px] p-1 bg-popover/95 backdrop-blur-md border-border/80 shadow-xl">
-                            {(aiProvider === 'Groq' ? GROQ_MODELS : GEMINI_MODELS).map((m) => (
-                              <DropdownMenuItem
-                                key={m.id}
-                                onClick={() => setAiModel(m.id)}
-                                className="flex items-center justify-between py-2 px-3 text-xs font-mono cursor-pointer rounded-md hover:bg-accent hover:text-accent-foreground"
-                              >
-                                <span className={aiModel === m.id ? 'text-primary font-medium' : 'text-foreground/80'}>
-                                  {m.label}
-                                </span>
-                                {aiModel === m.id && <Check className="size-3.5 text-primary shrink-0 ml-2" />}
-                              </DropdownMenuItem>
-                            ))}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                        <p className="text-[11px] text-muted-foreground">
-                          {aiProvider === 'Groq'
-                            ? 'Default: openai/gpt-oss-120b. Ultra-fast inference with fallback to openai/gpt-oss-20b.'
-                            : 'Default: gemini-3.5-flash-lite. Automatic rate-limit failover across Gemini & Gemma models.'}
-                        </p>
-                      </div>
+                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-foreground text-xs">Simkl</div>
+                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neeraj Singh</div>
+                              </div>
+                              <Checkbox checked={scrobbleSimkl} onCheckedChange={(c) => setScrobbleSimkl(!!c)} />
+                            </div>
 
-                      {/* API Key Input */}
-                      {aiProvider === 'Google Gemini' ? (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs text-foreground">Google Gemini API Key</Label>
-                            <a
-                              href="https://aistudio.google.com/apikey"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              Get a key <ExternalLink className="size-3" />
-                            </a>
+                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-foreground text-xs">AniList</div>
+                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
+                              </div>
+                              <Checkbox checked={scrobbleAniList} onCheckedChange={(c) => setScrobbleAniList(!!c)} />
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
+                              <div>
+                                <div className="font-medium text-foreground text-xs">MyAnimeList</div>
+                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
+                              </div>
+                              <Checkbox checked={scrobbleMal} onCheckedChange={(c) => setScrobbleMal(!!c)} />
+                            </div>
                           </div>
-                          <Input
-                            value={aiApiKey}
-                            onChange={(e) => setAiApiKey(e.target.value)}
-                            placeholder="AIzaSy..."
-                            className="font-mono text-xs"
-                          />
                         </div>
-                      ) : (
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs text-foreground">Groq API Key</Label>
-                            <a
-                              href="https://console.groq.com/keys"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              Get a key <ExternalLink className="size-3" />
-                            </a>
-                          </div>
-                          <Input
-                            value={groqApiKey}
-                            onChange={(e) => setGroqApiKey(e.target.value)}
-                            placeholder="gsk_..."
-                            className="font-mono text-xs"
-                          />
-                        </div>
-                      )}
 
-                      <p className="text-[11px] text-muted-foreground">
-                        Your Trakt watch history and MDBList list names are sent to generate personalized catalog rows.
-                      </p>
-
-                      <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-2">
-                        <Checkbox
-                          checked={aiPoweredSearch}
-                          onCheckedChange={(c) => setAiPoweredSearch(!!c)}
-                        />
-                        <span>Enable AI-powered intelligent search suggestions</span>
-                      </label>
-                    </div>
-                  )}
-                </div>
-
-                {/* Search Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'search' ? null : 'search')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <Search className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">Search</h3>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{searchEnabled ? 'On' : 'Off'}</p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform ${
-                        openSection === 'search' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-
-                  {openSection === 'search' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-3 text-xs">
-                      <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                        <Checkbox checked={searchIncludeXp} onCheckedChange={(c) => setSearchIncludeXp(!!c)} />
-                        <span>Include Xperience in Nuvio search</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                        <Checkbox checked={searchAnimeRows} onCheckedChange={(c) => setSearchAnimeRows(!!c)} />
-                        <span>Show anime in their own search rows</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                        <Checkbox checked={searchAiSuggestions} onCheckedChange={(c) => setSearchAiSuggestions(!!c)} />
-                        <span>Show AI suggestions in their own search row</span>
-                      </label>
-                      <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                        <Checkbox
-                          checked={searchFranchiseCollections}
-                          onCheckedChange={(c) => setSearchFranchiseCollections(!!c)}
-                        />
-                        <span>Show franchise collections in their own search row</span>
-                      </label>
-
-                      <div className="grid grid-cols-2 gap-3 pt-3">
-                        <div>
-                          <Label className="text-[11px] text-muted-foreground">Main rows label override</Label>
-                          <Input
-                            placeholder="Default"
-                            value={searchMainRowsName}
-                            onChange={(e) => setSearchMainRowsName(e.target.value)}
-                            className="text-xs mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-[11px] text-muted-foreground">Anime rows label override</Label>
-                          <Input
-                            placeholder="Default"
-                            value={searchAnimeRowsName}
-                            onChange={(e) => setSearchAnimeRowsName(e.target.value)}
-                            className="text-xs mt-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Discover Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'discover' ? null : 'discover')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <Compass className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">Discover</h3>
-                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">{discoverEnabled ? 'On' : 'Off'}</p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform ${
-                        openSection === 'discover' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-
-                  {openSection === 'discover' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-3 text-xs">
-                      <p className="text-muted-foreground">
-                        Show the built-in Movies and Series browse catalogs. Rename them if you want something else in Discover.
-                      </p>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <Label className="text-[11px] text-muted-foreground">Movies rename</Label>
-                          <Input
-                            placeholder="Movies"
-                            value={discoverMoviesName}
-                            onChange={(e) => setDiscoverMoviesName(e.target.value)}
-                            className="text-xs mt-1"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-[11px] text-muted-foreground">Series rename</Label>
-                          <Input
-                            placeholder="Series"
-                            value={discoverSeriesName}
-                            onChange={(e) => setDiscoverSeriesName(e.target.value)}
-                            className="text-xs mt-1"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Streams Informational Notice Card */}
-                <div className="rounded-2xl border border-border bg-card p-5 flex items-start gap-4">
-                  <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-primary shrink-0">
-                    <Radio className="size-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <h3 className="text-sm font-semibold text-foreground">Streams</h3>
-                      <Info className="size-3 text-muted-foreground" />
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Provide streams with a supporter membership. Serve streams from your own debrid service alongside your catalogs.
-                    </p>
-                    <p className="text-[11px] text-primary mt-2 font-medium">
-                      Stream provider addons run as dedicated integrations separate from this catalog profile.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Posters Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'posters' ? null : 'posters')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <ImageIcon className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">Posters</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">Custom URL, BetterPosters, EasyRatings, Top Posters, RPDB</p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform ${
-                        openSection === 'posters' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-
-                  {openSection === 'posters' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-3 text-xs">
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 py-2">
-                        {[
-                          { name: 'BetterPosters', status: 'verified' },
-                          { name: 'EasyRatings', status: 'verified' },
-                          { name: 'Top Posters', status: 'verified' },
-                          { name: 'RPDB', status: 'verified' },
-                          { name: 'OMDb', status: 'not in use' },
-                          { name: 'Fanart.tv', status: 'not in use' },
-                        ].map((p) => (
-                          <div key={p.name} className="p-2.5 rounded-lg bg-background border border-border flex items-center justify-between">
-                            <span className="text-foreground">{p.name}</span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                p.status === 'verified'
-                                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium'
-                                  : 'bg-muted text-muted-foreground'
+                        {/* When Playback Ends */}
+                        <div className="border-t border-border/40 pt-4 space-y-2">
+                          <Label className="text-xs font-semibold text-foreground">When playback ends</Label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <div
+                              onClick={() => setPlaybackEndRule('watched')}
+                              className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                                playbackEndRule === 'watched'
+                                  ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                                  : 'border-border bg-background text-muted-foreground hover:border-border/80'
                               }`}
                             >
-                              {p.status}
+                              <div className="font-medium text-xs text-foreground">Mark as watched</div>
+                              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                                After the title's runtime, mark it watched on every tracker immediately.
+                              </p>
+                            </div>
+
+                            <div
+                              onClick={() => setPlaybackEndRule('finished')}
+                              className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                                playbackEndRule === 'finished'
+                                  ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
+                                  : 'border-border bg-background text-muted-foreground hover:border-border/80'
+                              }`}
+                            >
+                              <div className="font-medium text-xs text-foreground">Only when finished</div>
+                              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
+                                Mark watched only when it played through completely or next episode starts.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 3. AI Recommendations */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'ai' ? null : 'ai')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'ai'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <Sparkles className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">AI Recommendations</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{aiProvider}</span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'ai' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'ai' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-4 text-sm">
+                        {/* Provider Selector */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-foreground">AI Provider</Label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAiProvider('Google Gemini')
+                                setAiModel('gemini-3.5-flash-lite')
+                              }}
+                              className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
+                                aiProvider === 'Google Gemini'
+                                  ? 'border-primary bg-primary/10 text-foreground'
+                                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
+                              }`}
+                            >
+                              <span>Google Gemini</span>
+                              {aiProvider === 'Google Gemini' && <Check className="size-3 text-primary" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setAiProvider('Groq')
+                                setAiModel('openai/gpt-oss-120b')
+                              }}
+                              className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors ${
+                                aiProvider === 'Groq'
+                                  ? 'border-primary bg-primary/10 text-foreground'
+                                  : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
+                              }`}
+                            >
+                              <span>Groq</span>
+                              {aiProvider === 'Groq' && <Check className="size-3 text-primary" />}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Model Selector matching Xperience UI */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-foreground">Model</Label>
+                            <span className="text-[11px] font-mono text-muted-foreground">{aiModel}</span>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-between font-mono text-xs h-9 bg-background/50 border-input"
+                                >
+                                  <span className="truncate">{aiModel}</span>
+                                  <ChevronDown className="size-3.5 opacity-50 ml-2 shrink-0" />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent align="start" className="w-[calc(100vw-3rem)] max-w-[420px] p-1 bg-popover/95 backdrop-blur-md border-border/80 shadow-xl">
+                              {(aiProvider === 'Groq' ? GROQ_MODELS : GEMINI_MODELS).map((m) => (
+                                <DropdownMenuItem
+                                  key={m.id}
+                                  onClick={() => setAiModel(m.id)}
+                                  className="flex items-center justify-between py-2 px-3 text-xs font-mono cursor-pointer rounded-md hover:bg-accent hover:text-accent-foreground"
+                                >
+                                  <span className={aiModel === m.id ? 'text-primary font-medium' : 'text-foreground/80'}>
+                                    {m.label}
+                                  </span>
+                                  {aiModel === m.id && <Check className="size-3.5 text-primary shrink-0 ml-2" />}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                          <p className="text-[11px] text-muted-foreground">
+                            {aiProvider === 'Groq'
+                              ? 'Default: openai/gpt-oss-120b. Ultra-fast inference with fallback to openai/gpt-oss-20b.'
+                              : 'Default: gemini-3.5-flash-lite. Automatic rate-limit failover across Gemini & Gemma models.'}
+                          </p>
+                        </div>
+
+                        {/* API Key Input */}
+                        {aiProvider === 'Google Gemini' ? (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-foreground">Google Gemini API Key</Label>
+                              <a
+                                href="https://aistudio.google.com/apikey"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Get a key <ExternalLink className="size-3" />
+                              </a>
+                            </div>
+                            <Input
+                              value={aiApiKey}
+                              onChange={(e) => setAiApiKey(e.target.value)}
+                              placeholder="AIzaSy..."
+                              className="font-mono text-xs"
+                            />
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs text-foreground">Groq API Key</Label>
+                              <a
+                                href="https://console.groq.com/keys"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Get a key <ExternalLink className="size-3" />
+                              </a>
+                            </div>
+                            <Input
+                              value={groqApiKey}
+                              onChange={(e) => setGroqApiKey(e.target.value)}
+                              placeholder="gsk_..."
+                              className="font-mono text-xs"
+                            />
+                          </div>
+                        )}
+
+                        <p className="text-[11px] text-muted-foreground">
+                          Your Trakt watch history and MDBList list names are sent to generate personalized catalog rows.
+                        </p>
+
+                        <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer pt-2">
+                          <Checkbox
+                            checked={aiPoweredSearch}
+                            onCheckedChange={(c) => setAiPoweredSearch(!!c)}
+                          />
+                          <span>Enable AI-powered intelligent search suggestions</span>
+                        </label>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 4. Search */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'search' ? null : 'search')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'search'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <Search className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Search</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{searchEnabled ? 'On' : 'Off'}</span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'search' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'search' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-3 text-xs">
+                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                          <Checkbox checked={searchIncludeXp} onCheckedChange={(c) => setSearchIncludeXp(!!c)} />
+                          <span>Include Xperience in Nuvio search</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                          <Checkbox checked={searchAnimeRows} onCheckedChange={(c) => setSearchAnimeRows(!!c)} />
+                          <span>Show anime in their own search rows</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                          <Checkbox checked={searchAiSuggestions} onCheckedChange={(c) => setSearchAiSuggestions(!!c)} />
+                          <span>Show AI suggestions in their own search row</span>
+                        </label>
+                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                          <Checkbox
+                            checked={searchFranchiseCollections}
+                            onCheckedChange={(c) => setSearchFranchiseCollections(!!c)}
+                          />
+                          <span>Show franchise collections in their own search row</span>
+                        </label>
+
+                        <div className="grid grid-cols-2 gap-3 pt-3">
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Main rows label override</Label>
+                            <Input
+                              placeholder="Default"
+                              value={searchMainRowsName}
+                              onChange={(e) => setSearchMainRowsName(e.target.value)}
+                              className="text-xs mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Anime rows label override</Label>
+                            <Input
+                              placeholder="Default"
+                              value={searchAnimeRowsName}
+                              onChange={(e) => setSearchAnimeRowsName(e.target.value)}
+                              className="text-xs mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 5. Discover */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'discover' ? null : 'discover')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'discover'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <Compass className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Discover</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">{discoverEnabled ? 'On' : 'Off'}</span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'discover' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'discover' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-3 text-xs">
+                        <p className="text-muted-foreground">
+                          Show the built-in Movies and Series browse catalogs. Rename them if you want something else in Discover.
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Movies rename</Label>
+                            <Input
+                              placeholder="Movies"
+                              value={discoverMoviesName}
+                              onChange={(e) => setDiscoverMoviesName(e.target.value)}
+                              className="text-xs mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[11px] text-muted-foreground">Series rename</Label>
+                            <Input
+                              placeholder="Series"
+                              value={discoverSeriesName}
+                              onChange={(e) => setDiscoverSeriesName(e.target.value)}
+                              className="text-xs mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 6. Streams */}
+                  <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6">
+                    <div className="flex min-h-5 items-center gap-1">
+                      <h3 className="text-sm font-semibold text-foreground">Streams</h3>
+                      <button
+                        type="button"
+                        className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
+                        title="About Streams"
+                      >
+                        <Info className="size-3.5" />
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="relative flex w-full items-center gap-4 overflow-hidden rounded-lg border p-4 text-left transition-transform hover:scale-[1.01] cursor-pointer"
+                      style={{
+                        background:
+                          'radial-gradient(ellipse at top right, color-mix(in oklab, var(--primary) 18%, transparent), transparent 70%), color-mix(in oklab, var(--card) 90%, transparent)',
+                        borderColor: 'color-mix(in oklab, var(--primary) 30%, var(--border))',
+                      }}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-primary/10">
+                        <Zap className="size-4 text-primary" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Provide streams with a supporter membership</span>
+                        <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">
+                          Serve streams from your own debrid service alongside your catalogs. Tap to become a supporter.
+                        </span>
+                      </span>
+                      <Lock className="size-4 shrink-0 text-primary" />
+                    </button>
+                  </section>
+
+                  {/* 7. Posters */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'posters' ? null : 'posters')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'posters'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <ImageIcon className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Posters</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {posterProviders.map((p) => p.name).join(', ')}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'posters' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'posters' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60">
+                        <PostersConfigSection
+                          providers={posterProviders}
+                          onProvidersChange={setPosterProviders}
+                          showRatingsOnPosters={showRatingsOnPosters}
+                          onShowRatingsChange={setShowRatingsOnPosters}
+                          badgedEpisodeStills={ratingBadgedStills}
+                          onBadgedEpisodeStillsChange={setRatingBadgedStills}
+                          showApplyToAll={false}
+                          showSectionHeader={true}
+                        />
+                      </div>
+                    )}
+                  </section>
+
+                  {/* 8. Preferences */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'preferences' ? null : 'preferences')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'preferences'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <SlidersHorizontal className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Preferences</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {POPULAR_LANGUAGES.find((l) => l.code === language)?.name || language} · {selectedRegion} · {ageRating === 'NONE' ? 'All Ratings' : ageRating}
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'preferences' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'preferences' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-5 text-xs">
+                        {/* Metadata Language */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                              <Globe className="size-3.5 text-primary" />
+                              Metadata Language
+                            </Label>
+                            <span className="text-[11px] font-mono text-muted-foreground">{language}</span>
+                          </div>
+                          <select
+                            value={language}
+                            onChange={(e) => setLanguage(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            <optgroup label="Popular Languages">
+                              {POPULAR_LANGUAGES.map((l) => (
+                                <option key={l.code} value={l.code}>
+                                  {l.name} ({l.code})
+                                </option>
+                              ))}
+                            </optgroup>
+                            <optgroup label="All Supported Locales (280+)">
+                              {(languagesData as any[]).map((l) => (
+                                <option key={l.iso_639_1} value={l.iso_639_1}>
+                                  {l.name} ({l.iso_639_1})
+                                </option>
+                              ))}
+                            </optgroup>
+                          </select>
+                          <p className="text-[11px] text-muted-foreground">
+                            Fetches titles, descriptions, and episode names in your preferred language.
+                          </p>
+                        </div>
+
+                        {/* Age Rating / Content Restriction */}
+                        <div className="space-y-2 border-t border-border/40 pt-4">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground">Content Age Rating</Label>
+                            <span className="text-[11px] text-muted-foreground font-medium">
+                              {AGE_RATINGS.find((r) => r.id === ageRating)?.name || 'No Restriction'}
                             </span>
                           </div>
-                        ))}
-                      </div>
-
-                      <div className="space-y-2 pt-2 border-t border-border/40">
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={showRatingsOnPosters} onCheckedChange={(c) => setShowRatingsOnPosters(!!c)} />
-                          <span>Show ratings on posters</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={ratingBadgedStills} onCheckedChange={(c) => setRatingBadgedStills(!!c)} />
-                          <span>Rating-badged episode stills</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Preferences Card */}
-                <div className="rounded-2xl border border-border bg-card overflow-hidden">
-                  <div
-                    onClick={() => setOpenSection(openSection === 'preferences' ? null : 'preferences')}
-                    className="p-5 flex items-center justify-between cursor-pointer hover:bg-accent/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="size-9 rounded-xl bg-accent flex items-center justify-center text-foreground">
-                        <Sliders className="size-4" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-semibold text-foreground">Preferences</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {POPULAR_LANGUAGES.find((l) => l.code === language)?.name || language} · {selectedRegion} · {ageRating === 'NONE' ? 'All Ratings' : ageRating}
-                        </p>
-                      </div>
-                    </div>
-                    <ChevronDown
-                      className={`size-4 text-muted-foreground transition-transform ${
-                        openSection === 'preferences' ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-
-                  {openSection === 'preferences' && (
-                    <div className="px-5 pb-6 pt-2 border-t border-border/60 space-y-5 text-xs">
-                      {/* Metadata Language */}
-                      <div className="space-y-1.5">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                            <Globe className="size-3.5 text-primary" />
-                            Metadata Language
-                          </Label>
-                          <span className="text-[11px] font-mono text-muted-foreground">{language}</span>
+                          <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                            {AGE_RATINGS.map((r) => {
+                              const isSelected = ageRating === r.id
+                              return (
+                                <button
+                                  key={r.id}
+                                  type="button"
+                                  onClick={() => setAgeRating(r.id)}
+                                  className={`px-2 py-2 rounded-lg text-xs font-medium border text-center transition-all ${
+                                    isSelected
+                                      ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
+                                      : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                                  }`}
+                                >
+                                  <div className="font-bold">{r.badge.text}</div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            {AGE_RATINGS.find((r) => r.id === ageRating)?.description}
+                          </p>
                         </div>
-                        <select
-                          value={language}
-                          onChange={(e) => setLanguage(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-                        >
-                          <optgroup label="Popular Languages">
-                            {POPULAR_LANGUAGES.map((l) => (
-                              <option key={l.code} value={l.code}>
-                                {l.name} ({l.code})
+
+                        {/* Streaming Region */}
+                        <div className="space-y-1.5 border-t border-border/40 pt-4">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold text-foreground">Streaming Region</Label>
+                            <span className="text-[11px] text-muted-foreground">{selectedRegion}</span>
+                          </div>
+                          <select
+                            value={selectedRegion}
+                            onChange={(e) => setSelectedRegion(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            {Object.keys(STREAMING_REGIONS).map((reg) => (
+                              <option key={reg} value={reg}>
+                                {reg}
                               </option>
                             ))}
-                          </optgroup>
-                          <optgroup label="All Supported Locales (280+)">
-                            {(languagesData as any[]).map((l) => (
-                              <option key={l.iso_639_1} value={l.iso_639_1}>
-                                {l.name} ({l.iso_639_1})
-                              </option>
-                            ))}
-                          </optgroup>
-                        </select>
-                        <p className="text-[11px] text-muted-foreground">
-                          Fetches titles, descriptions, and episode names in your preferred language.
-                        </p>
-                      </div>
-
-                      {/* Age Rating / Content Restriction */}
-                      <div className="space-y-2 border-t border-border/40 pt-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs font-semibold text-foreground">Content Age Rating</Label>
-                          <span className="text-[11px] text-muted-foreground font-medium">
-                            {AGE_RATINGS.find((r) => r.id === ageRating)?.name || 'No Restriction'}
-                          </span>
+                          </select>
+                          <p className="text-[11px] text-muted-foreground">
+                            Adapts streaming provider catalogs (Netflix, Disney+, Prime, etc.) to show titles available in this region.
+                          </p>
                         </div>
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                          {AGE_RATINGS.map((r) => {
-                            const isSelected = ageRating === r.id
-                            return (
-                              <button
-                                key={r.id}
-                                type="button"
-                                onClick={() => setAgeRating(r.id)}
-                                className={`px-2 py-2 rounded-lg text-xs font-medium border text-center transition-all ${
-                                  isSelected
-                                    ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
-                                    : 'border-border bg-background text-muted-foreground hover:text-foreground'
-                                }`}
-                              >
-                                <div className="font-bold">{r.badge.text}</div>
-                              </button>
-                            )
-                          })}
+
+                        {/* Checkbox Preferences */}
+                        <div className="space-y-2.5 border-t border-border/40 pt-4">
+                          <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                            <Checkbox checked={hideAdult} onCheckedChange={(c) => setHideAdult(!!c)} />
+                            <span>Hide adult content (pornographic & hentai titles)</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                            <Checkbox checked={excludeUnreleased} onCheckedChange={(c) => setExcludeUnreleased(!!c)} />
+                            <span>Exclude unreleased titles</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                            <Checkbox checked={moviesDigitalOnly} onCheckedChange={(c) => setMoviesDigitalOnly(!!c)} />
+                            <span>Movies: digital release only</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                            <Checkbox checked={hideWatched} onCheckedChange={(c) => setHideWatched(!!c)} />
+                            <span>Hide content I've already watched</span>
+                          </label>
+                          <label className="flex items-center gap-2 text-foreground cursor-pointer">
+                            <Checkbox checked={hideCaughtUp} onCheckedChange={(c) => setHideCaughtUp(!!c)} />
+                            <span>Hide TV shows I'm caught up on</span>
+                          </label>
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          {AGE_RATINGS.find((r) => r.id === ageRating)?.description}
-                        </p>
-                      </div>
 
-                      {/* Streaming Region */}
-                      <div className="space-y-1.5 border-t border-border/40 pt-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-xs font-semibold text-foreground">Streaming Region</Label>
-                          <span className="text-[11px] text-muted-foreground">{selectedRegion}</span>
-                        </div>
-                        <select
-                          value={selectedRegion}
-                          onChange={(e) => setSelectedRegion(e.target.value)}
-                          className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
-                        >
-                          {Object.keys(STREAMING_REGIONS).map((reg) => (
-                            <option key={reg} value={reg}>
-                              {reg}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-[11px] text-muted-foreground">
-                          Adapts streaming provider catalogs (Netflix, Disney+, Prime, etc.) to show titles available in this region.
-                        </p>
-                      </div>
-
-                      {/* Checkbox Preferences */}
-                      <div className="space-y-2.5 border-t border-border/40 pt-4">
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={hideAdult} onCheckedChange={(c) => setHideAdult(!!c)} />
-                          <span>Hide adult content (pornographic & hentai titles)</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={excludeUnreleased} onCheckedChange={(c) => setExcludeUnreleased(!!c)} />
-                          <span>Exclude unreleased titles</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={moviesDigitalOnly} onCheckedChange={(c) => setMoviesDigitalOnly(!!c)} />
-                          <span>Movies: digital release only</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={hideWatched} onCheckedChange={(c) => setHideWatched(!!c)} />
-                          <span>Hide content I've already watched</span>
-                        </label>
-                        <label className="flex items-center gap-2 text-foreground cursor-pointer">
-                          <Checkbox checked={hideCaughtUp} onCheckedChange={(c) => setHideCaughtUp(!!c)} />
-                          <span>Hide TV shows I'm caught up on</span>
-                        </label>
-                      </div>
-
-                      <div className="border-t border-border/40 pt-3">
-                        <Label className="text-xs text-muted-foreground mb-2 block">Exclude Genres</Label>
-                        <div className="flex flex-wrap gap-2">
-                          {GENRES_LIST.map((genre) => {
-                            const isExcluded = excludedGenres.includes(genre)
-                            return (
-                              <button
-                                key={genre}
-                                type="button"
-                                onClick={() => {
-                                  setExcludedGenres((prev) =>
-                                    isExcluded ? prev.filter((g) => g !== genre) : [...prev, genre]
-                                  )
-                                }}
-                                className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
-                                  isExcluded
-                                    ? 'bg-destructive/15 text-destructive border border-destructive/40'
-                                    : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
-                                }`}
-                              >
-                                {genre}
-                              </button>
-                            )
-                          })}
+                        <div className="border-t border-border/40 pt-3">
+                          <Label className="text-xs text-muted-foreground mb-2 block">Exclude Genres</Label>
+                          <div className="flex flex-wrap gap-2">
+                            {GENRES_LIST.map((genre) => {
+                              const isExcluded = excludedGenres.includes(genre)
+                              return (
+                                <button
+                                  key={genre}
+                                  type="button"
+                                  onClick={() => {
+                                    setExcludedGenres((prev) =>
+                                      isExcluded ? prev.filter((g) => g !== genre) : [...prev, genre]
+                                    )
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                                    isExcluded
+                                      ? 'bg-destructive/15 text-destructive border border-destructive/40'
+                                      : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
+                                  }`}
+                                >
+                                  {genre}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </section>
+
+                  {/* 9. Anime */}
+                  <section className="rounded-xl border bg-card overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenSection(openSection === 'anime' ? null : 'anime')}
+                      className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-accent/50 sm:px-6 cursor-pointer"
+                      aria-expanded={openSection === 'anime'}
+                    >
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-muted/60">
+                        <Tv className="size-4 text-muted-foreground" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-foreground">Anime</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                          {animeSource} · {animeNumbering.split(' ')[0]} · {animeStreamId} · Default
+                        </span>
+                      </span>
+                      <ChevronRight
+                        className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                          openSection === 'anime' ? 'rotate-90' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {openSection === 'anime' && (
+                      <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-4 text-xs">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold text-foreground">Anime season & episode source</Label>
+                          <select
+                            value={animeSource}
+                            onChange={(e) => setAnimeSource(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="TheTVDB">TheTVDB</option>
+                            <option value="TMDB">TMDB</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5 border-t border-border/40 pt-3">
+                          <Label className="text-xs font-semibold text-foreground">Anime episode numbering</Label>
+                          <select
+                            value={animeNumbering}
+                            onChange={(e) => setAnimeNumbering(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="Absolute (1137)">Absolute (1137)</option>
+                            <option value="Standard (S01E01)">Standard (S01E01)</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5 border-t border-border/40 pt-3">
+                          <Label className="text-xs font-semibold text-foreground">Filler episodes</Label>
+                          <select
+                            value={fillerEpisodes}
+                            onChange={(e) => setFillerEpisodes(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="Tag ([Filler])">Tag ([Filler])</option>
+                            <option value="Hide">Hide</option>
+                            <option value="Include normally">Include normally</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1.5 border-t border-border/40 pt-3">
+                          <Label className="text-xs font-semibold text-foreground">Anime stream ID</Label>
+                          <select
+                            value={animeStreamId}
+                            onChange={(e) => setAnimeStreamId(e.target.value)}
+                            className="w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="IMDb">IMDb</option>
+                            <option value="Kitsu">Kitsu</option>
+                            <option value="AniList">AniList</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 </div>
               </div>
             )}
@@ -1860,20 +1960,26 @@ function ProfileWizardPage() {
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground font-semibold">Tile shape</Label>
                         <div className="flex items-center gap-3">
-                          {(['Poster', 'Landscape', 'Square'] as const).map((shape) => (
-                            <label key={shape} className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
+                          {(
+                            [
+                              { value: 'POSTER', label: 'Poster' },
+                              { value: 'LANDSCAPE', label: 'Landscape' },
+                              { value: 'SQUARE', label: 'Square' },
+                            ] as const
+                          ).map(({ value, label }) => (
+                            <label key={value} className="flex items-center gap-2 text-xs text-foreground cursor-pointer">
                               <input
                                 type="radio"
                                 name={`shape-${col.id}`}
-                                checked={col.tileShape === shape}
+                                checked={col.tileShape === value}
                                 onChange={() => {
                                   setCollections((prev) =>
-                                    prev.map((c) => (c.id === col.id ? { ...c, tileShape: shape } : c))
+                                    prev.map((c) => (c.id === col.id ? { ...c, tileShape: value } : c))
                                   )
                                 }}
                                 className="accent-primary"
                               />
-                              <span>{shape}</span>
+                              <span>{label}</span>
                             </label>
                           ))}
                         </div>
@@ -1888,15 +1994,36 @@ function ProfileWizardPage() {
                         <div className="grid grid-cols-3 gap-3">
                           <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
                             <span className="text-xs text-foreground">Pin to top</span>
-                            <Checkbox checked={col.pinToTop} />
+                            <Checkbox
+                              checked={col.pinToTop}
+                              onCheckedChange={(checked) =>
+                                setCollections((prev) =>
+                                  prev.map((c) => (c.id === col.id ? { ...c, pinToTop: !!checked } : c))
+                                )
+                              }
+                            />
                           </div>
                           <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
                             <span className="text-xs text-foreground">Focus glow</span>
-                            <Checkbox checked={col.focusGlow} />
+                            <Checkbox
+                              checked={col.focusGlow}
+                              onCheckedChange={(checked) =>
+                                setCollections((prev) =>
+                                  prev.map((c) => (c.id === col.id ? { ...c, focusGlow: !!checked } : c))
+                                )
+                              }
+                            />
                           </div>
                           <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
                             <span className="text-xs text-foreground">"All" tab</span>
-                            <Checkbox checked={col.allTab} />
+                            <Checkbox
+                              checked={col.showAllTab}
+                              onCheckedChange={(checked) =>
+                                setCollections((prev) =>
+                                  prev.map((c) => (c.id === col.id ? { ...c, showAllTab: !!checked } : c))
+                                )
+                              }
+                            />
                           </div>
                         </div>
                       </div>
@@ -1905,20 +2032,26 @@ function ProfileWizardPage() {
                       <div className="space-y-2">
                         <Label className="text-xs text-muted-foreground font-semibold">View mode</Label>
                         <div className="grid grid-cols-3 gap-2 p-1 bg-background rounded-xl border border-border">
-                          {(['Follow layout', 'Rows', 'Tabbed grid'] as const).map((vm) => (
+                          {(
+                            [
+                              { value: 'FOLLOW_LAYOUT', label: 'Follow layout' },
+                              { value: 'ROWS', label: 'Rows' },
+                              { value: 'TABBED_GRID', label: 'Tabbed grid' },
+                            ] as const
+                          ).map(({ value, label }) => (
                             <button
-                              key={vm}
+                              key={value}
                               type="button"
                               onClick={() => {
                                 setCollections((prev) =>
-                                  prev.map((c) => (c.id === col.id ? { ...c, viewMode: vm } : c))
+                                  prev.map((c) => (c.id === col.id ? { ...c, viewMode: value } : c))
                                 )
                               }}
                               className={`py-2 rounded-lg text-xs font-medium transition-all ${
-                                col.viewMode === vm ? 'bg-accent text-accent-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
+                                col.viewMode === value ? 'bg-accent text-accent-foreground shadow-xs' : 'text-muted-foreground hover:text-foreground'
                               }`}
                             >
-                              {vm}
+                              {label}
                             </button>
                           ))}
                         </div>
@@ -2309,12 +2442,14 @@ function ProfileWizardPage() {
                   Posters
                 </h4>
                 <div className="space-y-1.5 text-xs">
-                  {['Custom URL', 'BetterPosters', 'EasyRatings', 'Top Posters', 'RPDB'].map((p) => (
-                    <div key={p} className="flex items-center gap-2 text-foreground">
-                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>{p}</span>
-                    </div>
-                  ))}
+                  {posterProviders
+                    .filter((p) => p.active || p.verified)
+                    .map((p) => (
+                      <div key={p.id} className="flex items-center gap-2 text-foreground">
+                        <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span>{p.name}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             </aside>
