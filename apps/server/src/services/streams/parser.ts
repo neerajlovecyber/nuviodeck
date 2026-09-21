@@ -163,10 +163,32 @@ export class StreamParser {
     return codecs
   }
 
+  private static normalizeUnicodeText(text: string): string {
+    const smallCapsMap: Record<string, string> = {
+      'ᴀ': 'a', 'ʙ': 'b', 'ᴄ': 'c', 'ᴅ': 'd', 'ᴇ': 'e', 'ғ': 'f', 'ɢ': 'g', 'ʜ': 'h',
+      'ɪ': 'i', 'ᴊ': 'j', 'ᴋ': 'k', 'ʟ': 'l', 'ᴍ': 'm', 'ɴ': 'n', 'ᴏ': 'o', 'ᴘ': 'p',
+      'ǫ': 'q', 'ʀ': 'r', 's': 's', 'ᴛ': 't', 'ᴜ': 'u', 'ᴠ': 'v', 'ᴡ': 'w', 'x': 'x',
+      'ʏ': 'y', 'ᴢ': 'z'
+    }
+    let norm = text.replace(/[ᴀ-ᴢ]/g, (ch) => smallCapsMap[ch] || ch)
+    if (norm.includes('🇮🇳')) norm += ' hindi '
+    if (norm.includes('🇰🇷')) norm += ' korean '
+    if (norm.includes('🇯🇵')) norm += ' japanese '
+    if (norm.includes('🇷🇺')) norm += ' russian '
+    if (norm.includes('🇪🇸')) norm += ' spanish '
+    if (norm.includes('🇫🇷')) norm += ' french '
+    if (norm.includes('🇩🇪')) norm += ' german '
+    if (norm.includes('🇮🇹')) norm += ' italian '
+    if (norm.includes('🇧🇷')) norm += ' portuguese '
+    if (norm.includes('🇨🇳')) norm += ' chinese '
+    if (norm.includes('🇬🇧') || norm.includes('🇺🇸')) norm += ' english '
+    return norm
+  }
+
   private static detectLanguages(text: string): { languages: string[]; languageEmojis: string[] } {
     const languages: string[] = []
     const languageEmojis: string[] = []
-    const lower = text.toLowerCase()
+    const lower = this.normalizeUnicodeText(text).toLowerCase()
 
     const map: Array<{ name: string; emoji: string; regex: RegExp }> = [
       { name: 'English', emoji: '🇬🇧', regex: /\b(english|eng|en)\b/ },
@@ -179,6 +201,10 @@ export class StreamParser {
       { name: 'Japanese', emoji: '🇯🇵', regex: /\b(japanese|jpn|ja|jp)\b/ },
       { name: 'Korean', emoji: '🇰🇷', regex: /\b(korean|kor|ko)\b/ },
       { name: 'Hindi', emoji: '🇮🇳', regex: /\b(hindi|hin|hi)\b/ },
+      { name: 'Telugu', emoji: '🇮🇳', regex: /\b(telugu|tel|te)\b/ },
+      { name: 'Tamil', emoji: '🇮🇳', regex: /\b(tamil|tam|ta)\b/ },
+      { name: 'Malayalam', emoji: '🇮🇳', regex: /\b(malayalam|mal|ml)\b/ },
+      { name: 'Kannada', emoji: '🇮🇳', regex: /\b(kannada|kan|kn)\b/ },
       { name: 'Chinese', emoji: '🇨🇳', regex: /\b(chinese|chi|zh)\b/ },
       { name: 'Multi', emoji: '🌐', regex: /\b(multi|multisubs?)\b/ },
       { name: 'Dual audio', emoji: '👥', regex: /\b(dual[- ._]?audio)\b/ },
@@ -195,11 +221,11 @@ export class StreamParser {
   }
 
   private static detectSize(text: string): { sizeBytes?: number; sizeFormatted?: string } {
-    const match = text.match(/(?:📦|💾|size:?\s*)?(\d+(?:\.\d+)?)\s*(GB|MB|GiB|MiB|TB)\b/i)
+    const match = text.match(/(?:📦|💾|size:?\s*)?(\d+(?:\.\d+)?)\s*(?:\/\s*(\d+(?:\.\d+)?)\s*)?(GB|MB|GiB|MiB|TB)\b/i)
     if (!match) return {}
 
     const value = parseFloat(match[1])
-    const unit = match[2].toUpperCase()
+    const unit = (match[3] || match[2] || 'GB').toUpperCase()
     let sizeBytes = 0
 
     if (unit.startsWith('TB')) sizeBytes = value * 1024 * 1024 * 1024 * 1024

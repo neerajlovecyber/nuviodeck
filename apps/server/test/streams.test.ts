@@ -318,6 +318,118 @@ describe('Section 1: Stream Engine & Micro-Syntax Formatter Parity', () => {
       expect(filtered).toHaveLength(1)
       expect(filtered[0].title).toBe('Inception')
     })
+
+    it('filters out sample/spam files, excluded keywords, and blocklisted release groups', () => {
+      const sampleStream = StreamParser.parse(
+        { name: 'S', title: 'Inception.2010.1080p.sample.mkv' },
+        's',
+        'S'
+      )
+      const spamKeywordStream = StreamParser.parse(
+        { name: 'S', title: 'Inception.2010.1080p.Ganool.mkv' },
+        's',
+        'S'
+      )
+      const blocklistHashStream = StreamParser.parse(
+        { name: 'S', title: 'Inception.2010.1080p.BluRay.mkv', infoHash: 'bad_hash_123' },
+        's',
+        'S'
+      )
+      const cleanStream = StreamParser.parse(
+        { name: 'S', title: 'Inception.2010.1080p.BluRay.x264-SPARKS.mkv', infoHash: 'good_hash_456' },
+        's',
+        'S'
+      )
+
+      const filtered = StreamFilterer.filter(
+        [sampleStream, spamKeywordStream, blocklistHashStream, cleanStream],
+        {
+          excludedKeywords: ['ganool'],
+          excludedReleaseGroups: ['ganool'],
+          blocklistHashes: ['bad_hash_123'],
+        }
+      )
+
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].infoHash).toBe('good_hash_456')
+    })
+
+    it('filters out streams that violate movie or series file size boundaries', () => {
+      // 100MB file claiming to be 4K (trash/sample)
+      const tinyStream = StreamParser.parse(
+        { name: 'S', title: 'Dune.2024.2160p.mkv 100 MB' },
+        's',
+        'S'
+      )
+      // 80GB oversized file
+      const giantStream = StreamParser.parse(
+        { name: 'S', title: 'Dune.2024.2160p.mkv 80 GB' },
+        's',
+        'S'
+      )
+      // 25GB perfect release
+      const perfectStream = StreamParser.parse(
+        { name: 'S', title: 'Dune.2024.2160p.mkv 25 GB' },
+        's',
+        'S'
+      )
+
+      const filtered = StreamFilterer.filter(
+        [tinyStream, giantStream, perfectStream],
+        {
+          mediaType: 'movie',
+          sizeLimits: {
+            movieMinGb: 1.0, // Min 1 GB
+            movieMaxGb: 50.0, // Max 50 GB
+          },
+        }
+      )
+
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].sizeFormatted).toBe('25.00 GB')
+    })
+
+    it('enforces cached-only filter to drop uncached torrents', () => {
+      const cachedStream = StreamParser.parse(
+        { name: 'S', title: 'Movie.1080p.mkv [TB+] 5 GB' },
+        's',
+        'S'
+      )
+      cachedStream.cached = true
+
+      const uncachedStream = StreamParser.parse(
+        { name: 'S', title: 'Movie.1080p.mkv 5 GB' },
+        's',
+        'S'
+      )
+      uncachedStream.cached = false
+
+      const filtered = StreamFilterer.filter([cachedStream, uncachedStream], {
+        cachedOnly: true,
+      })
+
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].cached).toBe(true)
+    })
+
+    it('automatically filters out 0 MB / 0 B placeholder dummy streams', () => {
+      const zeroMbStream = StreamParser.parse(
+        { name: 'Comet [TB+]\nUnknown', title: 'Itaewon Class S01 E01\nComet\nNot Ready(TB) Web Link Not Proxied\nSIZE 0 MB' },
+        'comet',
+        'Comet'
+      )
+      const validStream = StreamParser.parse(
+        { name: 'Comet [TB+]\n1080p FHD', title: 'Itaewon.Class.S01E01.1080p.NF.WEB-DL.DDP2.0.x264\n1.80 GB' },
+        'comet',
+        'Comet'
+      )
+
+      const filtered = StreamFilterer.filter([zeroMbStream, validStream])
+
+      expect(filtered).toHaveLength(1)
+      expect(filtered[0].resolution).toBe('1080p')
+      expect(filtered.some((s) => s.sizeFormatted === '0.00 MB' || s.rawTitle.includes('SIZE 0 MB'))).toBe(false)
+    })
   })
 
   // ----------------------------------------------------

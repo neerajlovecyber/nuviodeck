@@ -107,6 +107,7 @@ export interface StreamFilterOptions {
   excludePreDigital?: boolean // default: false (filters CAM, TS, TC, HDTS, HDCAM, SCR, R5, DVDScr)
   excludeMismatchedTitles?: boolean // default: false
   targetTitle?: string // target movie/show title to match against
+  mediaType?: 'movie' | 'series' | 'anime'
   excludedQualities?: string[] // default: ['CAM', 'TS', 'SCR']
   preferredLanguages?: string[]
   excludedLanguages?: string[]
@@ -114,6 +115,19 @@ export interface StreamFilterOptions {
   excludedPicture?: string[]
   preferredCodecs?: string[]
   excludedCodecs?: string[]
+  allowUnknownResolution?: boolean // default: true
+  allowUnknownQuality?: boolean // default: true
+  excludeZeroSize?: boolean // default: true (filters out 0 MB / 0 B dummy placeholder links)
+  excludedReleaseGroups?: string[]
+  excludedKeywords?: string[]
+  sizeLimits?: {
+    movieMinGb?: number
+    movieMaxGb?: number
+    seriesMinGb?: number
+    seriesMaxGb?: number
+  }
+  minSeeders?: number
+  blocklistHashes?: string[]
   sortCriteria?: StreamSortCriterion[]
 }
 
