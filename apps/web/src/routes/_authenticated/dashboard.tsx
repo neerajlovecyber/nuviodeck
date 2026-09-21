@@ -780,7 +780,7 @@ function DashboardPage() {
               )}
             </div>
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2.5 sm:gap-3">
               <Button
                 variant="outline"
                 onClick={() => setDeployProfile(null)}
@@ -877,7 +877,7 @@ function DashboardPage() {
                 </div>
               </div>
 
-              <DialogFooter className="pt-2 gap-2 sm:gap-0">
+              <DialogFooter className="pt-2 gap-2.5 sm:gap-3">
                 <Button
                   type="button"
                   variant="ghost"

@@ -22,6 +22,7 @@ import { useAppStore } from "@/store/useStore"
 import { nuvioApi } from "@/lib/nuvio-api"
 import { toast } from "sonner"
 import rawAvatars from "@/data/avatars.json"
+import { NuvioProfileSelectDialog } from "@/components/nuvio-profile-selector"
 import {
   Search,
   SlidersHorizontal,
@@ -89,6 +90,10 @@ function AvatarsPage() {
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
   const [visibleCount, setVisibleCount] = React.useState(72)
 
+  // Profile selection modal state
+  const [selectedAvatarForApply, setSelectedAvatarForApply] = React.useState<AvatarItem | null>(null)
+  const [isApplyModalOpen, setIsApplyModalOpen] = React.useState(false)
+
   // Filter avatars based on search and category
   const filteredAvatars = React.useMemo(() => {
     const q = searchQuery.toLowerCase().trim()
@@ -137,24 +142,35 @@ function AvatarsPage() {
     }, 2000)
   }
 
-  const handleApplyAvatar = async (item: AvatarItem, e?: React.MouseEvent) => {
+  const handleOpenApplyModal = (item: AvatarItem, e?: React.MouseEvent) => {
     e?.stopPropagation()
-    setAvatar(item.localUrl)
-    toast.success(`Avatar updated to ${item.name}!`, {
-      description: "Syncing to your active Nuvio profile slot...",
+    setSelectedAvatarForApply(item)
+    setIsApplyModalOpen(true)
+  }
+
+  const handleConfirmApply = async (slot: number, profile?: any) => {
+    if (!selectedAvatarForApply) return
+    const item = selectedAvatarForApply
+    const avatarRemoteUrl =
+      item.remoteUrl ||
+      (typeof window !== "undefined"
+        ? `${window.location.origin}${item.localUrl}`
+        : item.localUrl)
+
+    await nuvioApi.updateAvatar(slot, {
+      avatar_id: item.id,
+      avatar_url: avatarRemoteUrl,
     })
 
-    try {
-      const avatarRemoteUrl = item.remoteUrl || (typeof window !== "undefined" ? `${window.location.origin}${item.localUrl}` : item.localUrl)
-      await nuvioApi.updateAvatar(1, {
-        avatar_id: item.id,
-        avatar_url: avatarRemoteUrl,
-      })
-      toast.success(`Avatar successfully synced to your Nuvio account!`)
-    } catch (err: any) {
-      // If no active remote session is connected, local update still persists
-      console.warn("Could not sync avatar to remote Nuvio slot:", err?.message)
+    // If updating slot 1, also update active user avatar for instant sidebar sync
+    if (slot === 1) {
+      setAvatar(avatarRemoteUrl)
     }
+
+    const profileName = profile?.name || `Slot ${slot}`
+    toast.success(`Avatar updated for "${profileName}"!`, {
+      description: `Successfully applied ${item.name} to Nuvio slot ${slot}.`,
+    })
   }
 
   return (
@@ -385,7 +401,7 @@ function AvatarsPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={(e) => handleApplyAvatar(item, e)}
+                          onClick={(e) => handleOpenApplyModal(item, e)}
                           title={isCurrentAvatar ? "Current Profile Avatar" : "Set as Profile Avatar"}
                           className={`size-8 rounded-lg transition-colors ${
                             isCurrentAvatar
@@ -422,6 +438,44 @@ function AvatarsPage() {
             )}
           </main>
         </div>
+
+        {/* Reusable Profile Selector Dialog */}
+        <NuvioProfileSelectDialog
+          open={isApplyModalOpen}
+          onOpenChange={setIsApplyModalOpen}
+          title="Set Profile Avatar"
+          description="Select which profile slot on your connected Nuvio account should use this avatar."
+          confirmLabel={
+            selectedAvatarForApply ? `Apply "${selectedAvatarForApply.name}"` : undefined
+          }
+          preview={
+            selectedAvatarForApply ? (
+              <div className="flex items-center gap-3.5 p-3 rounded-2xl bg-muted/50 border border-border/60">
+                <div className="size-14 rounded-full ring-2 ring-primary/40 overflow-hidden shrink-0 bg-neutral-900">
+                  <img
+                    src={selectedAvatarForApply.localUrl}
+                    alt={selectedAvatarForApply.name}
+                    className="size-full object-cover"
+                  />
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-sm text-foreground truncate">
+                      {selectedAvatarForApply.name}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/15 text-primary">
+                      {selectedAvatarForApply.category}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground truncate">
+                    {selectedAvatarForApply.collection}
+                  </span>
+                </div>
+              </div>
+            ) : null
+          }
+          onConfirm={handleConfirmApply}
+        />
       </SidebarInset>
     </SidebarProvider>
   )
