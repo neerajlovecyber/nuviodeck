@@ -25,6 +25,7 @@ const defaultStreamsConfig: StreamsProfileConfig = {
     { id: 'torrentio_torbox', name: 'Torrentio', type: 'torrentio', enabled: true, debridService: 'torbox' },
     { id: 'comet_torbox', name: 'Comet', type: 'comet', enabled: true, debridService: 'torbox' },
     { id: 'stremthru_torbox', name: 'StremThru Torz', type: 'stremthru', enabled: true, debridService: 'torbox' },
+    { id: 'mediafusion_torbox', name: 'MediaFusion', type: 'mediafusion', enabled: true, debridService: 'torbox' },
     ...(config.debrid.customAddonUrls || []).map((url, idx) => ({
       id: `custom_addon_${idx + 1}`,
       name: `Custom Addon ${idx + 1}`,
@@ -47,7 +48,7 @@ const defaultStreamsConfig: StreamsProfileConfig = {
   },
   mergeStrategy: 'priority',
   formatter: {
-    preset: 'prism',
+    preset: 'tamtaro',
     viewMode: 'full',
   },
 }
@@ -123,7 +124,16 @@ async function getProfileConfig(profileId?: string) {
         region: cfg.preferences?.region || 'United States',
         proxyUrl: cfg.preferences?.proxyUrl || cfg.integrations?.proxyUrl,
       },
-      streams: (cfg.streams || defaultStreamsConfig) as StreamsProfileConfig,
+      streams: {
+        ...defaultStreamsConfig,
+        ...(cfg.streams || {}),
+        formatter: {
+          ...defaultStreamsConfig.formatter,
+          ...(cfg.streams?.formatter || {}),
+          preset: cfg.streams?.formatter?.preset || 'tamtaro',
+        },
+        sources: cfg.streams?.sources?.length ? cfg.streams.sources : defaultStreamsConfig.sources,
+      } as StreamsProfileConfig,
     }
   } catch (err: any) {
     console.error('Error fetching profile config:', err.message)

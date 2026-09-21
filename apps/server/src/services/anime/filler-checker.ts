@@ -3,7 +3,7 @@
  * Categorizes anime episodes as:
  * - Manga Canon (green)
  * - Mixed Canon (blue)
- * - Anime Canon (purple)
+ * - Anime Canon (purple)d
  * - Filler (orange/red)
  */
 
