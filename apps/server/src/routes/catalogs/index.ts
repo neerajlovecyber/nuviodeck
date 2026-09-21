@@ -43,12 +43,12 @@ const defaultStreamsConfig: StreamsProfileConfig = {
     debridlink: config.debrid.debridLinkApiKey || '',
   },
   filters: {
-    mostPerResolution: 10,
+    mostPerResolution: 20,
     excludedQualities: ['CAM', 'TS', 'SCR'],
   },
   mergeStrategy: 'priority',
   formatter: {
-    preset: 'tamtaro',
+    preset: 'nuvio',
     viewMode: 'full',
   },
 }

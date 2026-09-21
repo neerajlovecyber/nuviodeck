@@ -152,6 +152,11 @@ export class StreamSorter {
     preferredLanguages.forEach((lang, idx) => langRank.set(lang.toLowerCase(), idx + 1))
 
     return [...streams].sort((a, b) => {
+      // 0. SeaDex Best/Alt releases float to the top
+      const seaA = a.seadexBest ? 2 : a.seadex ? 1 : 0
+      const seaB = b.seadexBest ? 2 : b.seadex ? 1 : 0
+      if (seaA !== seaB) return seaB - seaA
+
       // 1. Cached on debrid service first (Ready > Uncached)
       if (a.cached !== b.cached) {
         return a.cached ? -1 : 1

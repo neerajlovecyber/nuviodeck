@@ -80,6 +80,20 @@ export class StreamDeduplicator {
         winner.visualTags = mergedVisuals
         winner.audioTags = mergedAudio
 
+        // Merge SeaDex flags: if EITHER copy has the flag, the winner keeps it
+        if (existing.seadex || stream.seadex) winner.seadex = true
+        if (existing.seadexBest || stream.seadexBest) winner.seadexBest = true
+
+        // Merge quality: prefer the more specific (non-Unknown) quality
+        if (winner.quality === 'Unknown' && (existing.quality !== 'Unknown' || stream.quality !== 'Unknown')) {
+          winner.quality = (existing.quality !== 'Unknown' ? existing.quality : stream.quality)
+        }
+
+        // Merge message: prefer the one with SeaDex/release info
+        if (!winner.message && (existing.message || stream.message)) {
+          winner.message = existing.message || stream.message
+        }
+
         if (!winner.indexer && (existing.indexer || stream.indexer)) {
           winner.indexer = existing.indexer || stream.indexer
         }

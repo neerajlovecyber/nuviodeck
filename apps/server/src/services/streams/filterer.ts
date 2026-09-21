@@ -201,6 +201,50 @@ export class StreamFilterer {
     return filtered
   }
 
+  /**
+   * Applies quota limits (mostPerResolution and maxPerService) AFTER sorting
+   * to ensure top-scoring / 5-star releases are preserved rather than random raw streams.
+   */
+  static applyQuotas(
+    streams: ParsedStreamMetadata[],
+    options?: StreamFilterOptions
+  ): ParsedStreamMetadata[] {
+    const mostPerResolution = options?.mostPerResolution ?? 0
+    const maxPerService = options?.maxPerService ?? 0
+
+    if (mostPerResolution <= 0 && maxPerService <= 0) {
+      return streams
+    }
+
+    const resolutionCounts = new Map<string, number>()
+    const serviceCounts = new Map<string, number>()
+    const result: ParsedStreamMetadata[] = []
+
+    for (const stream of streams) {
+      if (maxPerService > 0) {
+        const sKey = stream.debridService || stream.sourceName || 'unknown'
+        const currentServiceCount = serviceCounts.get(sKey) || 0
+        if (currentServiceCount >= maxPerService) {
+          continue
+        }
+        serviceCounts.set(sKey, currentServiceCount + 1)
+      }
+
+      if (mostPerResolution > 0) {
+        const resKey = stream.resolution || 'unknown'
+        const currentCount = resolutionCounts.get(resKey) || 0
+        if (currentCount >= mostPerResolution) {
+          continue
+        }
+        resolutionCounts.set(resKey, currentCount + 1)
+      }
+
+      result.push(stream)
+    }
+
+    return result
+  }
+
   private static hasPreDigitalKeywords(title: string): boolean {
     const upper = title.toUpperCase()
     return (

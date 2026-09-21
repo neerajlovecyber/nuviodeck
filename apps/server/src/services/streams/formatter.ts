@@ -58,6 +58,64 @@ export class StreamMicroSyntaxEngine {
         ? stream.folderSizeBytes
         : 0
 
+    // Quality Score (0-100) for star ratings and release ranking (Only top releases get scores)
+    const visualTags = stream.visualTags || []
+    const audioTags = stream.audioTags || []
+    const rls = (stream.releaseGroup || '').toLowerCase()
+    const isTopTierGroup = [
+      'framestor', 'flux', 'sic', 'thefarm', 'hallowed', 'bhdstudio',
+      'epsilon', 'ctrlhd', 'don', 'tayto', 'd-z0n3', 'playbd', 'bmf'
+    ].includes(rls)
+
+    let qualityScore: number | null = null
+    let seScore: number | null = null
+    const rseMatched: string[] = []
+
+    if (stream.seadexBest) {
+      qualityScore = 100
+      seScore = 1000
+      rseMatched.push('BEST RELEASE')
+    } else if (stream.seadex) {
+      qualityScore = 80
+      seScore = 800
+      rseMatched.push('ALT BEST RELEASE')
+    } else if (stream.quality === 'BluRay REMUX' && isTopTierGroup) {
+      qualityScore = 100
+      seScore = 950
+      rseMatched.push('Remux T1')
+    } else if (
+      stream.quality === 'BluRay REMUX' &&
+      (visualTags.includes('DV') || visualTags.includes('HDR10+')) &&
+      (audioTags.includes('Atmos') || audioTags.includes('TrueHD') || audioTags.includes('DTS-HD MA'))
+    ) {
+      qualityScore = 80
+      seScore = 800
+      rseMatched.push('Remux T1')
+    } else if (stream.quality === 'BluRay REMUX') {
+      qualityScore = 75
+      seScore = 750
+      rseMatched.push('Remux T2')
+    } else if (stream.resolution === '2160p' && isTopTierGroup && (visualTags.includes('DV') || visualTags.includes('HDR10+'))) {
+      qualityScore = 70
+      seScore = 700
+      rseMatched.push('UHD Bluray T1')
+    } else {
+      // Standard streams: null score -> no star ratings rendered, matching official Tam-Taro
+      qualityScore = null
+      seScore = null
+    }
+
+    if (visualTags.includes('DV') && !rseMatched.includes('DV')) rseMatched.push('DV')
+    if (visualTags.includes('HDR10+') && !rseMatched.includes('HDR10+')) rseMatched.push('HDR10+')
+    if (audioTags.includes('Atmos') && !rseMatched.includes('ATMOS')) rseMatched.push('ATMOS')
+    if (audioTags.includes('TrueHD') && !rseMatched.includes('TrueHD')) rseMatched.push('TrueHD')
+
+    const languages = stream.languages || []
+    const languageCodes = languages.map((l) => this.toLanguageCode(l))
+    const smallLanguageCodes = languages.map((l) => this.toSmallCapsCode(l))
+    const subtitles = (stream as any).subtitles || []
+    const smallSubtitleCodes = subtitles.map((s: string) => this.toSmallCapsCode(s))
+
     return {
       stream: {
         resolution: stream.resolution,
@@ -67,13 +125,22 @@ export class StreamMicroSyntaxEngine {
         audioChannels: stream.audioChannels ? [stream.audioChannels] : [],
         encode: stream.codecs?.join(' ') || '',
         codecs: stream.codecs || [],
-        languages: stream.languages || [],
-        languageCodes: (stream.languages || []).map((l) => this.toLanguageCode(l)),
-        smallLanguageCodes: (stream.languages || []).map((l) => this.toSmallCapsCode(l)),
+        languages,
+        uLanguages: languages,
+        languageCodes,
+        uLanguageCodes: languageCodes,
+        smallLanguageCodes,
+        uSmallLanguageCodes: smallLanguageCodes,
+        subtitles,
+        uSubtitles: subtitles,
+        smallSubtitleCodes,
+        uSmallSubtitleCodes: smallSubtitleCodes,
+        subbed: subtitles.length > 0,
         languageEmojis: stream.languageEmojis || [],
         size: stream.sizeBytes ?? (sizeFormatted ? this.parseBytes(sizeFormatted) : 0),
         sizeFormatted,
         folderSize,
+        bitrate: stream.bitrate || 0,
         seeders: stream.seeders ?? 0,
         releaseGroup: stream.releaseGroup || '',
         indexer: stream.indexer || '',
@@ -89,11 +156,22 @@ export class StreamMicroSyntaxEngine {
         network: stream.ottPlatform || '',
         message: stream.message || '',
         regexMatched: stream.movieCut || '',
+        rseMatched,
+        editions: stream.movieCut ? [stream.movieCut] : [],
+        movieCut: stream.movieCut || '',
         seadex: stream.seadex ?? false,
         seadexBest: stream.seadexBest ?? false,
+        nSeScore: qualityScore,
+        seScore: qualityScore,
         type: streamType,
         proxied: stream.proxied ?? false,
         library: stream.library ?? false,
+        preloading: false,
+        private: false,
+        date: new Date().toISOString().split('T')[0],
+      },
+      metadata: {
+        queryType: stream.season !== undefined ? 'series' : 'movie',
       },
       service: {
         cached: stream.cached,
@@ -124,6 +202,8 @@ export class StreamMicroSyntaxEngine {
       releaseGroup: stream.releaseGroup || '',
       codecs: stream.codecs?.join(' ') || '',
       languages: stream.languages || [],
+      nSeScore: qualityScore,
+      seScore: qualityScore,
     }
   }
 
@@ -201,13 +281,25 @@ export class StreamMicroSyntaxEngine {
         : this.evaluateTemplate(elseVal, context)
     }
 
-    // C. Branch condition: condition_chain["then"||"else"]
-    const branchMatch = expr.match(/^([\s\S]+?)\["([\s\S]*?)"\|\|"([\s\S]*?)"\]$/)
-    if (branchMatch) {
-      const [, conditionChain, thenContent, elseContent] = branchMatch
-      const passes = this.evaluateConditionChain(conditionChain.trim(), context)
-      const selected = passes ? thenContent : elseContent
-      return this.evaluateTemplate(selected, context)
+    // C. Branch conditions: condition_chain["branch1"||"branch2"||"branch3"]
+    const branchMatch = expr.match(/^([\s\S]+?)\[([\s\S]+)\]$/)
+    if (branchMatch && branchMatch[2].includes('"')) {
+      const conditionChain = branchMatch[1].trim()
+      const branches = this.splitBranches(branchMatch[2])
+      if (branches.length > 0) {
+        if (branches.length === 3) {
+          const val = this.resolvePath(context, conditionChain)
+          let selected = branches[2]
+          if (val === true || val === 'true' || val === 1) selected = branches[0]
+          else if (val === false || val === 'false' || val === 0) selected = branches[1]
+          else if (this.isExists(val)) selected = branches[0]
+          return this.evaluateTemplate(selected, context)
+        } else {
+          const passes = this.evaluateConditionChain(conditionChain, context)
+          const selected = passes ? branches[0] : (branches[1] ?? '')
+          return this.evaluateTemplate(selected, context)
+        }
+      }
     }
 
     // D. Fallback alternatives: {var1/var2/var3}
@@ -422,18 +514,184 @@ export class StreamMicroSyntaxEngine {
       return String(val ?? '').replaceAll(find, rep)
     }
 
-    // 7. default(fallback) / fallback(fallback)
+    // 7. remove(item1, item2, ...)
+    const removeMatch = pipe.match(/^remove\(([\s\S]*)\)$/i)
+    if (removeMatch) {
+      const targets = removeMatch[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+      if (Array.isArray(val)) {
+        return val.filter((item) => !targets.includes(String(item)))
+      }
+      let str = String(val ?? '')
+      for (const t of targets) {
+        str = str.replaceAll(t, '')
+      }
+      return str
+    }
+
+    // 8. truncate(limit)
+    const truncMatch = pipe.match(/^truncate\((\d+)\)$/i)
+    if (truncMatch) {
+      const maxLen = parseInt(truncMatch[1], 10)
+      const str = String(val ?? '')
+      return str.length > maxLen ? str.substring(0, maxLen) : str
+    }
+
+    // 9. smallcaps
+    if (pipe === 'smallcaps') {
+      const smallCapsMap: Record<string, string> = {
+        a: 'ᴀ', b: 'ʙ', c: 'ᴄ', d: 'ᴅ', e: 'ᴇ', f: 'ғ', g: 'ɢ', h: 'ʜ', i: 'ɪ', j: 'ᴊ', k: 'ᴋ', l: 'ʟ', m: 'ᴍ', n: 'ɴ', o: 'ᴏ', p: 'ᴘ', q: 'ϙ', r: 'ʀ', s: 's', t: 'ᴛ', u: 'ᴜ', v: 'ᴠ', w: 'ᴡ', x: 'х', y: 'ʏ', z: 'ᴢ',
+        A: 'ᴀ', B: 'ʙ', C: 'ᴄ', D: 'ᴅ', E: 'ᴇ', F: 'ғ', G: 'ɢ', H: 'ʜ', I: 'ɪ', J: 'ᴊ', K: 'ᴋ', L: 'ʟ', M: 'ᴍ', N: 'ɴ', O: 'ᴏ', P: 'ᴘ', Q: 'ϙ', R: 'ʀ', S: 's', T: 'ᴛ', U: 'ᴜ', V: 'ᴠ', W: 'ᴡ', X: 'х', Y: 'ʏ', Z: 'ᴢ',
+      }
+      return String(val ?? '')
+        .split('')
+        .map((c) => smallCapsMap[c] || c)
+        .join('')
+    }
+
+    // 10. sbitrate
+    if (pipe === 'sbitrate') {
+      const bps = typeof val === 'number' ? val : parseFloat(String(val || '0'))
+      if (isNaN(bps) || bps <= 0) return ''
+      if (bps >= 1000000) return `${(bps / 1000000).toFixed(1)} Mbps`
+      if (bps >= 1000) return `${(bps / 1000).toFixed(0)} Kbps`
+      return `${bps} bps`
+    }
+
+    // 11. sort / lsort
+    if (pipe === 'sort') {
+      return Array.isArray(val) ? [...val].sort() : val
+    }
+    if (pipe === 'lsort') {
+      return Array.isArray(val)
+        ? [...val].sort((a, b) =>
+            String(a).localeCompare(String(b), undefined, { sensitivity: 'base' })
+          )
+        : val
+    }
+
+    // 12. default(fallback) / fallback(fallback)
     const defMatch = pipe.match(/^(?:default|fallback)\(([\s\S]*)\)$/i)
     if (defMatch) {
       const def = defMatch[1].trim().replace(/^['"]|['"]$/g, '')
       return this.isExists(val) ? val : def
     }
 
+    // 13. string / length
+    if (pipe === 'string') {
+      return String(val ?? '')
+    }
+    if (pipe === 'length') {
+      if (Array.isArray(val)) return val.length
+      return String(val ?? '').length
+    }
+
+    // 14. date
+    const dateMatch = pipe.match(/^date\(([\s\S]*)\)$/i)
+    if (dateMatch) {
+      const d = val ? new Date(val) : new Date()
+      if (isNaN(d.getTime())) return String(val || '')
+      return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+    }
+
+    // 15. in(...)
+    const inMatch = pipe.match(/^in\(([\s\S]*)\)$/i)
+    if (inMatch) {
+      const targets = inMatch[1].split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
+      if (Array.isArray(val)) {
+        return val.some((v) => targets.includes(String(v)))
+      }
+      return targets.includes(String(val ?? ''))
+    }
+
+    // 16. star / pstar pipe (renders e.g. ★★★★★ / ★★★★ without empty padding)
+    // Returns '' for null/undefined/0 so streams without a quality score show no stars
+    if (pipe === 'star') {
+      if (val === null || val === undefined || val === 0 || val === '0' || val === '') return ''
+      const num = Math.min(100, Math.max(1, Number(val)))
+      const count = Math.min(5, Math.round(num / 20))
+      return count > 0 ? '★'.repeat(count) : ''
+    }
+    if (pipe === 'pstar') {
+      if (val === null || val === undefined || val === 0 || val === '0' || val === '') return ''
+      const num = Math.min(100, Math.max(1, Number(val)))
+      const count = Math.min(5, Math.round(num / 20))
+      if (count <= 0) return ''
+      return '★'.repeat(count) + '☆'.repeat(5 - count)
+    }
+
+    // 17. translate(fromChars, toChars)
+    const transMatch = pipe.match(/^translate\(([\s\S]*?),\s*([\s\S]*?)\)$/i)
+    if (transMatch) {
+      const from = transMatch[1].trim().replace(/^['"]|['"]$/g, '')
+      const to = transMatch[2].trim().replace(/^['"]|['"]$/g, '')
+      const str = String(val ?? '')
+      return str
+        .split('')
+        .map((c) => {
+          const idx = from.indexOf(c)
+          return idx !== -1 ? to[idx] || c : c
+        })
+        .join('')
+    }
+
     return val
+  }
+
+  private static splitBranches(raw: string): string[] {
+    const branches: string[] = []
+    let current = ''
+    let inQuotes = false
+    let quoteChar = ''
+    let depth = 0
+
+    for (let i = 0; i < raw.length; i++) {
+      const char = raw[i]
+      const next = raw[i + 1]
+
+      if ((char === "'" || char === '"') && raw[i - 1] !== '\\') {
+        if (!inQuotes) {
+          inQuotes = true
+          quoteChar = char
+        } else if (quoteChar === char) {
+          inQuotes = false
+        }
+      } else if (char === '[' && !inQuotes) {
+        depth++
+      } else if (char === ']' && !inQuotes) {
+        depth--
+      }
+
+      if (!inQuotes && depth === 0 && char === '|' && next === '|') {
+        branches.push(this.cleanBranch(current))
+        current = ''
+        i++ // skip second |
+        continue
+      }
+      current += char
+    }
+    if (current) branches.push(this.cleanBranch(current))
+    return branches
+  }
+
+  private static cleanBranch(str: string): string {
+    const trimmed = str.trim()
+    if (
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+      (trimmed.startsWith("'") && trimmed.endsWith("'"))
+    ) {
+      return trimmed.slice(1, -1)
+    }
+    return trimmed
   }
 
   private static resolvePath(obj: Record<string, any>, path: string): any {
     if (!path) return undefined
+    if (
+      (path.startsWith("'") && path.endsWith("'")) ||
+      (path.startsWith('"') && path.endsWith('"'))
+    ) {
+      return path.slice(1, -1)
+    }
     if (path in obj) return obj[path]
 
     const parts = path.split('.')
@@ -556,8 +814,19 @@ export class StreamFormatter {
     stream: ParsedStreamMetadata,
     options?: StreamFormatterOptions
   ): StremioStream {
-    const presetKey = (options?.preset || 'prism').toLowerCase()
+    const presetKey = (options?.preset || 'nuvio').toLowerCase()
     const viewMode = options?.viewMode || 'full'
+
+    // 0. Disable Formatter / Raw Addon Passthrough
+    if (
+      options?.enabled === false ||
+      presetKey === 'none' ||
+      presetKey === 'raw' ||
+      presetKey === 'disabled' ||
+      presetKey === 'passthrough'
+    ) {
+      return stream.originalStream
+    }
 
     // 1. Custom Template Override
     if (options?.customTemplate) {
@@ -573,7 +842,7 @@ export class StreamFormatter {
     // 2. Preset Normalization
     const normalizedKey = this.normalizePresetKey(presetKey)
     const presetsMap = streamPresets as Record<string, PresetDef>
-    const presetDef = presetsMap[normalizedKey] || presetsMap['prism']
+    const presetDef = presetsMap[normalizedKey] || presetsMap['nuvio']
 
     if (!presetDef) {
       return {

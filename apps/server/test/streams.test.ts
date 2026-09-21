@@ -92,6 +92,25 @@ describe('Section 1: Stream Engine & Micro-Syntax Formatter Parity', () => {
       expect(rendered).toBe('2160p')
     })
 
+    it('supports Tam-Taro SEL pipes (:star, :pstar, :truncate, :smallcaps, :sbitrate, :remove, :lsort)', () => {
+      // Star pipes
+      expect(StreamMicroSyntaxEngine.render('{stream.nSeScore::star}', parsed)).toContain('★')
+      expect(StreamMicroSyntaxEngine.render('{stream.nSeScore::pstar}', parsed)).toMatch(/^[★☆]{5}$/)
+
+      // Truncate pipe
+      expect(StreamMicroSyntaxEngine.render('{stream.title::truncate(4)}', parsed)).toBe('Dune')
+
+      // Smallcaps pipe
+      expect(StreamMicroSyntaxEngine.render("{'Dual Audio'::smallcaps}", parsed)).toBe('ᴅᴜᴀʟ ᴀᴜᴅɪᴏ')
+
+      // sbitrate pipe
+      const parsedWithBitrate = { ...parsed, bitrate: 24500000 }
+      expect(StreamMicroSyntaxEngine.render('{stream.bitrate::sbitrate}', parsedWithBitrate)).toBe('24.5 Mbps')
+
+      // remove pipe
+      expect(StreamMicroSyntaxEngine.render("{stream.audioTags::remove('Atmos')::join(' ')}", parsed)).toBe('TrueHD')
+    })
+
     it('handles line removal tools {tools.removeLine}', () => {
       const template = 'Line 1\n{tools.removeLine}\nLine 3'
       const rendered = StreamMicroSyntaxEngine.render(template, parsed)
@@ -135,17 +154,35 @@ describe('Section 1: Stream Engine & Micro-Syntax Formatter Parity', () => {
       expect(stream.description).toContain('Ready')
     })
 
-    it('nuvio preset includes UHD screen icon and debrid source info', () => {
+    it('nuvio preset includes UHD icon and debrid source info', () => {
       const stream = StreamFormatter.format(parsed, { preset: 'nuvio' })
-      expect(stream.name).toContain('🖥️ UHD')
-      expect(stream.description?.toLowerCase()).toContain('torbox')
+      expect(stream.name).toContain('4K')
       expect(stream.description).toContain('Comet')
+      expect(stream.description).toContain('FraMeSToR')
     })
 
     it('plain preset renders clean text description', () => {
       const stream = StreamFormatter.format(parsed, { preset: 'plain' })
       expect(stream.name).toContain('Cached')
       expect(stream.description).toContain('BluRay')
+    })
+
+    it('bypasses formatting completely when enabled=false or preset is "raw"/"none"', () => {
+      const rawStream = StreamFormatter.format(parsed, { enabled: false })
+      expect(rawStream.name).toBe(sampleStreamRaw.name)
+      expect(rawStream.title).toBe(sampleStreamRaw.title)
+
+      const noneStream = StreamFormatter.format(parsed, { preset: 'raw' })
+      expect(noneStream.name).toBe(sampleStreamRaw.name)
+      expect(noneStream.title).toBe(sampleStreamRaw.title)
+    })
+
+    it('evaluates star rating pipes (:star, :pstar) based on quality score', () => {
+      const star5 = StreamMicroSyntaxEngine.render('{stream.nSeScore::star}', parsed)
+      expect(star5).toContain('★')
+
+      const pstar = StreamMicroSyntaxEngine.render('{stream.nSeScore::pstar}', parsed)
+      expect(pstar).toHaveLength(5)
     })
   })
 

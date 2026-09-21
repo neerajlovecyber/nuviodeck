@@ -9,6 +9,7 @@ import {
 } from './types'
 
 export class StreamParser {
+  static _debugCount = 0
   static parse(
     stream: StremioStream,
     sourceId: string,
@@ -16,6 +17,16 @@ export class StreamParser {
     debridService?: string
   ): ParsedStreamMetadata {
     const rawText = `${stream.name || ''} ${stream.title || ''} ${stream.description || ''}`
+    // DEBUG: Dump raw text for first few streams to see what addon sends
+    if (StreamParser._debugCount < 3) {
+      StreamParser._debugCount++
+      console.log(`\n[Parser Debug] Raw stream from "${sourceName}":`)
+      console.log(`  name: ${JSON.stringify(stream.name)}`)
+      console.log(`  title: ${JSON.stringify(stream.title)}`)
+      console.log(`  description: ${JSON.stringify(stream.description?.substring(0, 300))}`)
+      console.log(`  url: ${stream.url?.substring(0, 80)}`)
+      console.log(`  infoHash: ${stream.infoHash}`)
+    }
     const id = stream.url || stream.infoHash || `${sourceId}:${Math.random().toString(36).substring(2, 9)}`
 
     const resolution = this.detectResolution(rawText)
@@ -499,12 +510,26 @@ export class StreamParser {
 
   private static detectSeaDex(text: string): boolean {
     const lower = text.toLowerCase()
-    return lower.includes('seadex') || text.includes('🌊') || text.includes('💦')
+    return (
+      lower.includes('seadex') ||
+      lower.includes('best release') ||
+      lower.includes('alt best') ||
+      text.includes('🌊') ||
+      text.includes('💦')
+    )
   }
 
   private static detectSeaDexBest(text: string): boolean {
     const lower = text.toLowerCase()
-    return lower.includes('seadex best') || lower.includes('seadex-best') || text.includes('🌊')
+    // "best release" but NOT "alt best release"
+    const hasBestRelease = lower.includes('best release') && !lower.includes('alt best')
+    return (
+      hasBestRelease ||
+      lower.includes('seadex best') ||
+      lower.includes('seadex-best') ||
+      (text.includes('🌊') && !text.includes('💦')) ||
+      (text.includes('🏆') && (lower.includes('best') || lower.includes('seadex')))
+    )
   }
 
   private static detectDuration(text: string): number | undefined {

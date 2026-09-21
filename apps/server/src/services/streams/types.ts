@@ -79,21 +79,29 @@ export interface ParsedStreamMetadata {
   codecs: StreamCodec[]
   languages: string[]
   languageEmojis: string[]
+  subtitles?: string[]
   sizeBytes?: number
   sizeFormatted?: string
   folderSizeBytes?: number
   folderSizeFormatted?: string
+  bitrate?: number
   seeders?: number
   releaseGroup?: string
   indexer?: string
   ottPlatform?: string
   movieCut?: string
+  rseMatched?: string[]
+  editions?: string[]
+  country?: string
+  date?: string
   duration?: number
   age?: string
   message?: string
   type?: string
   proxied?: boolean
   library?: boolean
+  preloading?: boolean
+  private?: boolean
   seadex?: boolean
   seadexBest?: boolean
   url?: string
@@ -160,8 +168,13 @@ export type StreamFormatterPreset =
   | 'shota'
   | 'tamtaro'
   | 'plain'
+  | 'none'
+  | 'raw'
+  | 'disabled'
+  | 'passthrough'
 
 export interface StreamFormatterOptions {
+  enabled?: boolean
   preset?: StreamFormatterPreset
   customTemplate?: string
   viewMode?: 'full' | 'episode' | 'sparse'
