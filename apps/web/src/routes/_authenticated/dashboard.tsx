@@ -74,6 +74,7 @@ import {
 import { toast } from 'sonner'
 import { nuvioApi, DeckProfile } from '@/lib/nuvio-api'
 import { getPresetRows } from '@/data/catalog-data'
+import { useAppStore } from '@/store/useStore'
 
 export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
@@ -184,6 +185,7 @@ const STARTING_POINTS = [
 
 function DashboardPage() {
   const navigate = useNavigate()
+  const user = useAppStore((s) => s.user)
 
   // Profiles state
   const [profiles, setProfiles] = React.useState<DeckProfile[]>([])
@@ -419,10 +421,6 @@ function DashboardPage() {
   // Handle Deploy
   const handleExecuteDeploy = async () => {
     if (!deployProfile) return
-    if (deployTargetAccounts.length === 0) {
-      toast.error('Please select at least one target Nuvio account')
-      return
-    }
     if (deploySelectedSlots.length === 0) {
       toast.error('Please select at least one profile slot (1-6)')
       return
@@ -430,13 +428,9 @@ function DashboardPage() {
 
     try {
       setIsDeploying(true)
-      const targets = deployTargetAccounts.map((accountId) => ({
-        accountId,
-        slots: deploySelectedSlots,
-      }))
 
       const res = await nuvioApi.deployDeckProfile(deployProfile.id, {
-        targets,
+        slots: deploySelectedSlots,
         options: {
           pushBadges: deployBadges,
           pushAvatar: deployAvatar,
@@ -658,51 +652,25 @@ function DashboardPage() {
             </DialogHeader>
 
             <div className="space-y-5 py-2">
-              {/* Target Accounts Selection */}
+              {/* Target Account */}
               <div>
                 <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Target Nuvio Account(s)
+                  Target Nuvio Account
                 </Label>
-                {sessions.length === 0 ? (
-                  <div className="mt-2 p-3 rounded-lg border border-dashed border-amber-500/30 bg-amber-500/5 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
-                    <span>No Nuvio accounts connected yet. Please connect an account via the sidebar switcher.</span>
+                <div className="mt-2 flex items-center justify-between p-3 rounded-xl border border-primary/25 bg-primary/5">
+                  <div className="flex items-center gap-3">
+                    <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+                      {user?.name?.charAt(0) || 'N'}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{user?.email || 'Active Account'}</p>
+                      <p className="text-xs text-muted-foreground">Currently logged-in Nuvio account</p>
+                    </div>
                   </div>
-                ) : (
-                  <div className="mt-2 space-y-2 max-h-32 overflow-y-auto pr-1">
-                    {sessions.map((session) => {
-                      const isSelected = deployTargetAccounts.includes(session.id)
-                      return (
-                        <div
-                          key={session.id}
-                          onClick={() => {
-                            setDeployTargetAccounts((prev) =>
-                              isSelected
-                                ? prev.filter((id) => id !== session.id)
-                                : [...prev, session.id]
-                            )}
-                          }
-                          className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'border-[#6366f1] bg-[#6366f1]/5 dark:bg-[#6366f1]/10'
-                              : 'border-border hover:bg-accent/40'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => {}}
-                            />
-                            <span className="text-sm font-medium">{session.email}</span>
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            Slot {session.activeProfileIndex || 1}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <Check className="size-3" /> Connected
+                  </span>
+                </div>
               </div>
 
               {/* Target Profile Slots (1 to 6) */}

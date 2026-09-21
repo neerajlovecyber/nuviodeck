@@ -19,6 +19,7 @@ import {
   DropdownMenuLabel,
 } from "@workspace/ui/components/dropdown-menu"
 import { useAppStore } from "@/store/useStore"
+import { nuvioApi } from "@/lib/nuvio-api"
 import { toast } from "sonner"
 import rawAvatars from "@/data/avatars.json"
 import {
@@ -136,12 +137,24 @@ function AvatarsPage() {
     }, 2000)
   }
 
-  const handleApplyAvatar = (item: AvatarItem, e?: React.MouseEvent) => {
+  const handleApplyAvatar = async (item: AvatarItem, e?: React.MouseEvent) => {
     e?.stopPropagation()
     setAvatar(item.localUrl)
-    toast.success(`Profile avatar updated to ${item.name}!`, {
-      description: "Your sidebar and profile avatar have been updated.",
+    toast.success(`Avatar updated to ${item.name}!`, {
+      description: "Syncing to your active Nuvio profile slot...",
     })
+
+    try {
+      const avatarRemoteUrl = item.remoteUrl || (typeof window !== "undefined" ? `${window.location.origin}${item.localUrl}` : item.localUrl)
+      await nuvioApi.updateAvatar(1, {
+        avatar_id: item.id,
+        avatar_url: avatarRemoteUrl,
+      })
+      toast.success(`Avatar successfully synced to your Nuvio account!`)
+    } catch (err: any) {
+      // If no active remote session is connected, local update still persists
+      console.warn("Could not sync avatar to remote Nuvio slot:", err?.message)
+    }
   }
 
   return (

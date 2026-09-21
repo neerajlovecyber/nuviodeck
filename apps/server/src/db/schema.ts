@@ -21,6 +21,8 @@ export const nuvioSessions = sqliteTable('nuvio_sessions', {
 
 export const deckProfiles = sqliteTable('deck_profiles', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
+  userEmail: text('user_email'),
   name: text('name').notNull(),
   isActive: integer('is_active', { mode: 'boolean' }).default(false),
   status: text('status').default('Ready'),
@@ -35,7 +37,8 @@ export const deckProfiles = sqliteTable('deck_profiles', {
 })
 
 export const accountConnections = sqliteTable('account_connections', {
-  id: text('id').primaryKey(), // provider name or `${userId}:${provider}`
+  id: text('id').primaryKey(), // `${userId}:${provider}` or `${provider}`
+  userId: text('user_id'),
   provider: text('provider').notNull(), // 'tmdb' | 'trakt' | 'simkl' | 'anilist' | 'myanimelist'
   username: text('username'),
   displayName: text('display_name'),
@@ -49,8 +52,15 @@ export const accountConnections = sqliteTable('account_connections', {
   updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
 })
 
+export const userSettings = sqliteTable('user_settings', {
+  userId: text('user_id').primaryKey(),
+  settingsJson: text('settings_json').notNull(),
+  updatedAt: text('updated_at').notNull().$defaultFn(() => new Date().toISOString()),
+})
+
 export const playbackSessions = sqliteTable('playback_sessions', {
   id: text('id').primaryKey(), // `${profileId}:${mediaId}:${season || 0}:${episode || 0}`
+  userId: text('user_id'),
   profileId: text('profile_id').notNull(),
   mediaId: text('media_id').notNull(),
   mediaType: text('media_type').notNull(), // 'movie' | 'series' | 'anime'
@@ -82,6 +92,9 @@ export type NewDeckProfile = typeof deckProfiles.$inferInsert
 
 export type AccountConnection = typeof accountConnections.$inferSelect
 export type NewAccountConnection = typeof accountConnections.$inferInsert
+
+export type UserSettings = typeof userSettings.$inferSelect
+export type NewUserSettings = typeof userSettings.$inferInsert
 
 export type PlaybackSession = typeof playbackSessions.$inferSelect
 export type NewPlaybackSession = typeof playbackSessions.$inferInsert

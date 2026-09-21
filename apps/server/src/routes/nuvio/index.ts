@@ -5,6 +5,7 @@ import { addonsRouter } from './addons'
 import { collectionsRouter } from './collections'
 import { syncRouter } from './sync'
 import { deckProfilesRouter } from './deck-profiles'
+import { settingsRouter } from './settings'
 
 export const nuvioRouter = new Hono()
 
@@ -15,3 +16,4 @@ nuvioRouter.route('/addons', addonsRouter)
 nuvioRouter.route('/collections', collectionsRouter)
 nuvioRouter.route('/sync', syncRouter)
 nuvioRouter.route('/deck-profiles', deckProfilesRouter)
+nuvioRouter.route('/settings', settingsRouter)

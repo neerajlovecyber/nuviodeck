@@ -7,11 +7,47 @@ import { NuvioApiError } from '../../lib/errors'
 
 export const authRouter = new Hono()
 
-// Helper to extract access token from Authorization header or fallback to latest session in DB
-export async function resolveAccessToken(c: any): Promise<string> {
+export interface CurrentSession {
+  sessionId: string
+  userId: string
+  email: string
+  accessToken: string
+  refreshToken: string
+}
+
+// Helper to extract full session details (userId, email, token)
+export async function resolveCurrentSession(c: any): Promise<CurrentSession> {
   const authHeader = c.req.header('Authorization')
+  let token: string | undefined
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7)
+    token = authHeader.slice(7)
+  }
+
+  if (token) {
+    const [matching] = await db
+      .select()
+      .from(nuvioSessions)
+      .where(eq(nuvioSessions.accessToken, token))
+      .limit(1)
+
+    if (matching) {
+      return {
+        sessionId: matching.id,
+        userId: matching.userId,
+        email: matching.email,
+        accessToken: matching.accessToken,
+        refreshToken: matching.refreshToken,
+      }
+    }
+
+    // Token provided in header: use this explicit token directly
+    return {
+      sessionId: 'header',
+      userId: 'header',
+      email: '',
+      accessToken: token,
+      refreshToken: '',
+    }
   }
 
   // Fallback: check stored local session in DB
@@ -35,15 +71,33 @@ export async function resolveAccessToken(c: any): Promise<string> {
             updatedAt: new Date().toISOString(),
           })
           .where(eq(nuvioSessions.id, latestSession.id))
-        return refreshed.access_token
+        return {
+          sessionId: latestSession.id,
+          userId: latestSession.userId,
+          email: latestSession.email,
+          accessToken: refreshed.access_token,
+          refreshToken: refreshed.refresh_token,
+        }
       } catch {
         // Continue with existing if refresh fails
       }
     }
-    return latestSession.accessToken
+    return {
+      sessionId: latestSession.id,
+      userId: latestSession.userId,
+      email: latestSession.email,
+      accessToken: latestSession.accessToken,
+      refreshToken: latestSession.refreshToken,
+    }
   }
 
   throw new NuvioApiError('Missing authorization header or active session', 401)
+}
+
+// Helper to extract access token from Authorization header or fallback to latest session in DB
+export async function resolveAccessToken(c: any): Promise<string> {
+  const session = await resolveCurrentSession(c)
+  return session.accessToken
 }
 
 // Sign in with email and password

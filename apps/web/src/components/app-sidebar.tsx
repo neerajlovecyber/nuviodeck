@@ -4,7 +4,6 @@ import { useAppStore } from "@/store/useStore"
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
   SidebarContent,
@@ -18,7 +17,6 @@ import {
   Settings2Icon,
   CircleHelpIcon,
   SearchIcon,
-  CommandIcon,
   Home,
   Wand2,
   Tag,
@@ -84,8 +82,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader className="w-full">
-        <TeamSwitcher />
+      <SidebarHeader className="w-full border-b border-sidebar-border/50 p-3">
+        <div className="flex items-center gap-3 px-1 py-1">
+          <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-xs">
+            N
+          </div>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-sm leading-tight tracking-tight text-foreground truncate">
+              Nuviodeck
+            </span>
+            <span className="text-[11px] text-muted-foreground font-medium truncate">
+              Streaming Studio
+            </span>
+          </div>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />

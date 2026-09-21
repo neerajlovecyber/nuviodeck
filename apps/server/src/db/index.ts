@@ -28,6 +28,8 @@ sqlite.run(`
 
   CREATE TABLE IF NOT EXISTS deck_profiles (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
+    user_email TEXT,
     name TEXT NOT NULL,
     is_active INTEGER DEFAULT 0,
     status TEXT DEFAULT 'Ready',
@@ -43,6 +45,7 @@ sqlite.run(`
 
   CREATE TABLE IF NOT EXISTS account_connections (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     provider TEXT NOT NULL,
     username TEXT,
     display_name TEXT,
@@ -56,8 +59,15 @@ sqlite.run(`
     updated_at TEXT NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS user_settings (
+    user_id TEXT PRIMARY KEY,
+    settings_json TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
   CREATE TABLE IF NOT EXISTS playback_sessions (
     id TEXT PRIMARY KEY,
+    user_id TEXT,
     profile_id TEXT NOT NULL,
     media_id TEXT NOT NULL,
     media_type TEXT NOT NULL,
@@ -79,16 +89,22 @@ sqlite.run(`
   );
 `)
 
-// Seed initial default profiles if empty (like Xperience)
-const countResult = sqlite.query('SELECT COUNT(*) as count FROM deck_profiles').get() as any
-if (countResult && countResult.count === 0) {
-  const now = new Date().toISOString()
-  sqlite.run(`
-    INSERT INTO deck_profiles (id, name, is_active, status, row_count, collection_count, badge_set_id, created_at, updated_at)
-    VALUES 
-      ('prof-indian', 'Indian', 1, 'Ready', 31, 1, 'xp_aurora', '${now}', '${now}'),
-      ('prof-new', 'new', 0, 'Ready', 24, 3, 'xp_onyx', '${now}', '${now}');
-  `)
+// Safe schema migration helper for existing SQLite databases
+function ensureColumn(table: string, column: string, type: string) {
+  try {
+    const columns = sqlite.query(`PRAGMA table_info(${table})`).all() as any[]
+    const exists = columns.some((c) => c.name === column)
+    if (!exists) {
+      sqlite.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`)
+    }
+  } catch (err) {
+    console.warn(`Could not add column ${column} to table ${table}:`, err)
+  }
 }
+
+ensureColumn('deck_profiles', 'user_id', 'TEXT')
+ensureColumn('deck_profiles', 'user_email', 'TEXT')
+ensureColumn('account_connections', 'user_id', 'TEXT')
+ensureColumn('playback_sessions', 'user_id', 'TEXT')
 
 export const db = drizzle(sqlite, { schema })

@@ -1,17 +1,24 @@
 import { Hono } from 'hono'
 import { db } from '../../db'
 import { deckProfiles, nuvioSessions } from '../../db/schema'
-import { eq, desc } from 'drizzle-orm'
+import { eq, desc, or, isNull } from 'drizzle-orm'
 import { nuvioClient } from '../../lib/nuvio-client'
+import { resolveCurrentSession } from './auth'
 
 export const deckProfilesRouter = new Hono()
 
-// List all deck profile configurations
+// List deck profile configurations for current user strictly
 deckProfilesRouter.get('/', async (c) => {
   try {
+    const session = await resolveCurrentSession(c).catch(() => null)
+    if (!session?.userId) {
+      return c.json({ profiles: [] })
+    }
+
     const profiles = await db
       .select()
       .from(deckProfiles)
+      .where(eq(deckProfiles.userId, session.userId))
       .orderBy(desc(deckProfiles.isActive), desc(deckProfiles.updatedAt))
 
     return c.json({ profiles })
@@ -20,9 +27,10 @@ deckProfilesRouter.get('/', async (c) => {
   }
 })
 
-// Create new deck profile
+// Create new deck profile tied to the logged-in account
 deckProfilesRouter.post('/', async (c) => {
   try {
+    const session = await resolveCurrentSession(c).catch(() => null)
     const body = await c.req.json()
     const name = body.name?.trim() || 'New Profile'
     const id = `deck-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`
@@ -30,6 +38,8 @@ deckProfilesRouter.post('/', async (c) => {
 
     const newProfile = {
       id,
+      userId: session?.userId || null,
+      userEmail: session?.email || null,
       name,
       isActive: false,
       status: 'Ready',
@@ -50,22 +60,45 @@ deckProfilesRouter.post('/', async (c) => {
   }
 })
 
-// Update profile (e.g. rename, toggle active)
+// Update profile (e.g. rename, toggle active, change avatar)
 deckProfilesRouter.patch('/:id', async (c) => {
   try {
+    const session = await resolveCurrentSession(c).catch(() => null)
     const id = c.req.param('id')
+
+    const [existing] = await db
+      .select()
+      .from(deckProfiles)
+      .where(eq(deckProfiles.id, id))
+      .limit(1)
+
+    if (!existing) {
+      return c.json({ error: 'Deck profile not found' }, 404)
+    }
+
+    if (session?.userId && existing.userId && existing.userId !== session.userId) {
+      return c.json({ error: 'Unauthorized to modify this profile' }, 403)
+    }
+
     const body = await c.req.json()
     const now = new Date().toISOString()
 
-    // If setting active, deactivate others
+    // If setting active, deactivate others for this user
     if (body.isActive) {
-      await db.update(deckProfiles).set({ isActive: false })
+      if (session?.userId) {
+        await db.update(deckProfiles).set({ isActive: false }).where(eq(deckProfiles.userId, session.userId))
+      } else {
+        await db.update(deckProfiles).set({ isActive: false })
+      }
     }
 
     await db
       .update(deckProfiles)
       .set({
         ...body,
+        // Adopt profile if was previously unassigned
+        userId: existing.userId || session?.userId || null,
+        userEmail: existing.userEmail || session?.email || null,
         updatedAt: now,
       })
       .where(eq(deckProfiles.id, id))
@@ -85,7 +118,23 @@ deckProfilesRouter.patch('/:id', async (c) => {
 // Delete profile
 deckProfilesRouter.delete('/:id', async (c) => {
   try {
+    const session = await resolveCurrentSession(c).catch(() => null)
     const id = c.req.param('id')
+
+    const [existing] = await db
+      .select()
+      .from(deckProfiles)
+      .where(eq(deckProfiles.id, id))
+      .limit(1)
+
+    if (!existing) {
+      return c.json({ error: 'Deck profile not found' }, 404)
+    }
+
+    if (session?.userId && existing.userId && existing.userId !== session.userId) {
+      return c.json({ error: 'Unauthorized to delete this profile' }, 403)
+    }
+
     await db.delete(deckProfiles).where(eq(deckProfiles.id, id))
     return c.json({ success: true, message: 'Profile deleted' })
   } catch (err: any) {
@@ -170,9 +219,13 @@ deckProfilesRouter.post('/apply-defaults', async (c) => {
 deckProfilesRouter.post('/:id/deploy', async (c) => {
   try {
     const id = c.req.param('id')
-    const { targets, options } = await c.req.json()
+    const body = await c.req.json().catch(() => ({}))
+    const { options } = body
+    let targets = body.targets
     // targets: Array<{ accountId: string, slots: number[] }>
     // options: { pushAvatar?: boolean, pushBadges?: boolean, pushCollections?: boolean, pushAddons?: boolean }
+
+    const currentSession = await resolveCurrentSession(c).catch(() => null)
 
     const [profile] = await db
       .select()
@@ -182,6 +235,17 @@ deckProfilesRouter.post('/:id/deploy', async (c) => {
 
     if (!profile) {
       return c.json({ error: 'Deck profile not found' }, 404)
+    }
+
+    if (currentSession?.userId && profile.userId && profile.userId !== currentSession.userId) {
+      return c.json({ error: 'Unauthorized to deploy this profile' }, 403)
+    }
+
+    // Default target: logged-in user's active session
+    if (!targets || targets.length === 0) {
+      if (currentSession) {
+        targets = [{ accountId: currentSession.sessionId, slots: body.slots || [1] }]
+      }
     }
 
     const deployReport: any[] = []

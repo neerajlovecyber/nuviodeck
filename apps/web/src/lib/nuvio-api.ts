@@ -97,6 +97,21 @@ export class NuvioApiClient {
     })
   }
 
+  // Account Settings
+  async getSettings() {
+    return this.request<{ settings: any | null; updatedAt?: string }>('/api/nuvio/settings')
+  }
+
+  async saveSettings(settings: any) {
+    return this.request<{ success: boolean; message: string; updatedAt?: string }>(
+      '/api/nuvio/settings',
+      {
+        method: 'PUT',
+        body: JSON.stringify(settings),
+      }
+    )
+  }
+
   // Profiles
   async getProfiles() {
     return this.request<{ profiles: NuvioProfile[] }>('/api/nuvio/profiles')
@@ -302,7 +317,8 @@ export class NuvioApiClient {
   async deployDeckProfile(
     id: string,
     deployConfig: {
-      targets: { accountId: string; slots: number[] }[]
+      slots?: number[]
+      targets?: { accountId: string; slots: number[] }[]
       options: {
         pushAvatar?: boolean
         pushBadges?: boolean
