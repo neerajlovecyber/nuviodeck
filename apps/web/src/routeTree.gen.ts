@@ -10,72 +10,99 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AvatarsRouteImport } from './routes/avatars'
-import { Route as BadgesRouteImport } from './routes/badges'
-import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as WizardProfileIdRouteImport } from './routes/wizard.$profileId'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AuthenticatedAvatarsRouteImport } from './routes/_authenticated/avatars'
+import { Route as AuthenticatedBadgesRouteImport } from './routes/_authenticated/badges'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedWizardProfileIdRouteImport } from './routes/_authenticated/wizard.$profileId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AvatarsRoute = AvatarsRouteImport.update({
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAvatarsRoute = AuthenticatedAvatarsRouteImport.update({
   id: '/avatars',
   path: '/avatars',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const BadgesRoute = BadgesRouteImport.update({
+const AuthenticatedBadgesRoute = AuthenticatedBadgesRouteImport.update({
   id: '/badges',
   path: '/badges',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const DashboardRoute = DashboardRouteImport.update({
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const SettingsRoute = SettingsRouteImport.update({
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const WizardProfileIdRoute = WizardProfileIdRouteImport.update({
-  id: '/wizard/$profileId',
-  path: '/wizard/$profileId',
-  getParentRoute: () => rootRouteImport,
-} as any)
+const AuthenticatedWizardProfileIdRoute =
+  AuthenticatedWizardProfileIdRouteImport.update({
+    id: '/wizard/$profileId',
+    path: '/wizard/$profileId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/avatars': typeof AvatarsRoute
-  '/badges': typeof BadgesRoute
-  '/dashboard': typeof DashboardRoute
-  '/settings': typeof SettingsRoute
-  '/wizard/$profileId': typeof WizardProfileIdRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/avatars': typeof AuthenticatedAvatarsRoute
+  '/badges': typeof AuthenticatedBadgesRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/avatars': typeof AvatarsRoute
-  '/badges': typeof BadgesRoute
-  '/dashboard': typeof DashboardRoute
-  '/settings': typeof SettingsRoute
-  '/wizard/$profileId': typeof WizardProfileIdRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/avatars': typeof AuthenticatedAvatarsRoute
+  '/badges': typeof AuthenticatedBadgesRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/settings': typeof AuthenticatedSettingsRoute
+  '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/avatars': typeof AvatarsRoute
-  '/badges': typeof BadgesRoute
-  '/dashboard': typeof DashboardRoute
-  '/settings': typeof SettingsRoute
-  '/wizard/$profileId': typeof WizardProfileIdRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
+  '/_authenticated/avatars': typeof AuthenticatedAvatarsRoute
+  '/_authenticated/badges': typeof AuthenticatedBadgesRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/signup'
     | '/avatars'
     | '/badges'
     | '/dashboard'
@@ -84,6 +111,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/signup'
     | '/avatars'
     | '/badges'
     | '/dashboard'
@@ -92,20 +121,21 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/avatars'
-    | '/badges'
-    | '/dashboard'
-    | '/settings'
-    | '/wizard/$profileId'
+    | '/_authenticated'
+    | '/login'
+    | '/signup'
+    | '/_authenticated/avatars'
+    | '/_authenticated/badges'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/settings'
+    | '/_authenticated/wizard/$profileId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AvatarsRoute: typeof AvatarsRoute
-  BadgesRoute: typeof BadgesRoute
-  DashboardRoute: typeof DashboardRoute
-  SettingsRoute: typeof SettingsRoute
-  WizardProfileIdRoute: typeof WizardProfileIdRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -117,51 +147,90 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/avatars': {
-      id: '/avatars'
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/avatars': {
+      id: '/_authenticated/avatars'
       path: '/avatars'
       fullPath: '/avatars'
-      preLoaderRoute: typeof AvatarsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedAvatarsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/badges': {
-      id: '/badges'
+    '/_authenticated/badges': {
+      id: '/_authenticated/badges'
       path: '/badges'
       fullPath: '/badges'
-      preLoaderRoute: typeof BadgesRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedBadgesRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/dashboard': {
-      id: '/dashboard'
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
-      preLoaderRoute: typeof DashboardRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/settings': {
-      id: '/settings'
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
-    '/wizard/$profileId': {
-      id: '/wizard/$profileId'
+    '/_authenticated/wizard/$profileId': {
+      id: '/_authenticated/wizard/$profileId'
       path: '/wizard/$profileId'
       fullPath: '/wizard/$profileId'
-      preLoaderRoute: typeof WizardProfileIdRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedWizardProfileIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAvatarsRoute: typeof AuthenticatedAvatarsRoute
+  AuthenticatedBadgesRoute: typeof AuthenticatedBadgesRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedWizardProfileIdRoute: typeof AuthenticatedWizardProfileIdRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAvatarsRoute: AuthenticatedAvatarsRoute,
+  AuthenticatedBadgesRoute: AuthenticatedBadgesRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedWizardProfileIdRoute: AuthenticatedWizardProfileIdRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AvatarsRoute: AvatarsRoute,
-  BadgesRoute: BadgesRoute,
-  DashboardRoute: DashboardRoute,
-  SettingsRoute: SettingsRoute,
-  WizardProfileIdRoute: WizardProfileIdRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

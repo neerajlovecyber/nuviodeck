@@ -69,6 +69,20 @@ export class NuvioApiClient {
     })
   }
 
+  async signup(email: string, password: string) {
+    return this.request<{
+      success: boolean
+      accessToken?: string
+      refreshToken?: string
+      user?: any
+      sessionId?: string
+      message?: string
+    }>('/api/nuvio/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+  }
+
   async getSession() {
     return this.request<{ session: any | null }>('/api/nuvio/auth/session')
   }

@@ -19,6 +19,7 @@ import {
   useSidebar,
 } from "@workspace/ui/components/sidebar"
 import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { useNavigate } from "@tanstack/react-router"
 import { useAppStore } from "@/store/useStore"
 import { toast } from "sonner"
 
@@ -33,12 +34,14 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const { setUser } = useAppStore()
+  const navigate = useNavigate()
 
   const handleLogout = async () => {
     try {
       await fetch("/api/nuvio/auth/logout", { method: "POST" })
       setUser(null)
       toast.success("Logged out successfully")
+      navigate({ to: "/login" })
     } catch {
       toast.error("Logout failed")
     }

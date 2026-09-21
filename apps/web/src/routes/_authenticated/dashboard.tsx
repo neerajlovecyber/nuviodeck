@@ -75,7 +75,7 @@ import { toast } from 'sonner'
 import { nuvioApi, DeckProfile } from '@/lib/nuvio-api'
 import { getPresetRows } from '@/data/catalog-data'
 
-export const Route = createFileRoute('/dashboard')({
+export const Route = createFileRoute('/_authenticated/dashboard')({
   component: DashboardPage,
 })
 

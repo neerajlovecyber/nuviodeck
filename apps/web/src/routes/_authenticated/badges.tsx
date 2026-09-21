@@ -24,7 +24,7 @@ import {
   Info,
 } from "lucide-react"
 
-export const Route = createFileRoute("/badges")({
+export const Route = createFileRoute("/_authenticated/badges")({
   component: BadgesPage,
 })
 

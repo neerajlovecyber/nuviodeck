@@ -31,7 +31,7 @@ import {
   X,
 } from "lucide-react"
 
-export const Route = createFileRoute("/avatars")({
+export const Route = createFileRoute("/_authenticated/avatars")({
   component: AvatarsPage,
 })
 

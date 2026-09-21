@@ -185,7 +185,7 @@ function SortableHomeRowItem({
   )
 }
 
-export const Route = createFileRoute('/wizard/$profileId')({
+export const Route = createFileRoute('/_authenticated/wizard/$profileId')({
   component: ProfileWizardPage,
 })
 

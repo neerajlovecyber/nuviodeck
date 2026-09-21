@@ -74,7 +74,7 @@ import { toast } from 'sonner'
 import { useAppStore } from '@/store/useStore'
 import { useSettingsStore, PosterProvider } from '@/store/useSettingsStore'
 
-export const Route = createFileRoute('/settings')({
+export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
 })
 
