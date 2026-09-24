@@ -11,6 +11,9 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import {
   ChevronLeft,
   CheckCircle2,
+  AlertCircle,
+  Link2,
+  Link2Off,
   Sparkles,
   Search,
   Key,
@@ -75,6 +78,8 @@ import { Switch } from '@workspace/ui/components/switch'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@workspace/ui/components/dialog'
@@ -99,7 +104,7 @@ import languagesData from '@/data/languages.json'
 import { AGE_RATINGS } from '@/data/age-ratings'
 import { STREAMING_REGIONS } from '@/data/streamings'
 import { PostersConfigSection } from '@/components/posters-config-section'
-import { INITIAL_POSTER_PROVIDERS, PosterProvider } from '@/store/useSettingsStore'
+import { INITIAL_POSTER_PROVIDERS, PosterProvider, useSettingsStore } from '@/store/useSettingsStore'
 
 const POPULAR_LANGUAGES = [
   { code: 'en-US', name: 'English (United States)' },
@@ -200,19 +205,55 @@ function ProfileWizardPage() {
 
   // Step 1: Setup State
   const [profileName, setProfileName] = React.useState('')
-  const [mdbListKey, setMdbListKey] = React.useState('neerajlovecyber-5qsn6f')
+  const [mdbListKey, setMdbListKey] = React.useState('')
   const [scrobbleMdbList, setScrobbleMdbList] = React.useState(true)
-  const [tmdbToken, setTmdbToken] = React.useState('eyJhbGciOiJIUzI1NiJ9.verified')
-  const [scrobbleTrakt, setScrobbleTrakt] = React.useState(true)
-  const [scrobbleSimkl, setScrobbleSimkl] = React.useState(true)
-  const [scrobbleAniList, setScrobbleAniList] = React.useState(true)
-  const [scrobbleMal, setScrobbleMal] = React.useState(true)
+  const [tmdbToken, setTmdbToken] = React.useState('')
+  const [letterboxd, setLetterboxd] = React.useState('')
+  const [showLetterboxd, setShowLetterboxd] = React.useState(false)
+  const [letterboxdVerified, setLetterboxdVerified] = React.useState(false)
+
+  // Trackers & Connections
+  const [traktConnected, setTraktConnected] = React.useState(false)
+  const [traktUsername, setTraktUsername] = React.useState('')
+  const [scrobbleTrakt, setScrobbleTrakt] = React.useState(false)
+
+  const [simklConnected, setSimklConnected] = React.useState(false)
+  const [simklUsername, setSimklUsername] = React.useState('')
+  const [scrobbleSimkl, setScrobbleSimkl] = React.useState(false)
+
+  const [anilistConnected, setAnilistConnected] = React.useState(false)
+  const [anilistUsername, setAnilistUsername] = React.useState('')
+  const [scrobbleAniList, setScrobbleAniList] = React.useState(false)
+
+  const [malConnected, setMalConnected] = React.useState(false)
+  const [malUsername, setMalUsername] = React.useState('')
+  const [scrobbleMal, setScrobbleMal] = React.useState(false)
+
+  const [tmdbAccountConnected, setTmdbAccountConnected] = React.useState(false)
+  const [tmdbAccountUsername, setTmdbAccountUsername] = React.useState('')
+
   const [playbackEndRule, setPlaybackEndRule] = React.useState<'watched' | 'finished'>('finished')
+  const [step1Submitted, setStep1Submitted] = React.useState(false)
+
+  // Connect Dialog & Info Sheets
+  const [connectModalProvider, setConnectModalProvider] = React.useState<
+    'trakt' | 'simkl' | 'anilist' | 'myanimelist' | 'tmdb' | null
+  >(null)
+  const [connectModalUsername, setConnectModalUsername] = React.useState('')
+  const [activeInfoKey, setActiveInfoKey] = React.useState<string | null>(null)
+
+  // Validation
+  const isMdbListValid = Boolean(mdbListKey.trim())
+  const isTmdbValid = Boolean(tmdbToken.trim())
+  const isStep1Valid = isMdbListValid && isTmdbValid
+  const setupPercent = Math.round(
+    ((Number(isMdbListValid) + Number(isTmdbValid)) / 2) * 50 + ((step - 1) / 4) * 50
+  )
 
   // AI & Search & Discover
   const [aiProvider, setAiProvider] = React.useState<'Google Gemini' | 'Groq'>('Google Gemini')
   const [aiModel, setAiModel] = React.useState('gemini-3.5-flash-lite')
-  const [aiApiKey, setAiApiKey] = React.useState('AIzaSyD-sample-verified-key')
+  const [aiApiKey, setAiApiKey] = React.useState('')
   const [groqApiKey, setGroqApiKey] = React.useState('')
   const [aiPoweredSearch, setAiPoweredSearch] = React.useState(true)
   const [searchEnabled, setSearchEnabled] = React.useState(true)
@@ -443,9 +484,9 @@ function ProfileWizardPage() {
   const [selectedDebridProvider, setSelectedDebridProvider] = React.useState<
     'realdebrid' | 'torbox' | 'alldebrid' | 'premiumize' | 'debridlink' | 'none'
   >('realdebrid')
-  const [debridApiKey, setDebridApiKey] = React.useState('rd_tok_live_738491823')
+  const [debridApiKey, setDebridApiKey] = React.useState('')
   const [showDebridKey, setShowDebridKey] = React.useState(false)
-  const [debridVerified, setDebridVerified] = React.useState(true)
+  const [debridVerified, setDebridVerified] = React.useState(false)
 
   const [streamSources, setStreamSources] = React.useState<
     Array<{
@@ -589,6 +630,69 @@ function ProfileWizardPage() {
                   if (cfg.streams.proxy.apiPassword) setStreamProxyPassword(cfg.streams.proxy.apiPassword)
                 }
               }
+              if (cfg.integrations) {
+                if (cfg.integrations.mdbListKey !== undefined) setMdbListKey(cfg.integrations.mdbListKey)
+                if (cfg.integrations.tmdbToken !== undefined) setTmdbToken(cfg.integrations.tmdbToken)
+                if (cfg.integrations.proxyUrl !== undefined) setProxyUrl(cfg.integrations.proxyUrl)
+                if (cfg.integrations.scrobbleMdbList !== undefined) setScrobbleMdbList(cfg.integrations.scrobbleMdbList)
+                if (cfg.integrations.letterboxd !== undefined) setLetterboxd(cfg.integrations.letterboxd)
+                if (cfg.integrations.playbackEndRule !== undefined) setPlaybackEndRule(cfg.integrations.playbackEndRule)
+                if (cfg.integrations.trakt) {
+                  setTraktConnected(Boolean(cfg.integrations.trakt.connected))
+                  setTraktUsername(cfg.integrations.trakt.username || '')
+                }
+                if (cfg.integrations.scrobbleTrakt !== undefined) setScrobbleTrakt(cfg.integrations.scrobbleTrakt)
+                if (cfg.integrations.simkl) {
+                  setSimklConnected(Boolean(cfg.integrations.simkl.connected))
+                  setSimklUsername(cfg.integrations.simkl.username || '')
+                }
+                if (cfg.integrations.scrobbleSimkl !== undefined) setScrobbleSimkl(cfg.integrations.scrobbleSimkl)
+                if (cfg.integrations.anilist) {
+                  setAnilistConnected(Boolean(cfg.integrations.anilist.connected))
+                  setAnilistUsername(cfg.integrations.anilist.username || '')
+                }
+                if (cfg.integrations.scrobbleAniList !== undefined) setScrobbleAniList(cfg.integrations.scrobbleAniList)
+                if (cfg.integrations.myanimelist) {
+                  setMalConnected(Boolean(cfg.integrations.myanimelist.connected))
+                  setMalUsername(cfg.integrations.myanimelist.username || '')
+                }
+                if (cfg.integrations.scrobbleMal !== undefined) setScrobbleMal(cfg.integrations.scrobbleMal)
+                if (cfg.integrations.tmdbAccount) {
+                  setTmdbAccountConnected(Boolean(cfg.integrations.tmdbAccount.connected))
+                  setTmdbAccountUsername(cfg.integrations.tmdbAccount.username || '')
+                }
+              } else {
+                // Brand new profile: inherit global defaults cleanly from Settings Store
+                const settings = useSettingsStore.getState()
+                if (settings.apiKeys.mdblist) setMdbListKey(settings.apiKeys.mdblist)
+                if (settings.apiKeys.tmdb) setTmdbToken(settings.apiKeys.tmdb)
+                if (settings.apiKeys.letterboxd) setLetterboxd(settings.apiKeys.letterboxd)
+                if (settings.apiKeys.mdblistScrobble !== undefined) setScrobbleMdbList(settings.apiKeys.mdblistScrobble)
+                if (settings.playbackCompletion) {
+                  setPlaybackEndRule(settings.playbackCompletion === 'auto' ? 'watched' : 'finished')
+                }
+                if (settings.connections.trakt.connected) {
+                  setTraktConnected(true)
+                  setTraktUsername(settings.connections.trakt.username)
+                  setScrobbleTrakt(settings.connections.trakt.scrobble)
+                }
+                if (settings.connections.simkl.connected) {
+                  setSimklConnected(true)
+                  setSimklUsername(settings.connections.simkl.username)
+                }
+                if (settings.connections.anilist.connected) {
+                  setAnilistConnected(true)
+                  setAnilistUsername(settings.connections.anilist.username)
+                }
+                if (settings.connections.myanimelist.connected) {
+                  setMalConnected(true)
+                  setMalUsername(settings.connections.myanimelist.username)
+                }
+                if (settings.connections.tmdb.connected) {
+                  setTmdbAccountConnected(true)
+                  setTmdbAccountUsername(settings.connections.tmdb.username)
+                }
+              }
               if (cfg.integrations?.proxyUrl && !cfg.preferences?.proxyUrl) {
                 setProxyUrl(cfg.integrations.proxyUrl)
               }
@@ -637,9 +741,16 @@ function ProfileWizardPage() {
           scrobbleMdbList,
           tmdbToken,
           proxyUrl,
+          letterboxd,
           scrobbleTrakt,
           scrobbleSimkl,
           scrobbleAniList,
+          scrobbleMal,
+          trakt: { connected: traktConnected, username: traktUsername },
+          simkl: { connected: simklConnected, username: simklUsername },
+          anilist: { connected: anilistConnected, username: anilistUsername },
+          myanimelist: { connected: malConnected, username: malUsername },
+          tmdbAccount: { connected: tmdbAccountConnected, username: tmdbAccountUsername },
           playbackEndRule,
         },
         ai: {
@@ -772,6 +883,119 @@ function ProfileWizardPage() {
     'Horror',
   ]
 
+  const handleVerifyLetterboxd = () => {
+    if (!letterboxd.trim()) {
+      toast.error('Please enter a Letterboxd username')
+      return
+    }
+    setLetterboxdVerified(true)
+    toast.success(`Letterboxd user "${letterboxd.trim()}" verified`)
+  }
+
+  const openConnectDialog = (provider: 'trakt' | 'simkl' | 'anilist' | 'myanimelist' | 'tmdb') => {
+    setConnectModalProvider(provider)
+    setConnectModalUsername('')
+  }
+
+  const handleConfirmConnect = () => {
+    if (!connectModalUsername.trim()) {
+      toast.error('Please enter an account username')
+      return
+    }
+    const username = connectModalUsername.trim()
+    if (connectModalProvider === 'trakt') {
+      setTraktConnected(true)
+      setTraktUsername(username)
+      setScrobbleTrakt(true)
+      useSettingsStore.getState().setConnection('trakt', { connected: true, username, scrobble: true })
+      toast.success(`Connected Trakt as ${username}`)
+    } else if (connectModalProvider === 'simkl') {
+      setSimklConnected(true)
+      setSimklUsername(username)
+      useSettingsStore.getState().setConnection('simkl', { connected: true, username })
+      toast.success(`Connected Simkl as ${username}`)
+    } else if (connectModalProvider === 'anilist') {
+      setAnilistConnected(true)
+      setAnilistUsername(username)
+      useSettingsStore.getState().setConnection('anilist', { connected: true, username })
+      toast.success(`Connected AniList as ${username}`)
+    } else if (connectModalProvider === 'myanimelist') {
+      setMalConnected(true)
+      setMalUsername(username)
+      useSettingsStore.getState().setConnection('myanimelist', { connected: true, username })
+      toast.success(`Connected MyAnimeList as ${username}`)
+    } else if (connectModalProvider === 'tmdb') {
+      setTmdbAccountConnected(true)
+      setTmdbAccountUsername(username)
+      useSettingsStore.getState().setConnection('tmdb', { connected: true, username })
+      toast.success(`Connected TMDB account as ${username}`)
+    }
+    setConnectModalProvider(null)
+  }
+
+  const handleDisconnect = (provider: 'trakt' | 'simkl' | 'anilist' | 'myanimelist' | 'tmdb') => {
+    if (provider === 'trakt') {
+      setTraktConnected(false)
+      setTraktUsername('')
+      setScrobbleTrakt(false)
+      useSettingsStore.getState().setConnection('trakt', { connected: false, username: '', scrobble: false })
+      toast.info('Trakt disconnected')
+    } else if (provider === 'simkl') {
+      setSimklConnected(false)
+      setSimklUsername('')
+      useSettingsStore.getState().setConnection('simkl', { connected: false, username: '' })
+      toast.info('Simkl disconnected')
+    } else if (provider === 'anilist') {
+      setAnilistConnected(false)
+      setAnilistUsername('')
+      useSettingsStore.getState().setConnection('anilist', { connected: false, username: '' })
+      toast.info('AniList disconnected')
+    } else if (provider === 'myanimelist') {
+      setMalConnected(false)
+      setMalUsername('')
+      useSettingsStore.getState().setConnection('myanimelist', { connected: false, username: '' })
+      toast.info('MyAnimeList disconnected')
+    } else if (provider === 'tmdb') {
+      setTmdbAccountConnected(false)
+      setTmdbAccountUsername('')
+      useSettingsStore.getState().setConnection('tmdb', { connected: false, username: '' })
+      toast.info('TMDB account disconnected')
+    }
+  }
+
+  const WIZARD_INFO_ITEMS: Record<string, { title: string; description: string; detail?: string }> = {
+    letterboxd: {
+      title: 'Letterboxd Username',
+      description: 'Your public Letterboxd username powers the "My Letterboxd Watchlist" catalog row.',
+      detail: 'No password or token required. Only public lists and watchlists are fetched.',
+    },
+    trakt: {
+      title: 'Trakt account',
+      description: 'Connect your Trakt account to automatically sync your watchlist, ratings, and watch progress.',
+      detail: 'Supports real-time scrobbling when watching in your player.',
+    },
+    'trakt-scrobble': {
+      title: 'Scrobble now watching to Trakt',
+      description: 'When you press play in your streaming app, report what you are currently watching to your Trakt account.',
+    },
+    simkl: {
+      title: 'Simkl account',
+      description: 'Link your Simkl account to bring your Plan to Watch lists, anime watching, and TV progress into catalog rows.',
+    },
+    anilist: {
+      title: 'AniList account',
+      description: 'Link your AniList account to sync your current anime watching progress, custom lists, and recommendations.',
+    },
+    myanimelist: {
+      title: 'MyAnimeList account',
+      description: 'Link your MyAnimeList account to sync your anime watching status and completed lists.',
+    },
+    'tmdb-account': {
+      title: 'TMDB account',
+      description: 'Connect your user TMDB account to import your TMDB favorites, custom lists, and rated titles.',
+    },
+  }
+
   return (
     <SidebarProvider
       style={
@@ -866,8 +1090,25 @@ function ProfileWizardPage() {
                         <KeyRound className="size-4 text-muted-foreground" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-foreground">Integrations</span>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">Both keys verified. You can continue.</span>
+                        <div className="flex items-center gap-2">
+                          <span className="block text-sm font-semibold text-foreground">Integrations</span>
+                          {!isStep1Valid && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-destructive bg-destructive/10 border border-destructive/20 rounded px-1.5 py-0.5">
+                              Keys Required
+                            </span>
+                          )}
+                        </div>
+                        <span className="mt-0.5 flex items-center gap-1.5 truncate text-xs">
+                          {isStep1Valid ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                              <CheckCircle2 className="size-3 shrink-0" /> Both required keys verified. You can continue.
+                            </span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                              <AlertCircle className="size-3 shrink-0" /> TMDB Read Access Token &amp; MDBList Key are required.
+                            </span>
+                          )}
+                        </span>
                       </span>
                       <ChevronRight
                         className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
@@ -878,24 +1119,48 @@ function ProfileWizardPage() {
 
                     {openSection === 'integrations' && (
                       <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-6 text-sm">
-                        {/* MDBList */}
+                        {/* 1. MDBList */}
                         <div className="space-y-2 pt-2">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground text-xs">MDBList Key</span>
-                            <a
-                              href="https://mdblist.com/preferences/"
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                            >
-                              Get a key <ExternalLink className="size-3" />
-                            </a>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">
+                                MDBList Key <span className="text-destructive font-bold">*</span>
+                              </span>
+                              <span className="text-[10px] font-semibold text-destructive uppercase tracking-wider bg-destructive/10 border border-destructive/20 rounded px-1.5 py-0.2">
+                                Required
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isMdbListValid && (
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/30">
+                                  <CheckCircle2 className="size-3" /> Verified
+                                </span>
+                              )}
+                              <a
+                                href="https://mdblist.com/preferences/"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              >
+                                Get a key <ExternalLink className="size-3" />
+                              </a>
+                            </div>
                           </div>
                           <Input
                             value={mdbListKey}
                             onChange={(e) => setMdbListKey(e.target.value)}
-                            className="font-mono text-xs"
+                            placeholder="Enter your MDBList API key"
+                            className={`font-mono text-xs ${
+                              step1Submitted && !isMdbListValid
+                                ? 'border-destructive focus-visible:ring-destructive'
+                                : ''
+                            }`}
                           />
+                          {step1Submitted && !isMdbListValid && (
+                            <p className="text-xs text-destructive flex items-center gap-1 font-medium">
+                              <AlertCircle className="size-3 shrink-0" /> MDBList Key is required to generate catalogs and watchlists.
+                            </p>
+                          )}
                           <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-1">
                             <Checkbox
                               checked={scrobbleMdbList}
@@ -905,14 +1170,31 @@ function ProfileWizardPage() {
                           </label>
                         </div>
 
-                        {/* TMDB */}
+                        {/* 2. TMDB */}
                         <div className="space-y-2 border-t border-border/40 pt-4">
                           <div className="flex items-center justify-between">
-                            <span className="font-medium text-foreground text-xs">TMDB Read Access Token</span>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
-                                Verified
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">
+                                TMDB Read Access Token <span className="text-destructive font-bold">*</span>
                               </span>
+                              <span className="text-[10px] font-semibold text-destructive uppercase tracking-wider bg-destructive/10 border border-destructive/20 rounded px-1.5 py-0.2">
+                                Required
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isTmdbValid && tmdbToken.startsWith('eyJ') ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/30">
+                                  <CheckCircle2 className="size-3" /> Verified
+                                </span>
+                              ) : isTmdbValid ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/30">
+                                  Token entered
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium border border-destructive/20">
+                                  Required
+                                </span>
+                              )}
                               <a
                                 href="https://www.themoviedb.org/settings/api"
                                 target="_blank"
@@ -926,8 +1208,23 @@ function ProfileWizardPage() {
                           <Input
                             value={tmdbToken}
                             onChange={(e) => setTmdbToken(e.target.value)}
-                            className="font-mono text-xs"
+                            placeholder="eyJhbGciOiJIUzI1NiJ9..."
+                            className={`font-mono text-xs ${
+                              step1Submitted && !isTmdbValid
+                                ? 'border-destructive focus-visible:ring-destructive'
+                                : ''
+                            }`}
                           />
+                          {step1Submitted && !isTmdbValid && (
+                            <p className="text-xs text-destructive flex items-center gap-1 font-medium">
+                              <AlertCircle className="size-3 shrink-0" /> TMDB API Read Access Token is required to fetch movie and TV metadata.
+                            </p>
+                          )}
+                          {isTmdbValid && !tmdbToken.startsWith('eyJ') && (
+                            <p className="text-xs text-amber-500 flex items-center gap-1 font-medium">
+                              <AlertCircle className="size-3 shrink-0" /> Note: TMDB API Read Access Token should start with "eyJ...". Make sure to copy the long token, not the short API key.
+                            </p>
+                          )}
                           <p className="text-[11px] text-muted-foreground">
                             On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ", not the short API key.
                           </p>
@@ -950,78 +1247,380 @@ function ProfileWizardPage() {
                           </div>
                         </div>
 
-                        {/* Connected Trackers */}
+                        {/* 3. Letterboxd */}
+                        <div className="border-t border-border/40 pt-4 space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">Letterboxd Username</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('letterboxd')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About Letterboxd"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                            </div>
+                            <a
+                              href="https://letterboxd.com"
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              letterboxd.com <ExternalLink className="size-3" />
+                            </a>
+                          </div>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type={showLetterboxd ? 'text' : 'password'}
+                                value={letterboxd}
+                                onChange={(e) => {
+                                  setLetterboxd(e.target.value)
+                                  setLetterboxdVerified(false)
+                                }}
+                                placeholder="username"
+                                className="h-9 pr-9 text-xs"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowLetterboxd(!showLetterboxd)}
+                                className="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {showLetterboxd ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                              </button>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleVerifyLetterboxd}
+                              disabled={!letterboxd.trim()}
+                              className="h-9 px-3 text-xs font-medium shrink-0 cursor-pointer"
+                            >
+                              {letterboxdVerified ? <CheckCircle2 className="size-3.5 text-emerald-500 mr-1" /> : null}
+                              Verify
+                            </Button>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            Optional. Your public Letterboxd username powers the “My Letterboxd Watchlist” row.
+                          </p>
+                        </div>
+
+                        {/* 4. Trakt */}
                         <div className="border-t border-border/40 pt-4 space-y-3">
-                          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Connected Trackers
-                          </h4>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-foreground text-xs">Trakt</div>
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neerajlovecyber</div>
-                              </div>
-                              <Checkbox checked={scrobbleTrakt} onCheckedChange={(c) => setScrobbleTrakt(!!c)} />
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">Trakt</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('trakt')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About Trakt"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                              <a
+                                href="https://trakt.tv"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-1"
+                              >
+                                About <ExternalLink className="size-3" />
+                              </a>
                             </div>
-
-                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-foreground text-xs">Simkl</div>
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected as Neeraj Singh</div>
-                              </div>
-                              <Checkbox checked={scrobbleSimkl} onCheckedChange={(c) => setScrobbleSimkl(!!c)} />
+                            {traktConnected && traktUsername && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3 shrink-0" /> Connected as {traktUsername}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            {traktConnected ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDisconnect('trakt')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2Off className="size-3.5" /> Disconnect Trakt
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openConnectDialog('trakt')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2 className="size-3.5" /> Connect Trakt
+                              </Button>
+                            )}
+                          </div>
+                          {traktConnected && (
+                            <div className="flex items-center gap-2.5 pt-1">
+                              <Switch
+                                id="scrobble-trakt"
+                                checked={scrobbleTrakt}
+                                onCheckedChange={(c) => setScrobbleTrakt(Boolean(c))}
+                              />
+                              <Label htmlFor="scrobble-trakt" className="text-xs font-medium cursor-pointer">
+                                Scrobble now watching to Trakt
+                              </Label>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('trakt-scrobble')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
                             </div>
+                          )}
+                        </div>
 
-                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-foreground text-xs">AniList</div>
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
-                              </div>
-                              <Checkbox checked={scrobbleAniList} onCheckedChange={(c) => setScrobbleAniList(!!c)} />
+                        {/* 5. Simkl */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">Simkl</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('simkl')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About Simkl"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                              <a
+                                href="https://simkl.com"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-1"
+                              >
+                                About <ExternalLink className="size-3" />
+                              </a>
                             </div>
-
-                            <div className="p-3 rounded-xl bg-background border border-border flex items-center justify-between">
-                              <div>
-                                <div className="font-medium text-foreground text-xs">MyAnimeList</div>
-                                <div className="text-[11px] text-emerald-600 dark:text-emerald-400">Connected</div>
-                              </div>
-                              <Checkbox checked={scrobbleMal} onCheckedChange={(c) => setScrobbleMal(!!c)} />
-                            </div>
+                            {simklConnected && simklUsername && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3 shrink-0" /> Connected as {simklUsername}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            {simklConnected ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDisconnect('simkl')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2Off className="size-3.5" /> Disconnect Simkl
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openConnectDialog('simkl')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2 className="size-3.5" /> Connect Simkl
+                              </Button>
+                            )}
                           </div>
                         </div>
 
-                        {/* When Playback Ends */}
-                        <div className="border-t border-border/40 pt-4 space-y-2">
-                          <Label className="text-xs font-semibold text-foreground">When playback ends</Label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                            <div
-                              onClick={() => setPlaybackEndRule('watched')}
-                              className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                                playbackEndRule === 'watched'
-                                  ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
-                                  : 'border-border bg-background text-muted-foreground hover:border-border/80'
-                              }`}
-                            >
-                              <div className="font-medium text-xs text-foreground">Mark as watched</div>
-                              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                                After the title's runtime, mark it watched on every tracker immediately.
-                              </p>
+                        {/* 6. AniList */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">AniList</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('anilist')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About AniList"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                              <a
+                                href="https://anilist.co"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-1"
+                              >
+                                About <ExternalLink className="size-3" />
+                              </a>
                             </div>
+                            {anilistConnected && anilistUsername && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3 shrink-0" /> Connected as {anilistUsername}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            {anilistConnected ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDisconnect('anilist')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2Off className="size-3.5" /> Disconnect AniList
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openConnectDialog('anilist')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2 className="size-3.5" /> Connect AniList
+                              </Button>
+                            )}
+                          </div>
+                        </div>
 
-                            <div
-                              onClick={() => setPlaybackEndRule('finished')}
-                              className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                                playbackEndRule === 'finished'
-                                  ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary'
-                                  : 'border-border bg-background text-muted-foreground hover:border-border/80'
-                              }`}
-                            >
-                              <div className="font-medium text-xs text-foreground">Only when finished</div>
-                              <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                                Mark watched only when it played through completely or next episode starts.
-                              </p>
+                        {/* 7. MyAnimeList */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">MyAnimeList</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('myanimelist')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About MyAnimeList"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                              <a
+                                href="https://myanimelist.net"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-1"
+                              >
+                                About <ExternalLink className="size-3" />
+                              </a>
                             </div>
+                            {malConnected && malUsername && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3 shrink-0" /> Connected as {malUsername}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            {malConnected ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDisconnect('myanimelist')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2Off className="size-3.5" /> Disconnect MyAnimeList
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openConnectDialog('myanimelist')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2 className="size-3.5" /> Connect MyAnimeList
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 8. When Playback Ends */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <Label className="text-xs font-semibold text-foreground">When playback ends</Label>
+                          <div className="space-y-3">
+                            <label
+                              onClick={() => setPlaybackEndRule('watched')}
+                              className="flex items-start gap-3 cursor-pointer group"
+                            >
+                              <div className="pt-0.5">
+                                <div
+                                  className={`size-4 rounded-full border flex items-center justify-center transition-colors ${
+                                    playbackEndRule === 'watched'
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : 'border-muted-foreground/40 group-hover:border-foreground/60'
+                                  }`}
+                                >
+                                  {playbackEndRule === 'watched' && <div className="size-1.5 rounded-full bg-primary-foreground" />}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium text-foreground block">Mark as watched</span>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                                  After the title's runtime, mark it watched on every connected tracker. Stremio does not report progress, so a title you stop early is still marked watched.
+                                </p>
+                              </div>
+                            </label>
+
+                            <label
+                              onClick={() => setPlaybackEndRule('finished')}
+                              className="flex items-start gap-3 cursor-pointer group"
+                            >
+                              <div className="pt-0.5">
+                                <div
+                                  className={`size-4 rounded-full border flex items-center justify-center transition-colors ${
+                                    playbackEndRule === 'finished'
+                                      ? 'border-primary bg-primary text-primary-foreground'
+                                      : 'border-muted-foreground/40 group-hover:border-foreground/60'
+                                  }`}
+                                >
+                                  {playbackEndRule === 'finished' && <div className="size-1.5 rounded-full bg-primary-foreground" />}
+                                </div>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="text-xs font-medium text-foreground block">Only when finished</span>
+                                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                                  Mark it watched only when we can tell it played through: your linked Nuvio account reports that you reached the end, or you start the next episode. Otherwise it goes to your tracker's Continue Watching list instead of your history, at the point where you actually stopped. AniList and MyAnimeList have no Continue Watching list, so the title stays under Watching there and the episode is not counted.
+                                </p>
+                              </div>
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* 9. TMDB Account */}
+                        <div className="border-t border-border/40 pt-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium text-foreground text-xs">TMDB account</span>
+                              <button
+                                type="button"
+                                onClick={() => setActiveInfoKey('tmdb-account')}
+                                className="size-5 rounded-full inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                                title="About TMDB account"
+                              >
+                                <Info className="size-3.5" />
+                              </button>
+                            </div>
+                            {tmdbAccountConnected && tmdbAccountUsername && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                                <CheckCircle2 className="size-3 shrink-0" /> Connected as {tmdbAccountUsername}
+                              </span>
+                            )}
+                          </div>
+                          <div>
+                            {tmdbAccountConnected ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDisconnect('tmdb')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2Off className="size-3.5" /> Disconnect TMDB
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openConnectDialog('tmdb')}
+                                className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                              >
+                                <Link2 className="size-3.5" /> Connect TMDB
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -2854,6 +3453,12 @@ function ProfileWizardPage() {
                         <button
                           type="button"
                           onClick={() => {
+                            if (step === 1 && !isStep1Valid && s.num > 1) {
+                              setStep1Submitted(true)
+                              setOpenSection('integrations')
+                              toast.error('Both TMDB Read Access Token and MDBList API key are required to continue')
+                              return
+                            }
                             saveProfileConfig()
                             setStep(s.num as any)
                           }}
@@ -2887,6 +3492,12 @@ function ProfileWizardPage() {
                     {step < 5 ? (
                       <Button
                         onClick={() => {
+                          if (step === 1 && !isStep1Valid) {
+                            setStep1Submitted(true)
+                            setOpenSection('integrations')
+                            toast.error('Both TMDB Read Access Token and MDBList API key are required to continue')
+                            return
+                          }
                           saveProfileConfig()
                           setStep((step + 1) as any)
                         }}
@@ -2944,10 +3555,13 @@ function ProfileWizardPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground">Setup completion</span>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">100%</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">{setupPercent}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full w-full" />
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                    style={{ width: `${setupPercent}%` }}
+                  />
                 </div>
               </div>
 
@@ -2974,13 +3588,35 @@ function ProfileWizardPage() {
                   Required
                 </h4>
                 <div className="space-y-1.5 text-xs">
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>MDBList</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {isMdbListValid ? (
+                        <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <div className="size-2 rounded-full bg-amber-500 ml-0.5 mr-1" />
+                      )}
+                      <span className={isMdbListValid ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                        MDBList
+                      </span>
+                    </div>
+                    {!isMdbListValid && (
+                      <span className="text-[10px] text-amber-500 font-medium">Missing</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>TMDB</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {isTmdbValid ? (
+                        <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <div className="size-2 rounded-full bg-amber-500 ml-0.5 mr-1" />
+                      )}
+                      <span className={isTmdbValid ? 'text-foreground font-medium' : 'text-muted-foreground'}>
+                        TMDB
+                      </span>
+                    </div>
+                    {!isTmdbValid && (
+                      <span className="text-[10px] text-amber-500 font-medium">Missing</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2992,20 +3628,52 @@ function ProfileWizardPage() {
                 </h4>
                 <div className="space-y-1.5 text-xs">
                   <div className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Trakt</span>
+                    {traktConnected ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <div className="size-1.5 rounded-full bg-muted-foreground/40 ml-1 mr-1" />
+                    )}
+                    <span className={traktConnected ? 'text-foreground' : 'text-muted-foreground'}>Trakt</span>
                   </div>
                   <div className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>Simkl</span>
+                    {simklConnected ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <div className="size-1.5 rounded-full bg-muted-foreground/40 ml-1 mr-1" />
+                    )}
+                    <span className={simklConnected ? 'text-foreground' : 'text-muted-foreground'}>Simkl</span>
                   </div>
                   <div className="flex items-center gap-2 text-foreground">
-                    <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
-                    <span>AniList</span>
+                    {anilistConnected ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <div className="size-1.5 rounded-full bg-muted-foreground/40 ml-1 mr-1" />
+                    )}
+                    <span className={anilistConnected ? 'text-foreground' : 'text-muted-foreground'}>AniList</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground">
+                    {malConnected ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <div className="size-1.5 rounded-full bg-muted-foreground/40 ml-1 mr-1" />
+                    )}
+                    <span className={malConnected ? 'text-foreground' : 'text-muted-foreground'}>MyAnimeList</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-foreground">
+                    {tmdbAccountConnected ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <div className="size-1.5 rounded-full bg-muted-foreground/40 ml-1 mr-1" />
+                    )}
+                    <span className={tmdbAccountConnected ? 'text-foreground' : 'text-muted-foreground'}>TMDB Account</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Sparkles className="size-3.5 text-purple-500 dark:text-purple-400" />
-                    <span>AI Recommendations</span>
+                    {aiVerified ? (
+                      <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Sparkles className="size-3.5 text-purple-500 dark:text-purple-400" />
+                    )}
+                    <span className={aiVerified ? 'text-foreground' : 'text-muted-foreground'}>AI Recommendations</span>
                   </div>
                 </div>
               </div>
@@ -3526,6 +4194,72 @@ function ProfileWizardPage() {
                 )
               })}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Connect Account Modal */}
+        <Dialog open={!!connectModalProvider} onOpenChange={(open) => !open && setConnectModalProvider(null)}>
+          <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle className="text-base capitalize">
+                Connect {connectModalProvider === 'tmdb' ? 'TMDB Account' : connectModalProvider === 'myanimelist' ? 'MyAnimeList' : connectModalProvider}
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Enter your account username to link your watchlist, history, and tracking.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">
+                  {connectModalProvider === 'tmdb' ? 'TMDB Username' : `${connectModalProvider?.toUpperCase()} Username`}
+                </label>
+                <Input
+                  placeholder="e.g. moviebuff_99"
+                  value={connectModalUsername}
+                  onChange={(e) => setConnectModalUsername(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleConfirmConnect()
+                  }}
+                  autoFocus
+                  className="h-10 text-sm"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Linking allows Nuvio to personalize your catalog rows and sync your watch progress seamlessly.
+              </p>
+            </div>
+            <DialogFooter className="flex items-center justify-between sm:justify-end gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setConnectModalProvider(null)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleConfirmConnect}>
+                Confirm Connection
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Info Dialog */}
+        <Dialog open={!!activeInfoKey} onOpenChange={(open) => !open && setActiveInfoKey(null)}>
+          <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+            <DialogHeader>
+              <DialogTitle className="text-base">
+                {activeInfoKey && WIZARD_INFO_ITEMS[activeInfoKey]?.title}
+              </DialogTitle>
+              <DialogDescription className="text-xs pt-1 leading-relaxed">
+                {activeInfoKey && WIZARD_INFO_ITEMS[activeInfoKey]?.description}
+              </DialogDescription>
+            </DialogHeader>
+            {activeInfoKey && WIZARD_INFO_ITEMS[activeInfoKey]?.detail && (
+              <div className="p-3 rounded-xl bg-accent/50 border border-border text-xs text-muted-foreground leading-relaxed">
+                {WIZARD_INFO_ITEMS[activeInfoKey].detail}
+              </div>
+            )}
+            <DialogFooter>
+              <Button size="sm" onClick={() => setActiveInfoKey(null)}>
+                Got it
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </SidebarInset>

@@ -125,8 +125,8 @@ export const INITIAL_POSTER_PROVIDERS: PosterProvider[] = [
     linkUrl: 'https://top-posters.com/',
     linkText: 'Get a key',
     key: '',
-    verified: true,
-    active: true,
+    verified: false,
+    active: false,
   },
   {
     id: 'rpdb',
@@ -184,10 +184,10 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       apiKeys: {
-        mdblist: 'neerajlovecyber-5qsn6f',
+        mdblist: '',
         mdblistScrobble: true,
-        tmdb: '••••••••••••••••••••••••••••••••',
-        gemini: '••••••••••••••••••••••••••••••••',
+        tmdb: '',
+        gemini: '',
         groq: '',
         deepseek: '',
         letterboxd: '',
@@ -252,18 +252,18 @@ export const useSettingsStore = create<SettingsState>()(
 
       connections: {
         nuvio: {
-          connected: true,
-          email: 'neerajlovecyber@gmail.com',
-          profilesCount: 3,
+          connected: false,
+          email: '',
+          profilesCount: 0,
         },
         tmdb: {
           connected: false,
           username: '',
         },
         trakt: {
-          connected: true,
-          username: 'Neerajlovecyber',
-          scrobble: false,
+          connected: false,
+          username: '',
+          scrobble: true,
         },
         simkl: {
           connected: false,
@@ -288,6 +288,44 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'nuviodeck-settings',
+      version: 2,
+      migrate: (persistedState: any) => {
+        if (!persistedState) return persistedState as SettingsState
+        const state = persistedState as any
+        if (state.apiKeys) {
+          if (state.apiKeys.mdblist === 'neerajlovecyber-5qsn6f') {
+            state.apiKeys.mdblist = ''
+          }
+          if (
+            state.apiKeys.tmdb === '••••••••••••••••••••••••••••••••' ||
+            state.apiKeys.tmdb === 'eyJhbGciOiJIUzI1NiJ9.verified' ||
+            (typeof state.apiKeys.tmdb === 'string' && state.apiKeys.tmdb.includes('verified'))
+          ) {
+            state.apiKeys.tmdb = ''
+          }
+          if (
+            state.apiKeys.gemini === '••••••••••••••••••••••••••••••••' ||
+            (typeof state.apiKeys.gemini === 'string' && state.apiKeys.gemini.includes('sample'))
+          ) {
+            state.apiKeys.gemini = ''
+          }
+        }
+        if (state.connections?.trakt?.username === 'Neerajlovecyber') {
+          state.connections.trakt = {
+            connected: false,
+            username: '',
+            scrobble: true,
+          }
+        }
+        if (state.connections?.nuvio?.email === 'neerajlovecyber@gmail.com') {
+          state.connections.nuvio = {
+            connected: false,
+            email: '',
+            profilesCount: 0,
+          }
+        }
+        return state as SettingsState
+      },
     }
   )
 )

@@ -289,10 +289,16 @@ function SettingsPage() {
                   >
                     Get a key <ExternalLink className="size-3" />
                   </a>
-                  <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                    <CircleCheck className="size-3 shrink-0" />
-                    <span className="min-w-0 truncate">{apiKeys.mdblist || 'Verified'}</span>
-                  </span>
+                  {apiKeys.mdblist.trim() ? (
+                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
+                      <CircleCheck className="size-3 shrink-0" />
+                      <span className="min-w-0 truncate">Verified</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive sm:ml-auto">
+                      Required
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="relative flex-1">
@@ -301,6 +307,7 @@ function SettingsPage() {
                       type={showMdb ? 'text' : 'password'}
                       value={apiKeys.mdblist}
                       onChange={(e) => setApiKey('mdblist', e.target.value)}
+                      placeholder="mdblist api key"
                       className="h-11 pr-10 text-sm"
                     />
                     <button
@@ -364,7 +371,7 @@ function SettingsPage() {
               <div className="flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Label htmlFor="default-tmdb" className="text-sm font-medium">
-                    TMDB API key <span className="text-destructive">*</span>
+                    TMDB Read Access Token <span className="text-destructive">*</span>
                   </Label>
                   <a
                     href="https://www.themoviedb.org/settings/api"
@@ -374,10 +381,16 @@ function SettingsPage() {
                   >
                     Get a key <ExternalLink className="size-3" />
                   </a>
-                  <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                    <CircleCheck className="size-3 shrink-0" />
-                    <span className="min-w-0 truncate">Verified</span>
-                  </span>
+                  {apiKeys.tmdb.trim() ? (
+                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
+                      <CircleCheck className="size-3 shrink-0" />
+                      <span className="min-w-0 truncate">Verified</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive sm:ml-auto">
+                      Required
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="relative flex-1">
@@ -386,7 +399,8 @@ function SettingsPage() {
                       type={showTmdb ? 'text' : 'password'}
                       value={apiKeys.tmdb}
                       onChange={(e) => setApiKey('tmdb', e.target.value)}
-                      className="h-11 pr-10 text-sm"
+                      placeholder="eyJhbGci..."
+                      className="h-11 pr-10 text-sm font-mono"
                     />
                     <button
                       type="button"
@@ -421,10 +435,12 @@ function SettingsPage() {
                   >
                     Get a key <ExternalLink className="size-3" />
                   </a>
-                  <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                    <CircleCheck className="size-3 shrink-0" />
-                    <span className="min-w-0 truncate">Gemini</span>
-                  </span>
+                  {apiKeys.gemini.trim() ? (
+                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
+                      <CircleCheck className="size-3 shrink-0" />
+                      <span className="min-w-0 truncate">Configured</span>
+                    </span>
+                  ) : null}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="relative flex-1">
@@ -1504,7 +1520,7 @@ function SettingsPage() {
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Signed in as</p>
                     <p className="truncate text-sm font-medium text-foreground">
-                      neerajlovecyber@gmail.com
+                      {connections.nuvio.email || 'user@example.com'}
                     </p>
                   </div>
                 </div>
