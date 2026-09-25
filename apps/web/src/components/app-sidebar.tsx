@@ -18,9 +18,9 @@ import {
   CircleHelpIcon,
   SearchIcon,
   Home,
-  Wand2,
   Tag,
   VenetianMask,
+  Palette,
 } from "lucide-react"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -43,10 +43,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/dashboard",
     },
     {
-      title: "Wizard",
-      url: "/dashboard",
-      icon: <Wand2 />,
-      isActive: pathname.startsWith("/wizard"),
+      title: "Cover Studio",
+      url: "/studio",
+      icon: <Palette />,
+      isActive: pathname === "/studio" || pathname.startsWith("/studio"),
     },
     {
       title: "Badges",

@@ -42,6 +42,22 @@ badgesRouter.get('/resolve/:presetId/:ratingKey', async (c) => {
   return c.json({ presetId, ratingKey, imageUrl })
 })
 
+// Real-time stream title badge parser (evaluated on TV / Web preview)
+badgesRouter.post('/parse', async (c) => {
+  const { presetId, title } = await c.req.json().catch(() => ({}))
+  if (!presetId || !title) {
+    return c.json({ error: 'presetId and title are required' }, 400)
+  }
+
+  const matches = await badgesEngineService.parseStreamTitle(presetId, title)
+  return c.json({
+    presetId,
+    title,
+    count: matches.length,
+    matches,
+  })
+})
+
 // Public export endpoint returning raw JSON ready for Nuvio TV / Mobile Settings -> Badges import
 badgesRouter.get('/export/:presetId', async (c) => {
   const presetParam = c.req.param('presetId') || ''

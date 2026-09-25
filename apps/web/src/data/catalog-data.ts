@@ -57,7 +57,6 @@ export interface CoverSetInfo {
   tileShape?: 'POSTER' | 'LANDSCAPE' | 'SQUARE'
   description?: string
   dynamic?: boolean
-  supporterOnly?: boolean
 }
 
 import xperienceRaw from './xperience-catalogs.json'

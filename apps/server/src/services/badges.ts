@@ -105,6 +105,42 @@ export class BadgesEngineService {
     return null
   }
 
+  /**
+   * Evaluates a stream title against all patterns in a badge preset
+   * and returns matched badges with their groups and graphic URLs.
+   */
+  async parseStreamTitle(
+    presetId: string,
+    streamTitle: string
+  ): Promise<Array<{ id: string; name: string; groupId: string; imageURL?: string }>> {
+    const set = await this.getBadgeSetById(presetId)
+    if (!set || !set.badges) return []
+
+    const matches: Array<{ id: string; name: string; groupId: string; imageURL?: string }> = []
+    const seenGroups = new Set<string>()
+
+    for (const b of set.badges) {
+      if (!b.pattern || b.isEnabled === false) continue
+      try {
+        const cleanPattern = b.pattern.replace(/\(\?[a-z]+\)/gi, '')
+        const rx = new RegExp(cleanPattern, 'i')
+        if (rx.test(streamTitle)) {
+          matches.push({
+            id: b.id,
+            name: b.name,
+            groupId: b.groupId || 'other',
+            imageURL: b.imageURL,
+          })
+          if (b.groupId) seenGroups.add(b.groupId)
+        }
+      } catch {
+        // ignore regex error
+      }
+    }
+
+    return matches
+  }
+
   clearCache(): void {
     this.cachedBadgeSets = null
     this.badgeImageCache.clear()

@@ -17,6 +17,7 @@ import { Route as AuthenticatedAvatarsRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedBadgesRouteImport } from './routes/_authenticated/badges'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
 import { Route as AuthenticatedWizardProfileIdRouteImport } from './routes/_authenticated/wizard.$profileId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -58,6 +59,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedWizardProfileIdRoute =
   AuthenticatedWizardProfileIdRouteImport.update({
     id: '/wizard/$profileId',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/badges': typeof AuthenticatedBadgesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/studio': typeof AuthenticatedStudioRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesByTo {
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/badges': typeof AuthenticatedBadgesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/studio': typeof AuthenticatedStudioRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesById {
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/_authenticated/badges': typeof AuthenticatedBadgesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRouteTypes {
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/badges'
     | '/dashboard'
     | '/settings'
+    | '/studio'
     | '/wizard/$profileId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/badges'
     | '/dashboard'
     | '/settings'
+    | '/studio'
     | '/wizard/$profileId'
   id:
     | '__root__'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/_authenticated/badges'
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
+    | '/_authenticated/studio'
     | '/_authenticated/wizard/$profileId'
   fileRoutesById: FileRoutesById
 }
@@ -196,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/studio': {
+      id: '/_authenticated/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/wizard/$profileId': {
       id: '/_authenticated/wizard/$profileId'
       path: '/wizard/$profileId'
@@ -211,6 +230,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedBadgesRoute: typeof AuthenticatedBadgesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
   AuthenticatedWizardProfileIdRoute: typeof AuthenticatedWizardProfileIdRoute
 }
 
@@ -219,6 +239,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBadgesRoute: AuthenticatedBadgesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStudioRoute: AuthenticatedStudioRoute,
   AuthenticatedWizardProfileIdRoute: AuthenticatedWizardProfileIdRoute,
 }
 

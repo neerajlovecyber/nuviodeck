@@ -20,6 +20,7 @@ export const config = {
   ai: {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     groqApiKey: process.env.GROQ_API_KEY || '',
+    deepseekApiKey: process.env.DEEPSEEK_API_KEY || '',
   },
   rpdb: {
     apiKey: process.env.RPDB_API_KEY || 't0-free-rpdb',

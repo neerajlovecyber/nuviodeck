@@ -295,6 +295,35 @@ catalogsRouter.get('/:profileId/manifest.json', async (c) => {
   return c.json(manifest)
 })
 
+// Fusion Widgets JSON export for smart TV and home screen widgets
+catalogsRouter.get('/:profileId/fusion/widgets.json', async (c) => {
+  const profileId = c.req.param('profileId')
+  const { name, rows } = await getProfileConfig(profileId)
+
+  const widgets = rows.map((r: any, idx: number) => ({
+    id: `widget-${r.id || idx}`,
+    title: r.name || r.id,
+    type: 'catalog',
+    source: {
+      type: r.type || 'movie',
+      id: r.id,
+    },
+    position: idx,
+  }))
+
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  return c.json({
+    widgets: {
+      exportType: 'fusionWidgets',
+      exportVersion: 1,
+      profileName: name,
+      widgets,
+    },
+    unresolvedSources: [],
+  })
+})
+
 // ----------------------------------------------------
 // Catalog Registry & Categories (Single Source of Truth)
 // ----------------------------------------------------

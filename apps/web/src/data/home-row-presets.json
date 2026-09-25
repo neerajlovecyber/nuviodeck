@@ -1,0 +1,168 @@
+{
+  "balanced": {
+    "id": "balanced",
+    "label": "Everyday Mix",
+    "hint": "A little of everything: trending, popular, and one big streamer.",
+    "catalog_ids": [
+      "recs_movies_for_you",
+      "recs_series_for_you",
+      "snoak_top100_movies",
+      "snoak_top100_series",
+      "trending_movies",
+      "trending_series",
+      "now_playing_movies",
+      "on_the_air_series",
+      "streaming_netflix_movies",
+      "streaming_netflix_series",
+      "genre_action_movies"
+    ]
+  },
+  "movie_lover": {
+    "id": "movie_lover",
+    "label": "Cinephile",
+    "hint": "Movie-forward feed: discovery, prestige studios, Awards & Canon.",
+    "catalog_ids": [
+      "recs_movies_for_you",
+      "trending_movies",
+      "snoak_top100_movies",
+      "now_playing_movies",
+      "upcoming_movies",
+      "awards_imdb_top250_movies",
+      "awards_letterboxd_top250",
+      "awards_criterion",
+      "awards_oscars_winners",
+      "studio_a24_movies",
+      "studio_marvel_movies",
+      "themed_mindfuck",
+      "genre_action_movies",
+      "genre_scifi_movies"
+    ]
+  },
+  "series_binger": {
+    "id": "series_binger",
+    "label": "TV Marathon",
+    "hint": "Series-only feed tuned for what is currently airing and what is next.",
+    "catalog_ids": [
+      "recs_series_for_you",
+      "trending_series",
+      "snoak_top100_series",
+      "on_the_air_series",
+      "airing_today_series",
+      "awards_imdb_top250_series",
+      "genre_limited_series",
+      "snoak_netflix_top10_series",
+      "snoak_hbo_top10_series",
+      "snoak_prime_top10_series",
+      "snoak_apple_top10_series",
+      "snoak_disney_top10_series",
+      "snoak_paramount_top10_series"
+    ]
+  },
+  "quality": {
+    "id": "quality",
+    "label": "Curated",
+    "hint": "Tighter, slower feed leaning on critic darlings and decade staples.",
+    "catalog_ids": [
+      "top_rated_movies",
+      "top_rated_series",
+      "awards_imdb_top250_movies",
+      "awards_letterboxd_top250",
+      "awards_criterion",
+      "themed_rt_best_90s",
+      "themed_rt_best_00s",
+      "studio_a24_movies",
+      "themed_mindfuck",
+      "themed_plot_twists",
+      "decade_2010s_movies",
+      "decade_1990s_movies"
+    ]
+  },
+  "lite_streaming": {
+    "id": "lite_streaming",
+    "label": "Lite Streaming",
+    "hint": "Just the weekly trending picks across the major streamers.",
+    "catalog_ids": [
+      "trending_movies",
+      "trending_series",
+      "snoak_netflix_top10_movies",
+      "snoak_netflix_top10_series",
+      "snoak_prime_top10_movies",
+      "snoak_prime_top10_series",
+      "snoak_disney_top10_movies",
+      "snoak_disney_top10_series",
+      "snoak_apple_top10_movies",
+      "snoak_apple_top10_series"
+    ]
+  },
+  "casual": {
+    "id": "casual",
+    "label": "Weekend",
+    "hint": "Trending blockbusters, light comedies, and weekend crowd-pleasers.",
+    "catalog_ids": [
+      "recs_movies_for_you",
+      "recs_series_for_you",
+      "trending_movies",
+      "trending_series",
+      "snoak_top100_movies",
+      "now_playing_movies",
+      "airing_today_series",
+      "genre_action_movies",
+      "genre_comedy_movies",
+      "genre_drama_series",
+      "themed_rotten_tomatoes_movies",
+      "awards_imdb_top250_movies"
+    ]
+  },
+  "anime_fan": {
+    "id": "anime_fan",
+    "label": "Anime Fan",
+    "hint": "Anime-first feed covering seasonal hits, classics, and studio powerhouses.",
+    "catalog_ids": [
+      "anime_trending_movies",
+      "anime_trending_series",
+      "anime_best_movies",
+      "anime_best_series",
+      "anime_ghibli",
+      "kb_crunchyroll_top50_series",
+      "streaming_hidive_series",
+      "genre_kdrama_popular_series",
+      "genre_kdrama_latest_series"
+    ]
+  },
+  "kids_profile": {
+    "id": "kids_profile",
+    "label": "Kids Profile",
+    "hint": "Wholesome, family-tested animation, live-action adventures, and classics.",
+    "catalog_ids": [
+      "kids_trending_movies",
+      "kids_trending_series",
+      "kids_top_movies",
+      "kids_family_movies",
+      "kids_family_series",
+      "kids_disney_movies",
+      "kids_animated_series",
+      "studio_pixar_movies",
+      "anime_ghibli",
+      "themed_halloween_kids"
+    ]
+  },
+  "classics_lover": {
+    "id": "classics_lover",
+    "label": "Classics Lover",
+    "hint": "Golden age Hollywood, landmark world cinema, and era-defining masterpieces.",
+    "catalog_ids": [
+      "awards_imdb_top250_movies",
+      "awards_afi_top100",
+      "awards_letterboxd_top250",
+      "awards_criterion",
+      "awards_oscars_winners",
+      "decade_1950s_and_before_movies",
+      "decade_1960s_movies",
+      "decade_1970s_movies",
+      "decade_1980s_movies",
+      "decade_1990s_movies",
+      "director_hitchcock_movies",
+      "director_kubrick_movies"
+    ]
+  }
+}

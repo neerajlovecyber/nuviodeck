@@ -430,4 +430,12 @@ export class TmdbService {
 
     return meta
   }
+
+  async getPublicList(listId: string): Promise<any | null> {
+    try {
+      return await this.request<any>(`/list/${listId}`)
+    } catch {
+      return null
+    }
+  }
 }

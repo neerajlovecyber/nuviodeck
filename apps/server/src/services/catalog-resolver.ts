@@ -2,9 +2,16 @@ import { TmdbService } from './tmdb'
 import { MdbListService } from './mdblist'
 import { AiSearchService } from './ai-search'
 import { isMovieReleasedDigitally } from './release-filter'
+import {
+  resolveRatingCountry,
+  buildCertificationFilter,
+  buildCategoryExclusionsFilter,
+  CATEGORY_FILTER_MAP,
+  type ExcludedCategory,
+} from './ratings-filter'
 import { db } from '../db'
-import { accountConnections, playbackSessions } from '../db/schema'
-import { eq } from 'drizzle-orm'
+import { accountConnections, playbackSessions, deckProfiles } from '../db/schema'
+import { eq, desc } from 'drizzle-orm'
 import { tmdbAccountService } from './integrations/tmdb-account'
 import { traktService } from './integrations/trakt'
 import { playbackTrackerService } from './playback-tracker'
@@ -30,11 +37,15 @@ export interface CatalogResolveOptions {
   hideAdult?: boolean
   excludeUnreleased?: boolean
   moviesDigitalOnly?: boolean
+  excludePreDigital?: boolean
+  ratingCountry?: string
   ageRating?: string
   maxRating?: string
   qualityFloor?: 'any' | 'good' | 'great'
   originCountries?: string | string[]
   excludeCountries?: string | string[]
+  excludeCategories?: string[]
+  releaseDelayHours?: number
   hideWatched?: boolean
   hideCaughtUp?: boolean
   seriesEpisodeSource?: 'tvdb' | 'tmdb'
@@ -344,6 +355,42 @@ export class CatalogResolver {
     options?: CatalogResolveOptions
   ): Promise<any[]> {
     const page = options?.page || 1
+
+    // Support 1: Merged Catalogs (e.g. merged:streaming_netflix_movies,streaming_prime_movies)
+    if (catalogId.startsWith('merged:')) {
+      const childIds = catalogId
+        .replace('merged:', '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+
+      const childResults = await Promise.all(
+        childIds.map((cid) => this.resolveCatalog(cid, type, options).catch(() => []))
+      )
+
+      const seenIds = new Set<string>()
+      const merged: any[] = []
+      const maxLen = Math.max(...childResults.map((r) => r.length), 0)
+
+      for (let i = 0; i < maxLen; i++) {
+        for (const res of childResults) {
+          if (res[i] && !seenIds.has(res[i].id)) {
+            seenIds.add(res[i].id)
+            merged.push(res[i])
+          }
+        }
+      }
+
+      return merged
+    }
+
+    // Support 2: Custom MDBList Lists (e.g. custom_mdblist_snoak_todays_most_popular_movies)
+    if (catalogId.startsWith('custom_mdblist_')) {
+      const slug = catalogId.replace('custom_mdblist_', '').replace(/_/g, '/')
+      const mdblistService = new MdbListService(options?.mdblistKey)
+      return await mdblistService.fetchListItems(slug, { page, rpdbKey: options?.rpdbKey })
+    }
+
     const tmdb = new TmdbService({
       apiToken: options?.tmdbToken,
       language: options?.language,
@@ -398,25 +445,29 @@ export class CatalogResolver {
         : options.excludeCountries
     }
 
-    // Max rating certification mapping (US standard)
+    // International Max Rating certification mapping
     const maxRating = options?.maxRating || options?.ageRating
     if (maxRating && maxRating !== 'NONE' && maxRating !== 'any') {
-      discoverParams.certification_country = 'US'
-      switch (maxRating) {
-        case 'G':
-          discoverParams.certification = isMovie ? 'G' : 'TV-G'
-          break
-        case 'PG':
-          discoverParams.certification = isMovie ? 'G|PG' : 'TV-G|TV-PG'
-          break
-        case 'PG-13':
-          discoverParams.certification = isMovie ? 'G|PG|PG-13' : 'TV-G|TV-PG|TV-14'
-          break
-        case 'R':
-          discoverParams.certification = isMovie ? 'G|PG|PG-13|R' : 'TV-G|TV-PG|TV-14|TV-MA'
-          break
-        default:
-          discoverParams.certification = maxRating
+      const country = resolveRatingCountry(options?.ratingCountry, options?.timezone)
+      const certFilter = buildCertificationFilter(maxRating, country, isMovie)
+      if (certFilter) {
+        if (certFilter.certification_country) discoverParams.certification_country = certFilter.certification_country
+        if (certFilter.certification) discoverParams.certification = certFilter.certification
+      }
+    }
+
+    // Category Exclusions (genres and keywords)
+    if (options?.excludeCategories && options.excludeCategories.length > 0) {
+      const catFilter = buildCategoryExclusionsFilter(options.excludeCategories, isMovie)
+      if (catFilter.without_genres) {
+        discoverParams.without_genres = discoverParams.without_genres
+          ? `${discoverParams.without_genres},${catFilter.without_genres}`
+          : catFilter.without_genres
+      }
+      if (catFilter.without_keywords) {
+        discoverParams.without_keywords = discoverParams.without_keywords
+          ? `${discoverParams.without_keywords},${catFilter.without_keywords}`
+          : catFilter.without_keywords
       }
     }
 
@@ -466,7 +517,82 @@ export class CatalogResolver {
       if (items.length > 0) return items
     }
 
-    // 3. AI Generated Catalogs
+    // 3. Custom AI Catalogs (ai_catalog_${uuid}_movies / ai_catalog_${uuid}_series)
+    if (catalogId.startsWith('ai_catalog_')) {
+      const parts = catalogId.split('_')
+      const kindStr = parts[parts.length - 1]
+      const promptKind = (kindStr === 'series' ? 'series' : 'movie') as 'movie' | 'series'
+      let prompt = (options as any)?.aiCatalogPrompt || (options as any)?.prompt || ''
+      let rev = (options as any)?.rev || 0
+
+      if (!prompt && options?.profileId) {
+        try {
+          const [prof] = await db
+            .select()
+            .from(deckProfiles)
+            .where(eq(deckProfiles.id, options.profileId))
+            .limit(1)
+          if (prof?.configJson) {
+            const parsed = JSON.parse(prof.configJson)
+            const catEntry =
+              parsed.ai_catalogs?.[catalogId] ||
+              Object.values(parsed.ai_catalogs || {}).find((c: any) => c.id === catalogId)
+            if (catEntry && typeof catEntry === 'object' && 'prompt' in catEntry) {
+              prompt = (catEntry as any).prompt
+              rev = (catEntry as any).rev || 0
+            }
+          }
+        } catch {}
+      }
+
+      if (!prompt) {
+        prompt = isMovie ? 'Curated Acclaimed Movies' : 'Curated Acclaimed TV Series'
+      }
+
+      return aiSearch.generateAiCatalog(prompt, promptKind, 75, rev, {
+        rpdbKey: options?.rpdbKey,
+        posterConfig: options?.posterConfig,
+        language: options?.language,
+        model: options?.aiModel,
+        provider: options?.aiProvider,
+        geminiKey: options?.geminiKey,
+        groqKey: options?.groqKey,
+      })
+    }
+
+    // 4. "Because You Watched" Dynamic AI Recommendations
+    if (
+      catalogId === 'ai_recommendations' ||
+      catalogId === 'because_you_watched' ||
+      catalogId === 'because_you_watched_movies' ||
+      catalogId === 'because_you_watched_series'
+    ) {
+      let watchedTitles: string[] = []
+      if (options?.profileId) {
+        try {
+          const sessions = await db
+            .select()
+            .from(playbackSessions)
+            .where(eq(playbackSessions.profileId, options.profileId))
+            .orderBy(desc(playbackSessions.updatedAt))
+            .limit(5)
+          watchedTitles = sessions.map((s) => s.title).filter((t): t is string => Boolean(t))
+        } catch {}
+      }
+
+      return aiSearch.generateRecommendations(watchedTitles, isMovie ? 'movie' : 'series', {
+        excludeCategories: (options as any)?.excludeCategories,
+        rpdbKey: options?.rpdbKey,
+        posterConfig: options?.posterConfig,
+        language: options?.language,
+        model: options?.aiModel,
+        provider: options?.aiProvider,
+        geminiKey: options?.geminiKey,
+        groqKey: options?.groqKey,
+      })
+    }
+
+    // 5. Presets AI Catalogs from catalog map
     if (xpCat?.source === 'gemini' || xpCat?.requires?.includes('ai')) {
       const topic = xpCat.label || (isMovie ? 'Recommended Movies' : 'Recommended TV Shows')
       return aiSearch.searchWithAi(topic, type, {
@@ -710,14 +836,31 @@ export class CatalogResolver {
         }
       }
 
-      // Apply digital release filter if enabled for movies
-      if (isMovie && options?.moviesDigitalOnly && rawResults.length > 0) {
+      // Apply digital release filter if enabled for movies (exclude_pre_digital)
+      if (isMovie && (options?.moviesDigitalOnly || options?.excludePreDigital) && rawResults.length > 0) {
         const filtered: any[] = []
         for (const item of rawResults) {
           const isDigital = await isMovieReleasedDigitally(item.id, options.tmdbToken, options.proxyUrl)
           if (isDigital) filtered.push(item)
         }
         rawResults = filtered
+      }
+
+      // Post-filter excluded categories (if returned by lists or charts)
+      if (options?.excludeCategories && options.excludeCategories.length > 0 && rawResults.length > 0) {
+        const excludedGenreIds = new Set<number>()
+        for (const cat of options.excludeCategories) {
+          const cfg = CATEGORY_FILTER_MAP[cat as ExcludedCategory]
+          if (!cfg) continue
+          const g = isMovie ? cfg.movieGenre : cfg.tvGenre
+          if (g !== null) excludedGenreIds.add(g)
+        }
+        if (excludedGenreIds.size > 0) {
+          rawResults = rawResults.filter((item) => {
+            const itemGenres: number[] = item.genre_ids || (item.genres || []).map((g: any) => g.id) || []
+            return !itemGenres.some((gid) => excludedGenreIds.has(gid))
+          })
+        }
       }
 
       // Apply hideWatched and hideCaughtUp filters (skips search and personal lists)

@@ -27,6 +27,15 @@ import { streamingProvidersRouter } from './routes/streaming-providers'
 import { avatarsRouter } from './routes/avatars'
 import { proxyRouter } from './routes/proxy'
 import { subtitlesRouter } from './routes/subtitles'
+import { streamBridgeRouter } from './routes/stream-bridge'
+import { animeRouter } from './routes/anime'
+import { addonManagerRouter } from './routes/addon-manager'
+import { customListsRouter } from './routes/custom-lists'
+import { coverStudioRouter, coverSetsPopularityRouter } from './routes/cover-studio'
+import { verifyRouter } from './routes/verify'
+import { profileRouter } from './routes/profile'
+import { supportRouter } from './routes/support'
+import { statusRouter } from './routes/status'
 
 const app = new Hono()
 
@@ -100,6 +109,16 @@ app.get('/api/health', (c) => {
       progress: '/api/progress',
       streamingProviders: '/api/streaming-providers',
       avatars: '/api/avatars',
+      streamBridge: '/api/stream-bridge',
+      anime: '/api/anime',
+      addonManager: '/api/addon-manager',
+      customLists: '/api/custom-lists',
+      coverStudio: '/api/cover-studio',
+      coverSets: '/api/cover-sets',
+      verify: '/api/verify',
+      profile: '/api/profile',
+      support: '/api/support',
+      status: '/api/status',
     },
   })
 })
@@ -140,6 +159,34 @@ app.route('/api/proxy', proxyRouter)
 
 // 12. Subtitles Provider Engine
 app.route('/api/subtitles', subtitlesRouter)
+
+// 13. Stream Bridge & Multi-Scraper Debrid Hub
+app.route('/api/stream-bridge', streamBridgeRouter)
+
+// 14. Anime Compatibility & ID Translation Suite
+app.route('/api/anime', animeRouter)
+
+// 15. Addon Manager & Multi-Device Failover Engine
+app.route('/api/addon-manager', addonManagerRouter)
+
+// 16. Custom Lists & Live Catalog Resolvers
+app.route('/api/custom-lists', customListsRouter)
+
+// 17. Cover Studio Procedural Engine & Community Sets
+app.route('/api/cover-studio', coverStudioRouter)
+app.route('/api/cover-sets', coverSetsPopularityRouter)
+
+// 18. Service Key Verification & AI Model Detection
+app.route('/api/verify', verifyRouter)
+
+// 19. Profile Discovery, Previews, AI Row Titles & Jellyfin
+app.route('/api/profile', profileRouter)
+
+// 20. Support Helpdesk & Threaded Tickets (Free for all)
+app.route('/api/support', supportRouter)
+
+// 21. Real-Time Service Status & Outage Incident Tracker
+app.route('/api/status', statusRouter)
 
 // Legacy / Users table endpoints
 app.get('/api/users', async (c) => {
