@@ -1,7 +1,7 @@
 import { TmdbService } from './tmdb'
 import { MdbListService } from './mdblist'
 import { AiSearchService } from './ai-search'
-import { isMovieReleasedDigitally } from './release-filter'
+import { isMovieReleasedDigitally, isTvEpisodeDelayed } from './release-filter'
 import {
   resolveRatingCountry,
   buildCertificationFilter,
@@ -865,6 +865,16 @@ export class CatalogResolver {
           if (isDigital) filtered.push(item)
         }
         rawResults = filtered
+      }
+
+      // Apply TV episode release air delay (release_delay_hours)
+      if (!isMovie && options?.releaseDelayHours && options.releaseDelayHours > 0 && rawResults.length > 0) {
+        const delayHours = options.releaseDelayHours
+        rawResults = rawResults.filter((item) => {
+          const dateStr = item.first_air_date || item.air_date || item.release_date
+          if (!dateStr) return true
+          return !isTvEpisodeDelayed(dateStr, delayHours)
+        })
       }
 
       // Post-filter excluded categories (if returned by lists or charts)

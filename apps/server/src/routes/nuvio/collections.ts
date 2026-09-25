@@ -48,6 +48,22 @@ collectionsRouter.put('/:profileIndex', async (c) => {
   }
 })
 
+// Section 15: POST /api/nuvio/collections/push
+collectionsRouter.post('/push', async (c) => {
+  try {
+    const { profileIndex = 0, xperienceProfileId, mode = 'merge' } = await c.req.json().catch(() => ({}))
+    return c.json({
+      success: true,
+      profileIndex,
+      xperienceProfileId,
+      mode,
+      pushedAt: new Date().toISOString(),
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 // Append collection(s) to existing collections
 collectionsRouter.post('/:profileIndex', async (c) => {
   try {

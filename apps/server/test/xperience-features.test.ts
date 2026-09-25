@@ -106,4 +106,47 @@ describe('Xperience-Derived Endpoints & Engines', () => {
     const data = await res.json()
     expect(data).toBeDefined()
   })
+
+  it('5. International Ratings Certification Matrix Normalization', async () => {
+    const { buildCertificationFilter, resolveRatingCountry } = await import(
+      '../src/services/ratings-filter'
+    )
+
+    // US G/PG/PG-13/R tiers
+    const usG = buildCertificationFilter('G', 'US', true)
+    expect(usG?.certification_country).toBe('US')
+    expect(usG?.certification).toContain('G')
+
+    const usR = buildCertificationFilter('R', 'US', true)
+    expect(usR?.certification).toContain('R')
+    expect(usR?.certification).toContain('PG-13')
+    expect(usR?.certification).not.toContain('NC-17')
+
+    // UK BBFC certification normalization
+    const uk15 = buildCertificationFilter('15', 'GB', true)
+    expect(uk15?.certification_country).toBe('GB')
+    expect(uk15?.certification).toContain('15')
+    expect(uk15?.certification).toContain('12')
+    expect(uk15?.certification).not.toContain('18')
+
+    // Region resolution from timezone
+    expect(resolveRatingCountry(undefined, 'Europe/London')).toBe('GB')
+    expect(resolveRatingCountry(undefined, 'America/New_York')).toBe('US')
+    expect(resolveRatingCountry(undefined, 'Asia/Kolkata')).toBe('IN')
+  })
+
+  it('6. TV Episode Release Air Delay Filter', async () => {
+    const { isTvEpisodeDelayed } = await import('../src/services/release-filter')
+
+    // An episode that aired 2 hours ago with a 24-hour delay requirement -> DELAYED
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    expect(isTvEpisodeDelayed(twoHoursAgo, 24)).toBe(true)
+
+    // An episode that aired 48 hours ago with a 24-hour delay requirement -> ALLOWED
+    const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    expect(isTvEpisodeDelayed(twoDaysAgo, 24)).toBe(false)
+
+    // Delay = 0 -> never delayed
+    expect(isTvEpisodeDelayed(twoHoursAgo, 0)).toBe(false)
+  })
 })

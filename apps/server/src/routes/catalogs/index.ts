@@ -108,8 +108,11 @@ async function getProfileConfig(profileId?: string) {
         hideAdult: cfg.preferences?.hideAdult ?? true,
         excludeUnreleased: cfg.preferences?.excludeUnreleased ?? false,
         moviesDigitalOnly: cfg.preferences?.moviesDigitalOnly ?? false,
+        excludePreDigital: cfg.preferences?.excludePreDigital ?? cfg.preferences?.moviesDigitalOnly ?? false,
         ageRating: cfg.preferences?.ageRating || 'NONE',
         maxRating: cfg.preferences?.maxRating || cfg.preferences?.ageRating || 'any',
+        ratingCountry: cfg.preferences?.ratingCountry,
+        releaseDelayHours: cfg.preferences?.releaseDelayHours ?? 0,
         qualityFloor: cfg.preferences?.qualityFloor || 'any',
         originCountries: cfg.preferences?.originCountries,
         excludeCountries: cfg.preferences?.excludeCountries,
@@ -296,6 +299,33 @@ catalogsRouter.get('/:profileId/manifest.json', async (c) => {
 })
 
 // Fusion Widgets JSON export for smart TV and home screen widgets
+catalogsRouter.get('/fusion/widgets.json', async (c) => {
+  const { name, rows } = await getProfileConfig(undefined)
+
+  const widgets = rows.map((r: any, idx: number) => ({
+    id: `widget-${r.id || idx}`,
+    title: r.name || r.id,
+    type: 'catalog',
+    source: {
+      type: r.type || 'movie',
+      id: r.id,
+    },
+    position: idx,
+  }))
+
+  c.header('Content-Type', 'application/json')
+  c.header('Access-Control-Allow-Origin', '*')
+  return c.json({
+    widgets: {
+      exportType: 'fusionWidgets',
+      exportVersion: 1,
+      profileName: name || 'Default Profile',
+      widgets,
+    },
+    unresolvedSources: [],
+  })
+})
+
 catalogsRouter.get('/:profileId/fusion/widgets.json', async (c) => {
   const profileId = c.req.param('profileId')
   const { name, rows } = await getProfileConfig(profileId)

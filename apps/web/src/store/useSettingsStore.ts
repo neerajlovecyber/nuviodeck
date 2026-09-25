@@ -47,6 +47,7 @@ export interface SettingsState {
     animeStreamId: string
     animeTitles: string
     maxRating: string
+    ratingCountry: string
     qualityFloor: string
     originCountries: string[]
     excludeCountries: string[]
@@ -54,6 +55,7 @@ export interface SettingsState {
     hideCaughtUp: boolean
     excludeUnreleased: boolean
     preDigitalOnly: boolean
+    releaseDelayHours: number
     hideAdult: boolean
     aiProvider: string
     aiModel: string
@@ -225,6 +227,7 @@ export const useSettingsStore = create<SettingsState>()(
         animeStreamId: 'IMDb (tt2098220:2:49)',
         animeTitles: 'Default (My Hero Academia)',
         maxRating: 'any',
+        ratingCountry: 'US',
         qualityFloor: 'Good (6.5+ rating, 100+ votes)',
         originCountries: [],
         excludeCountries: [],
@@ -232,6 +235,7 @@ export const useSettingsStore = create<SettingsState>()(
         hideCaughtUp: true,
         excludeUnreleased: false,
         preDigitalOnly: true,
+        releaseDelayHours: 0,
         hideAdult: false,
         aiProvider: 'Google Gemini',
         aiModel: 'gemini-3.5-flash-lite',

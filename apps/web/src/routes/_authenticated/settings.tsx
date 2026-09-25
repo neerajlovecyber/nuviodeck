@@ -69,11 +69,15 @@ import {
   Link2,
   Link2Off,
   Globe,
+  Send,
+  Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store/useStore'
 import { useSettingsStore, PosterProvider } from '@/store/useSettingsStore'
 import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
+import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
+import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -217,6 +221,8 @@ function SettingsPage() {
 
   // Password Visibility States
   const [traktDialogOpen, setTraktDialogOpen] = React.useState(false)
+  const [tmdbDialogOpen, setTmdbDialogOpen] = React.useState(false)
+  const [simklDialogOpen, setSimklDialogOpen] = React.useState(false)
   const [showMdb, setShowMdb] = React.useState(false)
   const [showTmdb, setShowTmdb] = React.useState(false)
   const [showGemini, setShowGemini] = React.useState(false)
@@ -1029,6 +1035,74 @@ function SettingsPage() {
                 </Label>
               </div>
 
+              {/* Parental Ratings & International Certification Matrix */}
+              <div className="grid gap-4 sm:grid-cols-2 pt-3 border-t">
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium">Ratings standard & region</Label>
+                  <select
+                    value={profileDefaults.ratingCountry || 'US'}
+                    onChange={(e) => setProfileDefault('ratingCountry', e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                  >
+                    <option value="US" className="bg-popover text-popover-foreground">United States (MPAA / FCC)</option>
+                    <option value="GB" className="bg-popover text-popover-foreground">United Kingdom (BBFC)</option>
+                    <option value="CA" className="bg-popover text-popover-foreground">Canada (CHVRS)</option>
+                    <option value="AU" className="bg-popover text-popover-foreground">Australia (ACB)</option>
+                    <option value="DE" className="bg-popover text-popover-foreground">Germany (FSK)</option>
+                    <option value="FR" className="bg-popover text-popover-foreground">France (CNC)</option>
+                    <option value="IT" className="bg-popover text-popover-foreground">Italy (MiC)</option>
+                    <option value="ES" className="bg-popover text-popover-foreground">Spain (ICAA)</option>
+                    <option value="BR" className="bg-popover text-popover-foreground">Brazil (ClassInd)</option>
+                    <option value="IN" className="bg-popover text-popover-foreground">India (CBFC)</option>
+                    <option value="VN" className="bg-popover text-popover-foreground">Vietnam</option>
+                  </select>
+                  <span className="text-[11px] text-muted-foreground">
+                    Normalizes age certifications to this region's cinema standards.
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium">Maximum age rating</Label>
+                  <select
+                    value={profileDefaults.maxRating || 'any'}
+                    onChange={(e) => setProfileDefault('maxRating', e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                  >
+                    <option value="any" className="bg-popover text-popover-foreground">No Restriction (All Content)</option>
+                    <option value="G" className="bg-popover text-popover-foreground">G / TV-Y (All Ages / Young Children)</option>
+                    <option value="PG" className="bg-popover text-popover-foreground">PG / TV-PG (Parental Guidance)</option>
+                    <option value="PG-13" className="bg-popover text-popover-foreground">PG-13 / 12+ (Teens & Pre-Adults)</option>
+                    <option value="R" className="bg-popover text-popover-foreground">R / 15+ / 16+ (Mature Audiences)</option>
+                    <option value="NC-17" className="bg-popover text-popover-foreground">NC-17 / 18+ (Adults Only)</option>
+                  </select>
+                  <span className="text-[11px] text-muted-foreground">
+                    Excludes any catalog titles classified above this severity tier.
+                  </span>
+                </div>
+              </div>
+
+              {/* Release Air Delay (hours) */}
+              <div className="flex flex-col gap-2 pt-3 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">TV episode air delay</Label>
+                  <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-muted text-foreground">
+                    {profileDefaults.releaseDelayHours || 0} hours
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="168"
+                  step="6"
+                  value={profileDefaults.releaseDelayHours || 0}
+                  onChange={(e) => setProfileDefault('releaseDelayHours', Number(e.target.value))}
+                  className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
+                />
+                <span className="text-[11px] text-muted-foreground">
+                  Delays newly aired episodes (0–168 hrs / 7 days) on home rows so debrid torrent caches and high-quality subtitle packs have time to populate.
+                </span>
+              </div>
+
               {/* AI Section */}
               <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t">
                 <div className="flex flex-col gap-2">
@@ -1188,17 +1262,49 @@ function SettingsPage() {
                   </div>
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setConnection('nuvio', { connected: false })
-                    toast.info('Nuvio account unlinked')
-                  }}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  <Link2Off className="size-4" /> Unlink
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/nuvio/collections/push', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ profileIndex: 0, mode: 'merge' }),
+                        })
+                        if (res.ok) toast.success('Collections pushed to Nuvio TV!')
+                        else toast.error('Failed to push collections')
+                      } catch {
+                        toast.error('Could not reach Nuvio Sync service')
+                      }
+                    }}
+                    className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                  >
+                    <Send className="size-3.5" /> Push to TV
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      window.open('/fusion/widgets.json', '_blank')
+                    }}
+                    className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                  >
+                    <Download className="size-3.5" /> Fusion Export
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setConnection('nuvio', { connected: false })
+                      toast.info('Nuvio account unlinked')
+                    }}
+                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:text-destructive cursor-pointer"
+                  >
+                    <Link2Off className="size-4" /> Unlink
+                  </Button>
+                </div>
               </div>
             </section>
 
@@ -1229,20 +1335,42 @@ function SettingsPage() {
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={connections.tmdb.connected ? 'outline' : 'default'}
-                  onClick={() => {
-                    const next = !connections.tmdb.connected
-                    setConnection('tmdb', { connected: next, username: next ? 'TMDBUser' : '' })
-                    toast.success(next ? 'Connected TMDB account' : 'Disconnected TMDB')
-                  }}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  {connections.tmdb.connected ? <Link2Off className="size-4" /> : <Link2 className="size-4" />}
-                  {connections.tmdb.connected ? 'Disconnect' : 'Connect'}
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {connections.tmdb.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/tmdb/disconnect', { method: 'DELETE' }).catch(() => {})
+                        setConnection('tmdb', { connected: false, username: '' })
+                        toast.info('TMDB account disconnected')
+                      }}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-4" /> Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => setTmdbDialogOpen(true)}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#01b4e4] hover:bg-[#01b4e4]/90 text-slate-900 cursor-pointer font-semibold"
+                    >
+                      <Link2 className="size-4" /> Connect TMDB
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              <TmdbConnectDialog
+                open={tmdbDialogOpen}
+                onOpenChange={setTmdbDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('tmdb', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
             </section>
 
             {/* 7. Trakt account */}
@@ -1396,20 +1524,42 @@ function SettingsPage() {
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={connections.simkl.connected ? 'outline' : 'default'}
-                  onClick={() => {
-                    const next = !connections.simkl.connected
-                    setConnection('simkl', { connected: next, username: next ? 'SimklUser' : '' })
-                    toast.success(next ? 'Connected Simkl' : 'Disconnected Simkl')
-                  }}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  {connections.simkl.connected ? <Link2Off className="size-4" /> : <Link2 className="size-4" />}
-                  {connections.simkl.connected ? 'Disconnect' : 'Connect'}
-                </Button>
+                <div className="flex shrink-0 items-center gap-2">
+                  {connections.simkl.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/simkl/disconnect', { method: 'DELETE' }).catch(() => {})
+                        setConnection('simkl', { connected: false, username: '' })
+                        toast.info('Simkl account disconnected')
+                      }}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-4" /> Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => setSimklDialogOpen(true)}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white cursor-pointer font-semibold"
+                    >
+                      <Link2 className="size-4" /> Connect Simkl
+                    </Button>
+                  )}
+                </div>
               </div>
+
+              <SimklConnectDialog
+                open={simklDialogOpen}
+                onOpenChange={setSimklDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('simkl', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
             </section>
 
             {/* 9. AniList account */}

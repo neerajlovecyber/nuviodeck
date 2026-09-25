@@ -228,6 +228,22 @@ export function AddonManagerPage() {
         body: JSON.stringify({ urls }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.results) {
+          setAddons((prev) =>
+            prev.map((addon) => {
+              const r = data.results[addon.url]
+              if (r) {
+                return {
+                  ...addon,
+                  health: r.status,
+                  latencyMs: r.latencyMs,
+                }
+              }
+              return addon
+            })
+          )
+        }
         toast.success("Addon health latency rechecked across all nodes!")
       }
     } catch {

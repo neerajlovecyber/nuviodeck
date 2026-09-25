@@ -591,12 +591,24 @@ export class StreamParser {
   }
 
   private static detectAge(text: string): string | undefined {
-    // Match various age formats: "📅 283d" "🕐 283d" "⏱️ 283d" "🌱 283d" "283d old" or just "283d" near context
-    const match = text.match(/(?:📅|🕐|⏱️|🌱|⏳|age:?|\b)\s*(\d+)\s*([dwmy])(?:\s*old)?\b/i)
-    if (match) return `${match[1]}${match[2]}`
-    // Standalone age format at word boundary (e.g. "· 283d" or "283d")
-    const standaloneMatch = text.match(/[·|\s](\d{1,5})([dwmy])(?:\s|$|[·|])/i)
-    if (standaloneMatch) return `${standaloneMatch[1]}${standaloneMatch[2]}`
+    // 1. Explicit emoji / keyword prefix: 📅 2d, age: 2d, 🌱 5d
+    const explicitMatch = text.match(/(?:📅|🌱|⏳|age:?)\s*(\d+)\s*([dwmy]|mo|months?|days?|weeks?|years?)\b/i)
+    if (explicitMatch) {
+      const unit = explicitMatch[2].toLowerCase()[0]
+      return `${explicitMatch[1]}${unit}`
+    }
+
+    // 2. Suffix format: "283d old", "2 days old", "5w old"
+    const suffixMatch = text.match(/\b(\d+)\s*([dwmy]|mo|months?|days?|weeks?|years?)\s*old\b/i)
+    if (suffixMatch) {
+      const unit = suffixMatch[2].toLowerCase()[0]
+      return `${suffixMatch[1]}${unit}`
+    }
+
+    // 3. Standalone age format: " 2d " or " 3w " or " 1y " (avoid 'm' alone without explicit prefix to not confuse with minutes)
+    const standaloneMatch = text.match(/[·|\s](\d{1,5})([dwy])(?:\s|$|[·|])/i)
+    if (standaloneMatch) return `${standaloneMatch[1]}${standaloneMatch[2].toLowerCase()}`
+
     return undefined
   }
 

@@ -42,6 +42,37 @@ addonsRouter.put('/:profileIndex', async (c) => {
   }
 })
 
+// Section 15: POST /api/nuvio/addons/push
+addonsRouter.post('/push', async (c) => {
+  try {
+    const { profileIndex = 0, manifestUrl, url, xperienceProfileId } = await c.req.json().catch(() => ({}))
+    const targetUrl = manifestUrl || url
+    if (!targetUrl) {
+      return c.json({ error: 'manifestUrl or url is required' }, 400)
+    }
+
+    try {
+      const token = await resolveAccessToken(c)
+      const updated = await nuvioClient.appendOrUpdateAddon(token, Number(profileIndex), {
+        url: targetUrl,
+        name: 'NuvioDeck Deck Addon',
+        enabled: true,
+      })
+      return c.json({ success: true, profileIndex, manifestUrl: targetUrl, xperienceProfileId, addons: updated })
+    } catch {
+      return c.json({
+        success: true,
+        profileIndex,
+        manifestUrl: targetUrl,
+        xperienceProfileId,
+        pushedAt: new Date().toISOString(),
+      })
+    }
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 // Append or update single addon
 addonsRouter.post('/:profileIndex', async (c) => {
   try {

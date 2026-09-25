@@ -135,6 +135,7 @@ app.route('/api/metadata', metadataRouter)
 
 // 4. Catalogs & Stremio/Nuvio Manifest Engine
 app.route('/api/catalogs', catalogsRouter)
+app.get('/fusion/widgets.json', (c) => c.redirect('/api/catalogs/fusion/widgets.json', 307))
 
 // 5. Debrid & Streams (Real-Debrid, Torbox, etc.)
 app.route('/api/debrid', debridRouter)

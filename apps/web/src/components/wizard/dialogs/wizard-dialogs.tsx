@@ -43,6 +43,8 @@ import { WIZARD_INFO_ITEMS } from '../wizard-constants'
 import { useWizard } from '../wizard-context'
 import { useSettingsStore } from '@/store/useSettingsStore'
 import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
+import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
+import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 
 function SortableHomeRowItem({ row, onRemove }: { row: CatalogItem; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -130,6 +132,10 @@ export function WizardDialogs() {
     setTraktConnected,
     setTraktUsername,
     setScrobbleTrakt,
+    setSimklConnected,
+    setSimklUsername,
+    setTmdbAccountConnected,
+    setTmdbAccountUsername,
   } = useWizard()
 
   const dndSensors = useSensors(
@@ -666,9 +672,39 @@ export function WizardDialogs() {
         }}
       />
 
-      {/* 6b. Connect Account Modal for other providers */}
+      {/* 6b. Simkl Dedicated PIN Activation Modal */}
+      <SimklConnectDialog
+        open={connectModalProvider === 'simkl'}
+        onOpenChange={(open) => !open && setConnectModalProvider(null)}
+        onSuccess={(profile) => {
+          setSimklConnected(true)
+          setSimklUsername(profile.username)
+          useSettingsStore.getState().setConnection('simkl', {
+            connected: true,
+            username: profile.username,
+          })
+          setConnectModalProvider(null)
+        }}
+      />
+
+      {/* 6c. TMDB Dedicated OAuth Session Modal */}
+      <TmdbConnectDialog
+        open={connectModalProvider === 'tmdb'}
+        onOpenChange={(open) => !open && setConnectModalProvider(null)}
+        onSuccess={(profile) => {
+          setTmdbAccountConnected(true)
+          setTmdbAccountUsername(profile.username)
+          useSettingsStore.getState().setConnection('tmdb', {
+            connected: true,
+            username: profile.username,
+          })
+          setConnectModalProvider(null)
+        }}
+      />
+
+      {/* 6d. Connect Account Modal for other providers */}
       <Dialog
-        open={!!connectModalProvider && connectModalProvider !== 'trakt'}
+        open={!!connectModalProvider && !['trakt', 'simkl', 'tmdb'].includes(connectModalProvider)}
         onOpenChange={(open) => !open && setConnectModalProvider(null)}
       >
         <DialogContent className="sm:max-w-md bg-card border-border text-foreground">

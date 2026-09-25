@@ -123,3 +123,23 @@ export async function isMovieReleasedInRegion(
     return true
   }
 }
+
+/**
+ * Check if a TV episode or newly aired title has met the configured release air delay (in hours).
+ * For example, releaseDelayHours = 24 ensures an episode isn't shown until 24 hours after broadcast.
+ */
+export function isTvEpisodeDelayed(airDateStr: string | null | undefined, delayHours: number = 0): boolean {
+  if (!airDateStr || delayHours <= 0) return false // Not delayed (allowed through)
+
+  try {
+    const airDate = new Date(airDateStr).getTime()
+    if (isNaN(airDate)) return false
+
+    const delayMs = delayHours * 60 * 60 * 1000
+    const allowedTime = airDate + delayMs
+    return Date.now() < allowedTime // Still delayed
+  } catch {
+    return false
+  }
+}
+
