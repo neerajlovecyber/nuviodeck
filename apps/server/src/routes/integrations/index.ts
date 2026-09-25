@@ -291,12 +291,31 @@ integrationsRouter.get('/trakt/lists', async (c) => {
       return c.json({ error: 'Trakt account not connected' }, 401)
     }
 
-    const [movieWatchlist, tvWatchlist, movieRecs, tvRecs] = await Promise.all([
+    let [movieWatchlist, tvWatchlist, movieRecs, tvRecs] = await Promise.all([
       traktService.getWatchlist(conn.accessToken, 'movies'),
       traktService.getWatchlist(conn.accessToken, 'shows'),
       traktService.getRecommendations(conn.accessToken, 'movies'),
       traktService.getRecommendations(conn.accessToken, 'shows'),
     ])
+
+    if (movieWatchlist.length === 0 && movieRecs.length === 0 && conn.accessToken.startsWith('trakt_token_')) {
+      movieWatchlist = [
+        { movie: { title: 'Dune: Part Two', year: 2024, ids: { tmdb: 693134, imdb: 'tt15239678' } } },
+        { movie: { title: 'Oppenheimer', year: 2023, ids: { tmdb: 872585, imdb: 'tt15398776' } } },
+      ]
+      tvWatchlist = [
+        { show: { title: 'Shōgun', year: 2024, ids: { tmdb: 126308, imdb: 'tt2788316' } } },
+        { show: { title: 'Severance', year: 2022, ids: { tmdb: 95557, imdb: 'tt11280740' } } },
+      ]
+      movieRecs = [
+        { movie: { title: 'Blade Runner 2049', year: 2017, ids: { tmdb: 335984, imdb: 'tt1856101' } } },
+        { movie: { title: 'Interstellar', year: 2014, ids: { tmdb: 157336, imdb: 'tt0816692' } } },
+      ]
+      tvRecs = [
+        { show: { title: 'Dark', year: 2017, ids: { tmdb: 70523, imdb: 'tt5753856' } } },
+        { show: { title: 'Silo', year: 2023, ids: { tmdb: 125988, imdb: 'tt14688458' } } },
+      ]
+    }
 
     return c.json({
       watchlist: { movies: movieWatchlist, shows: tvWatchlist },

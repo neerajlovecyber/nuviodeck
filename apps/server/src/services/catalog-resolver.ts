@@ -658,29 +658,50 @@ export class CatalogResolver {
         } catch {
           rawResults = []
         }
-      } else if (catalogId.startsWith('trakt_watchlist') || catalogId.startsWith('trakt_recommendations')) {
+      } else if (
+        catalogId.startsWith('trakt_watchlist') ||
+        catalogId.startsWith('trakt_recommendations') ||
+        catalogId === 'recs_movies_for_you' ||
+        catalogId === 'recs_series_for_you' ||
+        (xpCat && xpCat.source === 'recs')
+      ) {
         try {
-          const [conn] = await db.select().from(accountConnections).where(eq(accountConnections.id, 'trakt')).limit(1)
-          if (conn) {
+          const [conn] = await db
+            .select()
+            .from(accountConnections)
+            .where(eq(accountConnections.id, 'trakt'))
+            .limit(1)
+
+          if (conn && conn.accessToken) {
             const isWatchlist = catalogId.startsWith('trakt_watchlist')
             const items = isWatchlist
               ? await traktService.getWatchlist(conn.accessToken, isMovie ? 'movies' : 'shows', page)
               : await traktService.getRecommendations(conn.accessToken, isMovie ? 'movies' : 'shows', page)
-            rawResults = (items || []).map((item: any) => {
-              const media = item.movie || item.show || item
-              return {
-                id: media.ids?.tmdb || media.ids?.imdb,
-                imdb_id: media.ids?.imdb,
-                title: media.title,
-                name: media.title,
-                release_date: media.year ? `${media.year}-01-01` : undefined,
-                first_air_date: media.year ? `${media.year}-01-01` : undefined,
-                overview: media.overview || '',
-              }
-            })
+
+            if (items && items.length > 0) {
+              rawResults = items.map((item: any) => {
+                const media = item.movie || item.show || item
+                return {
+                  id: media.ids?.tmdb || media.ids?.imdb,
+                  imdb_id: media.ids?.imdb,
+                  title: media.title,
+                  name: media.title,
+                  release_date: media.year ? `${media.year}-01-01` : undefined,
+                  first_air_date: media.year ? `${media.year}-01-01` : undefined,
+                  overview: media.overview || '',
+                }
+              })
+            }
+          }
+
+          // If Trakt not connected or returned no recommendations, fallback to trending
+          if (rawResults.length === 0) {
+            const trendingRes = await tmdb.getTrending(tmdbType, 'week', page)
+            rawResults = trendingRes.results || []
           }
         } catch {
-          rawResults = []
+          const trendingRes = await tmdb.getTrending(tmdbType, 'week', page).catch(() => ({ results: [] }))
+          rawResults = trendingRes.results || []
         }
       } else if (catalogId === 'continue_watching' || catalogId.startsWith('continue_watching')) {
         try {

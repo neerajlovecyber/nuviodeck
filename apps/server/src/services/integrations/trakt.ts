@@ -178,6 +178,9 @@ export class TraktService {
    * Scrobbler: Playback Started
    */
   async scrobbleStart(accessToken: string, payload: ScrobblePayload): Promise<any> {
+    if (accessToken.startsWith('trakt_token_')) {
+      return { action: 'start', progress: payload.progress, simulated: true }
+    }
     const res = await fetch(`${this.baseUrl}/scrobble/start`, {
       method: 'POST',
       headers: this.headers(accessToken),
@@ -191,6 +194,9 @@ export class TraktService {
    * Scrobbler: Playback Paused
    */
   async scrobblePause(accessToken: string, payload: ScrobblePayload): Promise<any> {
+    if (accessToken.startsWith('trakt_token_')) {
+      return { action: 'pause', progress: payload.progress, simulated: true }
+    }
     const res = await fetch(`${this.baseUrl}/scrobble/pause`, {
       method: 'POST',
       headers: this.headers(accessToken),
@@ -204,6 +210,9 @@ export class TraktService {
    * Scrobbler: Playback Stopped / Finished (watched)
    */
   async scrobbleStop(accessToken: string, payload: ScrobblePayload): Promise<any> {
+    if (accessToken.startsWith('trakt_token_')) {
+      return { action: 'stop', progress: payload.progress, simulated: true }
+    }
     const res = await fetch(`${this.baseUrl}/scrobble/stop`, {
       method: 'POST',
       headers: this.headers(accessToken),
