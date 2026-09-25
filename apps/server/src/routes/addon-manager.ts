@@ -34,7 +34,17 @@ const linkedAccounts = new Map<string, LinkedAccount>()
 const failoverRules = new Map<string, FailoverRule>()
 const addonLibrary = new Map<string, AddonLibraryEntry>()
 
-// Populate standard defaults if empty
+// Populate standard default accounts and library
+if (linkedAccounts.size === 0) {
+  linkedAccounts.set('nuvio-primary', {
+    id: 'nuvio-primary',
+    type: 'nuvio',
+    name: 'Primary Nuvio Account',
+    email: 'user@nuviodeck.com',
+    addedAt: Date.now(),
+  })
+}
+
 if (addonLibrary.size === 0) {
   addonLibrary.set('lib-torrentio', {
     id: 'lib-torrentio',

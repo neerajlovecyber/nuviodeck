@@ -13,11 +13,14 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as AuthenticatedAddonsRouteImport } from './routes/_authenticated/addons'
 import { Route as AuthenticatedAvatarsRouteImport } from './routes/_authenticated/avatars'
 import { Route as AuthenticatedBadgesRouteImport } from './routes/_authenticated/badges'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
+import { Route as AuthenticatedStatusRouteImport } from './routes/_authenticated/status'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedWhatsNewRouteImport } from './routes/_authenticated/whats-new'
 import { Route as AuthenticatedWizardProfileIdRouteImport } from './routes/_authenticated/wizard.$profileId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -39,6 +42,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAddonsRoute = AuthenticatedAddonsRouteImport.update({
+  id: '/addons',
+  path: '/addons',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedAvatarsRoute = AuthenticatedAvatarsRouteImport.update({
   id: '/avatars',
   path: '/avatars',
@@ -59,9 +67,19 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedStatusRoute = AuthenticatedStatusRouteImport.update({
+  id: '/status',
+  path: '/status',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedWhatsNewRoute = AuthenticatedWhatsNewRouteImport.update({
+  id: '/whats-new',
+  path: '/whats-new',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedWizardProfileIdRoute =
@@ -75,22 +93,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/addons': typeof AuthenticatedAddonsRoute
   '/avatars': typeof AuthenticatedAvatarsRoute
   '/badges': typeof AuthenticatedBadgesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/status': typeof AuthenticatedStatusRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/addons': typeof AuthenticatedAddonsRoute
   '/avatars': typeof AuthenticatedAvatarsRoute
   '/badges': typeof AuthenticatedBadgesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/settings': typeof AuthenticatedSettingsRoute
+  '/status': typeof AuthenticatedStatusRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesById {
@@ -99,11 +123,14 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
+  '/_authenticated/addons': typeof AuthenticatedAddonsRoute
   '/_authenticated/avatars': typeof AuthenticatedAvatarsRoute
   '/_authenticated/badges': typeof AuthenticatedBadgesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
+  '/_authenticated/status': typeof AuthenticatedStatusRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/whats-new': typeof AuthenticatedWhatsNewRoute
   '/_authenticated/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRouteTypes {
@@ -112,22 +139,28 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/signup'
+    | '/addons'
     | '/avatars'
     | '/badges'
     | '/dashboard'
     | '/settings'
+    | '/status'
     | '/studio'
+    | '/whats-new'
     | '/wizard/$profileId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/signup'
+    | '/addons'
     | '/avatars'
     | '/badges'
     | '/dashboard'
     | '/settings'
+    | '/status'
     | '/studio'
+    | '/whats-new'
     | '/wizard/$profileId'
   id:
     | '__root__'
@@ -135,11 +168,14 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/signup'
+    | '/_authenticated/addons'
     | '/_authenticated/avatars'
     | '/_authenticated/badges'
     | '/_authenticated/dashboard'
     | '/_authenticated/settings'
+    | '/_authenticated/status'
     | '/_authenticated/studio'
+    | '/_authenticated/whats-new'
     | '/_authenticated/wizard/$profileId'
   fileRoutesById: FileRoutesById
 }
@@ -180,6 +216,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/addons': {
+      id: '/_authenticated/addons'
+      path: '/addons'
+      fullPath: '/addons'
+      preLoaderRoute: typeof AuthenticatedAddonsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/avatars': {
       id: '/_authenticated/avatars'
       path: '/avatars'
@@ -208,11 +251,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/status': {
+      id: '/_authenticated/status'
+      path: '/status'
+      fullPath: '/status'
+      preLoaderRoute: typeof AuthenticatedStatusRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/studio': {
       id: '/_authenticated/studio'
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/whats-new': {
+      id: '/_authenticated/whats-new'
+      path: '/whats-new'
+      fullPath: '/whats-new'
+      preLoaderRoute: typeof AuthenticatedWhatsNewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/wizard/$profileId': {
@@ -226,20 +283,26 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAddonsRoute: typeof AuthenticatedAddonsRoute
   AuthenticatedAvatarsRoute: typeof AuthenticatedAvatarsRoute
   AuthenticatedBadgesRoute: typeof AuthenticatedBadgesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
+  AuthenticatedStatusRoute: typeof AuthenticatedStatusRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedWhatsNewRoute: typeof AuthenticatedWhatsNewRoute
   AuthenticatedWizardProfileIdRoute: typeof AuthenticatedWizardProfileIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAddonsRoute: AuthenticatedAddonsRoute,
   AuthenticatedAvatarsRoute: AuthenticatedAvatarsRoute,
   AuthenticatedBadgesRoute: AuthenticatedBadgesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
+  AuthenticatedStatusRoute: AuthenticatedStatusRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedWhatsNewRoute: AuthenticatedWhatsNewRoute,
   AuthenticatedWizardProfileIdRoute: AuthenticatedWizardProfileIdRoute,
 }
 

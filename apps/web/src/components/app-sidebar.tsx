@@ -21,6 +21,9 @@ import {
   Tag,
   VenetianMask,
   Palette,
+  Layers,
+  Activity,
+  Sparkles,
 } from "lucide-react"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
@@ -49,6 +52,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       isActive: pathname === "/studio" || pathname.startsWith("/studio"),
     },
     {
+      title: "Addon Manager",
+      url: "/addons",
+      icon: <Layers />,
+      isActive: pathname === "/addons" || pathname.startsWith("/addons"),
+    },
+    {
       title: "Badges",
       url: "/badges",
       icon: <Tag />,
@@ -69,14 +78,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: <Settings2Icon />,
     },
     {
-      title: "Get Help",
-      url: "/dashboard",
-      icon: <CircleHelpIcon />,
+      title: "System Status",
+      url: "/status",
+      icon: <Activity />,
     },
     {
-      title: "Search",
-      url: "/avatars",
-      icon: <SearchIcon />,
+      title: "What's New",
+      url: "/whats-new",
+      icon: <Sparkles />,
     },
   ]
 

@@ -1,0 +1,1747 @@
+[
+  {
+    "id": "charts-hbo-max-ireland-turkey",
+    "date": "2026-09-23",
+    "tag": "added",
+    "title": "HBO Max Top 10 rows can be set to Ireland or Turkey",
+    "body": "Turkey has a movies chart only."
+  },
+  {
+    "id": "delay-new-episodes",
+    "date": "2026-09-23",
+    "tag": "added",
+    "title": "Delay new episodes",
+    "body": "Hold a newly aired episode back from Continue Watching and episode lists for as long as you choose, so debrid streams have time to appear."
+  },
+  {
+    "id": "digital-filter-festival-premiere",
+    "date": "2026-09-23",
+    "tag": "fixed",
+    "title": "The digital release filter no longer lets through films that just reached cinemas",
+    "body": "A film that played at festivals long before its cinema release, such as Bad Apples, now stays hidden until it is out digitally."
+  },
+  {
+    "id": "anime-episode-images-from-tmdb",
+    "date": "2026-09-23",
+    "tag": "fixed",
+    "title": "Episode images and season posters no longer go missing on some anime",
+    "body": "Anime that TheTVDB has no pictures for, such as Blood of Zeus, now use TMDB's instead."
+  },
+  {
+    "id": "studio-frame-rounding",
+    "date": "2026-09-23",
+    "tag": "improved",
+    "title": "Rounded frames in Studio",
+    "body": "The frame accent has a Rounding slider, from square corners to fully rounded ends.",
+    "supporter": true
+  },
+  {
+    "id": "cover-studio",
+    "date": "2026-09-23",
+    "tag": "added",
+    "title": "Studio: design your own collection covers",
+    "body": "Give every folder a background, a logo, a colour and a label in any language, then publish the covers to your profile.",
+    "link": {
+      "to": "/studio",
+      "label": "Open the Studio"
+    },
+    "supporter": true
+  },
+  {
+    "id": "wizard-nav-moved",
+    "date": "2026-09-23",
+    "tag": "changed",
+    "title": "The Wizard moved out of the side nav",
+    "body": "Open it from any profile card on the Profiles page. The Studio takes its place."
+  },
+  {
+    "id": "top-posters-devices-infuse-omni",
+    "date": "2026-09-22",
+    "tag": "improved",
+    "title": "Top Posters device settings now apply in Infuse and Omni",
+    "body": "Each device shows up separately in your Top Posters Devices tab, so its own settings take effect.",
+    "supporter": true
+  },
+  {
+    "id": "simkl-public-lists",
+    "date": "2026-09-22",
+    "tag": "added",
+    "title": "Add Simkl's official lists, or anyone's public Simkl list",
+    "body": "Paste the list link into Add Catalog List. Like your own Simkl lists, it needs Simkl PRO or VIP."
+  },
+  {
+    "id": "french-spanish-italian-age-ratings",
+    "date": "2026-09-22",
+    "tag": "fixed",
+    "title": "Max rating now reads every French, Spanish and Italian age rating",
+    "body": "French profiles with a cap no longer hide films rated Tous publics, and ratings such as Ai, 13 and VM14 now count."
+  },
+  {
+    "id": "rating-system-by-country",
+    "date": "2026-09-22",
+    "tag": "added",
+    "title": "Max rating can use your own country's age ratings",
+    "body": "Pick a Rating system in Preferences. The UK, Ireland, Australia, New Zealand and Canada are new, so a UK profile capped at PG now hides films rated 12A or 15.",
+    "link": {
+      "to": "/guide#wizard",
+      "label": "How to set it up"
+    }
+  },
+  {
+    "id": "simkl-list-digital-release-sort",
+    "date": "2026-09-22",
+    "tag": "added",
+    "title": "Sort a Simkl film list by digital release",
+    "body": "Pick Digital release in the Sort menu of a Simkl list row to see the newest digital releases first."
+  },
+  {
+    "id": "simkl-list-newest-whole-list",
+    "date": "2026-09-22",
+    "tag": "fixed",
+    "title": "Newest and Oldest now sort your whole Simkl list",
+    "body": "Recent titles on a long list no longer end up on the second page."
+  },
+  {
+    "id": "monster-single-episode-on-tmdb",
+    "date": "2026-09-22",
+    "tag": "fixed",
+    "title": "Monster no longer opens as a single episode",
+    "body": "Profiles that use TMDB for series episodes now get the full series, with each story as its own season."
+  },
+  {
+    "id": "dynamic-covers-nightly-for-everyone",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "Dynamic covers in Nuvio now refresh every night for everyone",
+    "body": "On most nights the refresh ran out of time, and about half of the profiles using them kept the art from the night before."
+  },
+  {
+    "id": "simkl-custom-lists",
+    "date": "2026-09-21",
+    "tag": "added",
+    "title": "Add your own Simkl lists as rows",
+    "body": "They show up in the row and folder pickers once you reconnect Simkl, and need Simkl PRO or VIP."
+  },
+  {
+    "id": "search-finds-anthology-installments",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "Searching Dahmer now finds the Monster series",
+    "body": "Shows that exist only as one season of a larger series now show up in search and open that series."
+  },
+  {
+    "id": "season-posters-in-your-language",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "Season posters now use your language",
+    "body": "Some seasons showed a poster in another language, like Russian art on Monster season 3."
+  },
+  {
+    "id": "supporter-welcome-once-per-account",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "The supporter welcome no longer pops up on every new device",
+    "body": "It shows once when you become a supporter, and again only if you come back after your support lapsed."
+  },
+  {
+    "id": "ai-prompt-rows-refresh",
+    "date": "2026-09-21",
+    "tag": "added",
+    "title": "Your own AI rows can now refresh daily or weekly",
+    "body": "Pick a schedule under Refresh picks in the row editor to get new titles on it. Regenerate now skips what the row showed recently too."
+  },
+  {
+    "id": "because-you-watched-follows-latest-watch",
+    "date": "2026-09-21",
+    "tag": "changed",
+    "title": "Because You Watched now follows your latest watch",
+    "body": "It used to hold one title across several watches. On Simkl, a show you are partway through now counts too."
+  },
+  {
+    "id": "watched-title-imdb-id-name",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "Rows are no longer named after an IMDb id",
+    "body": "A title marked watched in Nuvio could name a row \"Because You Watched tt2794380\". Rows now use the real title."
+  },
+  {
+    "id": "shuffle-long-mdblist-lists",
+    "date": "2026-09-21",
+    "tag": "fixed",
+    "title": "Shuffle now covers long MDBList lists end to end",
+    "body": "Lists past 2,000 titles only shuffled their first 2,000, so a row sorted by Newest or Top Rated still came back as only the newest or best-rated titles."
+  },
+  {
+    "id": "anthology-series-missing-episodes",
+    "date": "2026-09-20",
+    "tag": "fixed",
+    "title": "Monster and other anthology shows no longer open with one episode and no artwork",
+    "body": "The full season list now loads, so the right episode plays instead of the first season premiere."
+  },
+  {
+    "id": "jellyfin-sign-in-reason",
+    "date": "2026-09-20",
+    "tag": "fixed",
+    "title": "Jellyfin apps no longer say your password is wrong when streams are off",
+    "body": "Sign-in now names the real reason, and the wizard warns you before you carry a password to your player.",
+    "supporter": true
+  },
+  {
+    "id": "country-filter-coproductions",
+    "date": "2026-09-20",
+    "tag": "fixed",
+    "title": "Country filters no longer hide titles over a co-production country",
+    "body": "A title now counts as being from the country it comes from, not from every country a production company behind it is registered in."
+  },
+  {
+    "id": "logo-style-backdrops",
+    "date": "2026-09-19",
+    "tag": "improved",
+    "title": "Each logo cover style now has its own matching backdrop",
+    "body": "Mix any backdrop style with any cover style. Folders you already set up keep their current backdrop until you choose again."
+  },
+  {
+    "id": "choose-folders-after-emptying",
+    "date": "2026-09-19",
+    "tag": "fixed",
+    "title": "Turning off every folder in a collection no longer hides Choose folders",
+    "body": "You can reopen the folder list and switch folders back on, and they return in the collection’s style."
+  },
+  {
+    "id": "rpdb-upcoming-blank-posters",
+    "date": "2026-09-19",
+    "tag": "fixed",
+    "title": "Upcoming titles no longer show a blank poster with RPDB",
+    "body": "When RPDB has no poster yet for a title that is not out, the regular poster shows instead."
+  },
+  {
+    "id": "upcoming-rows-preset-empty",
+    "date": "2026-09-19",
+    "tag": "fixed",
+    "title": "Upcoming rows no longer come up empty on preset profiles",
+    "body": "Upcoming series and upcoming anime films showed nothing on profiles made from a preset."
+  },
+  {
+    "id": "anime-filler-tag-first",
+    "date": "2026-09-19",
+    "tag": "changed",
+    "title": "The [Filler] tag now sits at the start of an episode title",
+    "body": "It was at the end, where a long title cut it off."
+  },
+  {
+    "id": "collection-lists-own-section",
+    "date": "2026-09-18",
+    "tag": "improved",
+    "title": "Importing a collection no longer crowds Home rows",
+    "body": "The lists a collection uses now have their own From your collections section, closed until you open it."
+  },
+  {
+    "id": "stremio-reinstall-no-duplicate",
+    "date": "2026-09-18",
+    "tag": "fixed",
+    "title": "Installing in Stremio again no longer adds a second Xperience",
+    "body": "Your Stremio link now stays the same until you reset it. If you install again after this update, remove the old copy first, one last time."
+  },
+  {
+    "id": "simkl-switch-account",
+    "date": "2026-09-18",
+    "tag": "fixed",
+    "title": "Switching to a different Simkl account now shows that account right away",
+    "body": "After connecting another Simkl account to a profile or in Settings, Simkl rows could keep showing the previous account’s titles for up to a day."
+  },
+  {
+    "id": "support-ticket-numbers",
+    "date": "2026-09-18",
+    "tag": "added",
+    "title": "Support tickets now have a number",
+    "body": "Each ticket shows one, like #1042, in your ticket list and at the top of the conversation, so you can refer to it easily.",
+    "supporter": true
+  },
+  {
+    "id": "jellyfin-mode",
+    "date": "2026-09-17",
+    "tag": "added",
+    "title": "Use your profile from Infuse, Swiftfin and other Jellyfin apps",
+    "body": "Turn on Jellyfin access in the Streams step, generate a password, and sign in from your player.",
+    "supporter": true,
+    "link": {
+      "to": "/guide#jellyfin",
+      "label": "How to set it up"
+    }
+  },
+  {
+    "id": "digital-filter-late-release-date",
+    "date": "2026-09-17",
+    "tag": "fixed",
+    "title": "The digital release filter no longer hides a film that has since come out",
+    "body": "A film whose disc or overseas date was recorded before its digital one stayed hidden until that later date. It now shows the day it lands digitally."
+  },
+  {
+    "id": "imported-addon-rows-full-page",
+    "date": "2026-09-17",
+    "tag": "fixed",
+    "title": "Imported add-on rows no longer stop at 20 titles",
+    "body": "A row from an add-on that hands out its titles in small batches now fills a full page like every other row."
+  },
+  {
+    "id": "comet-wrong-ip",
+    "date": "2026-09-17",
+    "tag": "fixed",
+    "title": "Comet streams no longer stop on a Wrong IP screen",
+    "body": "The built-in Comet source now uses Comet’s own server instead of ElfHosted’s. That also removes the Unknown row that would not play when ElfHosted was busy.",
+    "supporter": true
+  },
+  {
+    "id": "streams-lapsed-debrid-row",
+    "date": "2026-09-17",
+    "tag": "fixed",
+    "title": "A lapsed debrid subscription no longer adds a stream that will not play",
+    "supporter": true
+  },
+  {
+    "id": "gemini-3-5-flash-lite",
+    "date": "2026-09-15",
+    "tag": "added",
+    "title": "Gemini 3.5 Flash-Lite is now the AI model Xperience uses by default",
+    "body": "You can pick it in the wizard or Settings. In testing it finished far more often than 3.1 Flash-Lite on a free Google key and filled rows that used to come back short."
+  },
+  {
+    "id": "season-posters-on-the-detail-page",
+    "date": "2026-09-15",
+    "tag": "fixed",
+    "title": "Each season now gets its own poster on the season picker",
+    "body": "Anime was the worst hit: every season tile showed the same show poster, because the art only ever came from the season numbers TMDB knows and anime is served in TheTVDB numbering."
+  },
+  {
+    "id": "sort-places-titles-with-no-release-date",
+    "date": "2026-09-15",
+    "tag": "fixed",
+    "title": "Newest and Oldest no longer put undated titles near the top",
+    "body": "On a Simkl or Letterboxd row a title with no announced release date led its year instead of following the dated ones, and a release date that moved could take a month to catch up."
+  },
+  {
+    "id": "shuffle-covers-the-whole-list",
+    "date": "2026-09-14",
+    "tag": "fixed",
+    "title": "Shuffle now draws from the whole list, not just its first page",
+    "body": "On an MDBList or Letterboxd row it only reordered the page it had already loaded, so a list sorted newest first came back shuffled but all from the newest titles."
+  },
+  {
+    "id": "gemini-model-unavailable-warning",
+    "date": "2026-09-14",
+    "tag": "fixed",
+    "title": "Verifying your Google key now says when it cannot use the Gemini model you picked",
+    "body": "Google stopped offering Gemini 2.5 Flash and 2.5 Flash-Lite to API keys created after July 2026, so those picks quietly ran on Gemini 3.1 Flash-Lite. The wizard and Settings now tell you when that will happen and which model takes over."
+  },
+  {
+    "id": "recommendations-respect-excluded-categories",
+    "date": "2026-09-14",
+    "tag": "fixed",
+    "title": "Recommendations no longer build on categories you excluded",
+    "body": "A profile that hides a category, like anime, was still having its AI and Because You Watched rows picked from what you watched in it, so those rows came back thin or named after a hidden title."
+  },
+  {
+    "id": "simkl-letterboxd-sort-by-date",
+    "date": "2026-09-14",
+    "tag": "fixed",
+    "title": "Newest and Oldest now order Simkl and Letterboxd rows by release date",
+    "body": "They only compared release years, so on a list where most titles share a year, like a Plan to Watch, the row barely changed."
+  },
+  {
+    "id": "offcloud-debrid-service",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Connect Offcloud like any other debrid service",
+    "body": "Add your Offcloud key in the Streams step and it feeds your stream sources directly, with no separate add-on to install.",
+    "supporter": true
+  },
+  {
+    "id": "imported-rows-collapse",
+    "date": "2026-09-14",
+    "tag": "fixed",
+    "title": "The Imported section in Home rows now collapses",
+    "body": "Its header and the collapse all button did nothing, so a long list of imported rows could not be folded away."
+  },
+  {
+    "id": "watch-filter-disabled-reason",
+    "date": "2026-09-14",
+    "tag": "improved",
+    "title": "Greyed out watch filters now say why",
+    "body": "Watch provider IDs, Watch region and Offer types explain what they are waiting on when you open the info button beside them."
+  },
+  {
+    "id": "addon-manager-failover",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Automatic backups for an add-on that goes down",
+    "body": "Name a backup for any add-on and Xperience swaps it in when the first one stops answering, then puts it back when it recovers.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager-catalog-controls",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Rename, hide and reorder the catalogs an add-on gives you",
+    "body": "Open Edit catalogs on any add-on to change what its rows are called, hide the ones you do not use, and set the order they appear in. Hidden ones can be brought back at any time.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager-bulk-apply",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Apply one account setup to your other accounts",
+    "body": "Copy the add-ons from one account onto the others you have linked, or just match their order, with a preview of what changes on each before anything is written.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager-copy-between-profiles",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Copy an add-on to another Nuvio profile",
+    "body": "Pick Copy to another profile from any add-on to put it on your other profiles, without leaving the one you are looking at.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager-library",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Keep a library of add-on links",
+    "body": "Save the add-ons whose link is painful to rebuild, tag them, check they still work, and put any of them onto an account in one step.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager-install-restore",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Add, lock and restore add-ons in the manager",
+    "body": "Paste an add-on link to install it, lock one so it cannot be removed by accident, put a saved add-on onto any account, and roll a list back to how it was before a change. Nuvio accounts can now switch between profiles.",
+    "supporter": true
+  },
+  {
+    "id": "addon-manager",
+    "date": "2026-09-14",
+    "tag": "added",
+    "title": "Manage your add-ons from inside Xperience",
+    "body": "Link a Stremio or Nuvio account and reorder, turn off or tidy its add-ons without leaving the app. Members only.",
+    "supporter": true
+  },
+  {
+    "id": "stream-4k-source-spellings",
+    "date": "2026-09-10",
+    "tag": "fixed",
+    "title": "4K releases no longer sink below 1080p ones",
+    "body": "A 4K remux named the way its release group names it (BDRemux, UHDRemux) was read as having no source at all, which sent it to the bottom of the list and put it out of reach of the Quality filter."
+  },
+  {
+    "id": "imported-addon-titles-open",
+    "date": "2026-09-10",
+    "tag": "fixed",
+    "title": "Titles in imported add-on rows now open",
+    "body": "Some imported rows listed correctly but every title failed to load when tapped, the AIOStreams library row among them. They now open using details from the add-on itself."
+  },
+  {
+    "id": "anime-filler-coverage",
+    "date": "2026-09-10",
+    "tag": "improved",
+    "title": "Filler marking now covers hundreds of anime",
+    "body": "It could only reach a handful of shows before. One Piece, Naruto, Dragon Ball Z, Detective Conan and many more are now marked, and episodes that mix canon with filler are left alone."
+  },
+  {
+    "id": "anime-trending-films-fallback",
+    "date": "2026-09-10",
+    "tag": "fixed",
+    "title": "Trending anime films stay filled while AniList is down",
+    "body": "The films half of the anime Trending folder came back with only two titles during the outage. It now fills from TMDB until AniList is back."
+  },
+  {
+    "id": "import-aiostreams-server-error",
+    "date": "2026-09-10",
+    "tag": "fixed",
+    "title": "Importing an AIOStreams add-on no longer fails with Server Error",
+    "body": "Create profile could fail on an add-on whose rows previewed fine, most often AIOStreams with its Library catalog. Imports that do fail now say which setting was rejected."
+  },
+  {
+    "id": "imdb-most-popular-tv-shows",
+    "date": "2026-09-10",
+    "tag": "added",
+    "title": "IMDb Most Popular TV Shows",
+    "body": "The IMDb Top 100 folder in Trending now has a series tab next to the films. The row can also be added to the home screen on its own."
+  },
+  {
+    "id": "stream-demoted-rows-kept",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "Foreign-language releases stay in the stream list",
+    "body": "A release named in another language could drop out of a long list of results instead of just moving down it."
+  },
+  {
+    "id": "merged-row-sort-shuffle",
+    "date": "2026-09-09",
+    "tag": "improved",
+    "title": "Sort and Shuffle now sit in the merged row editor",
+    "body": "They were only in the row settings, so Recently added was easy to miss. All three order controls are together now."
+  },
+  {
+    "id": "anime-filler-marking",
+    "date": "2026-09-09",
+    "tag": "added",
+    "title": "Mark filler episodes in anime",
+    "body": "Turn on Filler episodes in anime settings and a fully filler episode reads 50. The Reviving Lion [Filler]. Episodes that mix canon and filler are left alone."
+  },
+  {
+    "id": "anime-anilist-outage-fallback",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "Anime Most Popular, Trending and Top Rated stay filled",
+    "body": "These folders went empty while AniList was unavailable. They now fall back to MyAnimeList so the rows keep working."
+  },
+  {
+    "id": "anime-scrobble-season-layout",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "AniList and MyAnimeList get the right anime entry",
+    "body": "On long anime split into several entries, a played episode could be marked against the wrong one and at the wrong number. Bleach season 2 landed on Thousand-Year Blood War."
+  },
+  {
+    "id": "stream-wrong-show-demoted",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "Episodes of other shows no longer top the stream list",
+    "body": "Opening One Piece could list Dune Prophecy and Cowboy Bebop above every real result. Streams that name a different show now sort to the bottom."
+  },
+  {
+    "id": "stream-title-match-series",
+    "date": "2026-09-09",
+    "tag": "changed",
+    "title": "Only the title you asked for now covers series",
+    "body": "The stream setting was films only. It now also drops results from a remake that shares the name, so the 1999 One Piece will not list the live action."
+  },
+  {
+    "id": "easy-ratings-key-verify-per-type",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "EasyRatings keys that render only some artwork",
+    "body": "A token whose posters would not render was reported as an invalid key. It now verifies on its logo or backdrop instead."
+  },
+  {
+    "id": "renderer-artwork-per-type-health",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "EasyRatings and XRDB logos, backdrops and episode stills",
+    "body": "A poster that would not render could take the logo, hero backdrop and episode stills with it, leaving those on plain artwork. Each is now judged on its own."
+  },
+  {
+    "id": "hide-watched-nuvio-profiles",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "Hide watched now sees your Nuvio history",
+    "body": "With several Nuvio profiles on one account, films you had watched kept showing up even with the filter on. Anime you watched from a Kitsu or MyAnimeList page is now hidden too."
+  },
+  {
+    "id": "anime-search-duplicates",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "One card per anime film in search",
+    "body": "Anime searches listed some films twice, and the spare copy played nothing. Films that only showed a Japanese title now find their own entry too."
+  },
+  {
+    "id": "anime-search-ova-details",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "OVAs and specials in anime search now open",
+    "body": "Anime search results that exist only on Kitsu answered \"Failed to load\" when tapped. They now open with their episodes, artwork and streams."
+  },
+  {
+    "id": "catalog-copy-ninth-duplicate",
+    "date": "2026-09-09",
+    "tag": "fixed",
+    "title": "Duplicating a row keeps working past the eighth copy",
+    "body": "On a row you had already copied eight times, the next duplicate arrived as an imported catalog named after its id, with no filters to set. Copies made before this are back to normal on their own."
+  },
+  {
+    "id": "built-in-subtitle-filter",
+    "date": "2026-09-08",
+    "tag": "added",
+    "title": "Pick streams by their built-in subtitles",
+    "body": "Stream filters can now rank or require releases that carry subtitles in the file itself, so a foreign-language film can be played without waiting on an external subtitle that may not stay in sync."
+  },
+  {
+    "id": "dubbed-stream-filter",
+    "date": "2026-09-08",
+    "tag": "added",
+    "title": "Dubbed releases can be hidden",
+    "body": "Dubbed is now one of the languages you can rank or hide in your stream filters, for anyone who would rather have the original audio."
+  },
+  {
+    "id": "built-in-subtitles-stream-label",
+    "date": "2026-09-08",
+    "tag": "added",
+    "title": "Built-in subtitles on your stream labels",
+    "body": "The stream format editor has a new Built-in subtitles field, so a row can show what a release carries before you pick it."
+  },
+  {
+    "id": "merged-rows-hold-their-order",
+    "date": "2026-09-08",
+    "tag": "fixed",
+    "title": "Merged rows keep the order you asked for",
+    "body": "A merged row with Shuffle off still came back in a different order each day, because the catalogs inside it were shuffling their own share of it. Only the merged row’s own Shuffle setting decides now."
+  },
+  {
+    "id": "merged-rows-sort-recently-added",
+    "date": "2026-09-08",
+    "tag": "added",
+    "title": "Merged rows can sort by Recently added",
+    "body": "Pick it under Sort on any merged row whose catalogs track when a title was added, and the newest arrivals from across them lead the row."
+  },
+  {
+    "id": "mal-expired-link-says-so",
+    "date": "2026-09-07",
+    "tag": "fixed",
+    "title": "MyAnimeList rows going quiet now tell you why",
+    "body": "A MyAnimeList login expires about once a month, and when it did your MAL rows just emptied and vanished. Step 1 now flags the link as refused and offers a Reconnect button."
+  },
+  {
+    "id": "awards-by-ceremony",
+    "date": "2026-09-07",
+    "tag": "added",
+    "title": "Awards collection, one folder per ceremony",
+    "body": "Awards now holds thirteen ceremonies, from the Academy Awards and Cannes to the Razzies, each opening onto its own categories. Best Picture nominees sit alongside the winners inside the Academy Awards folder."
+  },
+  {
+    "id": "awards-portrait-covers",
+    "date": "2026-09-07",
+    "tag": "added",
+    "title": "Awards Portrait cover set",
+    "body": "A poster-shaped set for the Awards collection, with each ceremony trophy over its own colour. Pick it from the cover options on any Awards folder."
+  },
+  {
+    "id": "canon-best-of-collection",
+    "date": "2026-09-07",
+    "tag": "changed",
+    "title": "Canon lists moved out of Awards",
+    "body": "IMDb Top 250, Letterboxd Top 250, Criterion, AFI and the yearly best-of are now a separate Canon & Best-Of collection. Folders you already added are untouched."
+  },
+  {
+    "id": "top-posters-banners",
+    "date": "2026-09-07",
+    "tag": "added",
+    "title": "Top Posters banners for backdrops and landscape rows",
+    "body": "Top Posters can now supply the wide artwork behind a title, with its ratings and logo on it. Turn banners on in your Top Posters dashboard and move Top Posters up your poster provider list."
+  },
+  {
+    "id": "hide-unreleased-shows-and-films",
+    "date": "2026-09-07",
+    "tag": "fixed",
+    "title": "Hide unreleased catches shows and festival films",
+    "body": "Shows premiering later this year were never checked at all, and films that had only played a festival counted as released. Both stay hidden now until they are actually out."
+  },
+  {
+    "id": "viki-viu-folders",
+    "date": "2026-09-06",
+    "tag": "added",
+    "title": "Rakuten Viki and Viu folders",
+    "body": "Two Asian drama services, each with popular and newest rows, an Originals row and its own cover art."
+  },
+  {
+    "id": "dynamic-covers-refresh-on-device",
+    "date": "2026-09-06",
+    "tag": "fixed",
+    "title": "Dynamic collection covers change nightly again",
+    "body": "Dynamic cover art froze at whatever it looked like the day you pushed your collections to Nuvio. It now refreshes on your devices every day with the latest titles from each folder."
+  },
+  {
+    "id": "hide-caught-up-shows",
+    "date": "2026-09-06",
+    "tag": "added",
+    "title": "Hide TV shows you're caught up on",
+    "body": "A new filter hides series once you have watched every episode that has aired, until a new one arrives. Turn it on for everything in Setup, or per row in the catalog editor."
+  },
+  {
+    "id": "scrobble-queue-fairness",
+    "date": "2026-09-06",
+    "tag": "fixed",
+    "title": "Watched titles reach your trackers again",
+    "body": "Completions queued up behind one very busy account and stopped being sent, so titles you finished were not marked watched on Trakt, Simkl, AniList, MAL or MDBList. The queue now serves every account in turn."
+  },
+  {
+    "id": "trakt-tmdb-chart-rows",
+    "date": "2026-09-05",
+    "tag": "added",
+    "title": "More Trakt and TMDB chart rows to add",
+    "body": "Trakt Most Played, Most Watched, Most Collected, Most Favorited and Box Office are now in the catalog list, alongside New Releases for films and shows and an Upcoming row for shows."
+  },
+  {
+    "id": "addon-manifest-query-streams",
+    "date": "2026-09-05",
+    "tag": "fixed",
+    "title": "Stream and subtitle addons whose link carries a key return results",
+    "body": "An addon added by a manifest URL with a question mark in it, where a key or setting rides in the link, was asked the wrong address and quietly answered nothing on every title.",
+    "supporter": true
+  },
+  {
+    "id": "torrentio-direct-install-guidance",
+    "date": "2026-09-05",
+    "tag": "improved",
+    "title": "Torrentio gets a real answer instead of an error code",
+    "body": "Torrentio only answers your own device, so it cannot join the merged stream list. Pasting its URL now explains that in your language, and the streams step builds your personal Torrentio link to install in Nuvio next to your profile.",
+    "supporter": true
+  },
+  {
+    "id": "addon-paste-forgiveness",
+    "date": "2026-09-05",
+    "tag": "improved",
+    "title": "Pasting a stream or subtitle addon link is more forgiving",
+    "body": "Configure-page and stremio:// links now work, a missing manifest.json ending is added for you, and an addon whose host refuses to answer says so plainly instead of showing a bare error code.",
+    "supporter": true
+  },
+  {
+    "id": "custom-poster-url-provider",
+    "date": "2026-09-05",
+    "tag": "added",
+    "title": "Bring your own poster service with a custom URL",
+    "body": "A new Custom URL entry in Posters takes any https poster service, addressed per title with the {imdb_id} placeholder ({type} and {tmdb_id} work too). If a pattern works in AIOMetadata, it works here."
+  },
+  {
+    "id": "imported-collection-delete-cleanup",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Deleting an imported collection cleans up its sources",
+    "body": "Sources a collection import added under \"Imported (not in catalog)\" stayed there after the collection was deleted. They are now removed with it, unless one of your rows or other folders still uses them."
+  },
+  {
+    "id": "sign-in-resend-captcha",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Resend code on the sign-in page works",
+    "body": "Asking for the code to be sent again always answered with a captcha error. It works now, and a sign-in page left open since the earlier sign-in outage recovers by itself instead of repeating that error."
+  },
+  {
+    "id": "sign-in-code-captcha-blocked",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Signing in with an email code works again",
+    "body": "Send code answered “captcha protection: request disallowed” and no code ever arrived, because the sign-in page was being served without its bot check. Continue with Google was never affected."
+  },
+  {
+    "id": "tracker-list-rows-catch-up",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Your own tracker list rows keep up with your edits",
+    "body": "A title you added to or removed from a Simkl, Trakt or MDBList list could stay wrong on the matching row for hours. Those rows now catch up within half an hour."
+  },
+  {
+    "id": "catalog-copy-naming",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Every duplicated row is named so you can tell the copies apart",
+    "body": "Two copies of one row were both called \"Trending copy\", so it was easy to open the wrong one and add a filter to a copy that already had one. Copies are numbered now, and duplicating a copy carries that copy’s own filters and name instead of the original’s."
+  },
+  {
+    "id": "tracker-connect-broken",
+    "date": "2026-09-03",
+    "tag": "fixed",
+    "title": "Connecting Trakt, Simkl, AniList and MyAnimeList works again",
+    "body": "Since 1 September, starting a tracker connection sent you to the tracker’s own error page instead of its sign-in, so no new accounts could be linked. Connecting works again, and links made before then were never affected."
+  },
+  {
+    "id": "nuvio-episode-title-as-show-name",
+    "date": "2026-09-01",
+    "tag": "fixed",
+    "title": "Shows you marked watched in the app use the show name",
+    "body": "A series you marked watched inside Nuvio could be picked up under one of its episode names, so a row could read \"Because You Watched Episode 12\". Rows and folders built from your watch history now use the show name."
+  },
+  {
+    "id": "kitsu-missing-new-season",
+    "date": "2026-09-01",
+    "tag": "fixed",
+    "title": "A new anime season shows up on the Kitsu source",
+    "body": "With Anime season and episode source set to Kitsu, a season that started airing recently could be missing entirely, leaving the show stuck on its earlier seasons. Any season Kitsu has no entry for is now filled in from TheTVDB."
+  },
+  {
+    "id": "because-you-watched-name-mismatch",
+    "date": "2026-09-01",
+    "tag": "fixed",
+    "title": "Because You Watched rows match the title they are named after",
+    "body": "A row could be named after one thing you watched while showing recommendations for another. The title a row is based on now changes only when you watch something new, instead of moving on its own each day."
+  },
+  {
+    "id": "airing-series-season-boundary-error",
+    "date": "2026-08-31",
+    "tag": "fixed",
+    "title": "A show still on the air stops failing to open",
+    "body": "Around the point a running show moves into a new season, its detail page could come back as an error and keep failing however many times you opened it. We were asking for a season the source had not published yet and reading the empty answer as a fault rather than as nothing there yet. The page opens again, and the new season fills in on its own once the source lists it."
+  },
+  {
+    "id": "convert-working-imported-lists",
+    "date": "2026-08-31",
+    "tag": "improved",
+    "title": "Take back a list another add-on was serving out of order",
+    "body": "An MDBList, Trakt, TMDB or Letterboxd list that came in with an imported add-on is served in that add-on’s order, and offers no Sort. Manage add-ons now offers Convert on those rows too, not only on broken ones, which serves the list in its own order with Sort and Shuffle back."
+  },
+  {
+    "id": "kitsu-blank-episodes",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Anime episodes stop coming up blank on the Kitsu source",
+    "body": "With Anime season and episode source set to Kitsu, episodes could have no title, no air date, no synopsis and no picture, and some seasons were blank the whole way through. Anything Kitsu leaves empty is now filled in from TheTVDB."
+  },
+  {
+    "id": "kitsu-absolute-numbering",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Running episode numbers come back on the Kitsu source",
+    "body": "Absolute numbering showed on TheTVDB and TMDB but never on Kitsu, so the same episode read 22. Last Rain on one source and Last Rain on another."
+  },
+  {
+    "id": "anime-specials-marked-series-watched",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Watching an anime special stops marking the series watched",
+    "body": "A short or special played from an anime series was sent to AniList and MyAnimeList as an episode of the series itself, so watching one could set your progress past the end and mark the whole thing complete. Specials are no longer written."
+  },
+  {
+    "id": "anime-new-season-wrong-entry",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "A brand new anime season stops marking season 1 as watching",
+    "body": "Watching the newest season of a show could put its first season back on your AniList or MyAnimeList list instead. A season stays unlisted for a few weeks after it starts airing, and we were falling back to the earliest one rather than leaving it alone. Nothing is written now until the season is listed, which happens on its own."
+  },
+  {
+    "id": "oldest-sort-undated-titles",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Titles with no release date stop leading an Oldest sort",
+    "body": "Sorting a row by Oldest put anything with no release date at the very top. Those titles now sit at the end instead of pushing real results down."
+  },
+  {
+    "id": "letterboxd-list-stray-films",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Letterboxd list rows stop repeating titles at the end",
+    "body": "A Letterboxd list row ended with a few repeated titles and then kept serving them instead of finishing. The strip of related lists at the foot of the page was being counted as part of the list."
+  },
+  {
+    "id": "letterboxd-row-sorting",
+    "date": "2026-08-30",
+    "tag": "added",
+    "title": "Sort a Letterboxd row by release date",
+    "body": "Letterboxd lists and watchlists now offer Newest and Oldest alongside their own list order, applied across the whole list rather than the part on screen."
+  },
+  {
+    "id": "rows-refresh-on-reopen",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Rows catch up with your lists and your watching again",
+    "body": "Adding a film to a Trakt or Simkl list, or watching something, could leave the matching row unchanged for hours however many times you reopened the app. Rows are refreshed in the background, but our delivery network was allowed to keep answering with the copy from before that refresh. It now hands over the newer one."
+  },
+  {
+    "id": "subtitles-anime-native-ids",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Anime now gets subtitles too",
+    "body": "If you watch anime through Xperience, the Subtitles step was finding nothing for it while streams for the same episode worked normally. Anime is addressed by a different kind of id, and the subtitle sources do not speak it, so nothing was ever asked. Xperience now translates it to the id they do understand before asking, using the same episode matching your trackers already rely on. It stays exact: on the rare episode it cannot place with certainty it still returns nothing, rather than handing you the wrong episode.",
+    "supporter": true
+  },
+  {
+    "id": "limited-series-ghost-episode",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Continue Watching stops offering an episode that does not exist",
+    "body": "On a handful of limited series, Kaleidoscope among them, we listed one episode more than your tracker has, so Continue Watching kept offering a final episode you could never finish or clear off the row. The short intro clip behind that extra number is now filed under Specials, which puts the rest of the season back on the numbering your tracker and your streams already use."
+  },
+  {
+    "id": "whats-new-phone-headings",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Patch note headings read properly on a phone",
+    "body": "The tags beside a heading left it only a few characters wide, so the heading broke one word per line. They now sit above it."
+  },
+  {
+    "id": "subtitles-hearing-impaired-only",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Hearing impaired \"Only these\" no longer hides everything",
+    "body": "Picking Only these under Subtitles gave you an empty list. Nothing was wrong with your setup: a subtitle only counts as hearing impaired if the source says so, and OpenSubtitles never does, so the filter had nothing to keep. It now shows the full list instead of nothing, and starts filtering properly as soon as you add a source that labels them.",
+    "supporter": true
+  },
+  {
+    "id": "clearer-add-and-import-errors",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "When an add or an import fails, it tells you why again",
+    "body": "Adding a catalog list, importing an add-on or converting an imported row could fail with the wrong message. Reasons the app has proper wording for, like needing your MDBList or TMDB key, or a link that points at nothing, were being replaced by a short technical phrase in English whichever language you use. Pasting several manifest links at once was worse still: if one of them could not be reached, nothing said which one. Both are fixed. Failures now name the link that went wrong and give the reason in your own language wherever there is one. Converting a batch of imported rows also stops as soon as the hourly limit on adding lists is reached, rather than spending the rest of the batch on attempts that could not have worked."
+  },
+  {
+    "id": "recently-watched-auto-refresh",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Recently Watched tiles keep up with what you watch again",
+    "body": "Your Recently Watched folders are pushed to Nuvio once and then refreshed in the background, so the tiles follow your viewing without you doing anything. That background pass had fallen a long way behind: a fresh watch was queued straight away, but it then waited behind hours of routine housekeeping before anyone looked at it, so the tiles sat still until you opened Xperience and pushed by hand. Housekeeping had also stopped reaching about a quarter of accounts entirely, which is why some shelves went quiet altogether. A new watch now goes to the front of the queue, the background pass gets through several times as much work per run, and every account is covered again."
+  },
+  {
+    "id": "episode-airtime-evening",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "An episode that airs tonight stops turning up at breakfast",
+    "body": "If you set your timezone anywhere in the Americas, an episode broadcast at 8 or 9 in the evening was marked as released around 8 that morning, so it sat in Continue Watching badged as a new episode for most of a day before anyone could actually watch it. The airtime was known all along, it was just being rounded to the middle of the day to keep the date right on every kind of Nuvio client. It now keeps as much of the real airtime as that allows, which lands an 8pm episode on the second and a 9pm one about an hour ahead of the broadcast instead of thirteen. Shows that air after midnight in Japan gain the same way, arriving in the morning rather than the evening."
+  },
+  {
+    "id": "merged-row-discover-type",
+    "date": "2026-08-30",
+    "tag": "added",
+    "title": "Give a merged row your own Discover type",
+    "body": "A row that blends several catalogs into one was fixed under Mixed in Discover, and the Discover type setting every other row has was not offered for it. That left the one case it was most wanted for out in the cold: if you merged two lists precisely because they belong together, like the plan to watch list Simkl splits into films and shows, there was no way to file the result under a name of your own. A merged row now takes a custom Discover type like any other row, from the row settings behind its three dots. Picking one replaces that row's Mixed tab, and where the row shows on Home is unaffected."
+  },
+  {
+    "id": "collections-square-tiles",
+    "date": "2026-08-30",
+    "tag": "added",
+    "title": "Square folder tiles in collections",
+    "body": "Collections offered folder tiles as tall posters or wide landscapes, and nothing in between, even though square is a shape Nuvio has always drawn and your home rows have always offered. A collection imported from elsewhere could arrive with square folders that you then had no way to set yourself, or to get back once you changed them. Square is now a third option beside Poster and Landscape on any collection. Pick it and everything on the step shows it: the folder grid, the live preview, and the cover and artwork pickers all draw square tiles, so what you see is what your TV gets. Applying a cover set no longer quietly puts you back on landscape either, because no cover set is square and your choice of shape is yours to keep."
+  },
+  {
+    "id": "streams-stated-heights",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Standard definition stops arriving in a list that asked for HD",
+    "body": "Some releases name a size the resolution list has no room for, like 576p or 540p, and a few name none at all beyond a number. Both were being treated the same way as a release nobody could read, which meant they were never hidden: switch 480p and 360p off and you could still be handed a 576p rip, or a phone-sized clip of a talk show, sitting under the rows you did want. Anything a release states plainly is now read and matched against the resolutions you picked. The same pass catches heights written without the p on the end, so a 4K remux named that way is finally labelled 4K instead of Unknown.",
+    "supporter": true
+  },
+  {
+    "id": "streams-order-and-resolution-cap",
+    "date": "2026-08-30",
+    "tag": "fixed",
+    "title": "Your stream list comes back in the order you asked for",
+    "body": "Sorting by best resolution first could still leave a 4K row at the very bottom of the list, under the 720p ones. That happened whenever your settings left slots to spare: the list was built in two goes and the second was tacked on the end instead of being sorted in with the rest. Everything is now ordered the way you set it, top to bottom. Most per resolution has also become a real limit rather than a target, so a list that asked for 20 results, 5 per resolution and three resolutions now stops at 15 instead of quietly serving a sixth and seventh 4K to fill the gap. Results per title was always a maximum, so coming in under it is a proper answer.",
+    "supporter": true
+  },
+  {
+    "id": "subtitles-bridge",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Subtitles, gathered and labelled by release",
+    "body": "Xperience can now fetch subtitles for you. Turn it on under Subtitles on the streams step and it asks every source you list, merges the answers into one list and hands your player that. Pick the languages you want and the order you want them in, and cap how many of each you see. The part worth knowing: most subtitle lists give you four rows all saying English with no way to tell them apart, and if the one your player picks is out of sync you are stuck. Xperience labels the rest with the release they were timed to, so you can switch to the one that matches what you are watching. It also puts that one first when it can, because it knows which stream it just gave you. OpenSubtitles is built in and needs no key, and you can paste in any other subtitle addon.",
+    "supporter": true
+  },
+  {
+    "id": "streams-right-film",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Keep the wrong film out of your stream list",
+    "body": "Open a film and some of what comes back is not that film. It is usually another one from the same series, and because it is often a genuine 4K remux of that other film, nothing about the quality gives it away. There is now a switch on the streams step that compares the year on each result against the film you actually opened and drops the ones that disagree. Films only, and off unless you turn it on. It is deliberately cautious: a result that states no year is always kept, and so is anything named exactly as the film, so a release in another language will not vanish on you.",
+    "supporter": true
+  },
+  {
+    "id": "streams-pre-digital",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Hide streams for films still in cinemas",
+    "body": "Click a film that is still in cinemas and the only copies in existence are filmed in one. Hiding cam, telesync and screener rips catches most of them, but not all: plenty are uploaded under names that say nothing about what they are, so they arrive looking like an ordinary 1080p release. There is now a switch on the streams step, beside the quality chips, that stops guessing from the name and asks a better question instead: has the film actually been released digitally yet? Until it has, Xperience shows you nothing rather than something bad. It is off unless you turn it on, it only applies to films, and if the release dates cannot be checked your streams come through as usual.",
+    "supporter": true
+  },
+  {
+    "id": "streams-hide-unknown",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Hide streams that never say what they are",
+    "body": "Plenty of releases name no resolution and no quality anywhere in their title, and there was no setting that could hide them: the resolution list only held the six it can read, so switching them all off still left those rows on screen. The streams step now has an Unknown switch under the resolutions and an Unknown chip beside the qualities. Both stay on, which is what your list does today, and either one is yours to switch off. Worth knowing before you do: a handful of good releases are simply named badly, and turning these off hides those too.",
+    "supporter": true
+  },
+  {
+    "id": "support-tickets",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Get help without leaving the app",
+    "body": "Members and supporters can now open a support ticket from inside Xperience. Attach screenshots by pasting or dropping them in, and keep the whole conversation in one place until it is resolved. Each ticket carries the details about your setup that we would otherwise have to ask you for, and you can see exactly what those are before you send.",
+    "link": {
+      "to": "/support",
+      "label": "Open Support"
+    },
+    "supporter": true
+  },
+  {
+    "id": "tmdb-v3-key-rescue",
+    "date": "2026-08-29",
+    "tag": "fixed",
+    "title": "Detail pages no longer fail on an older TMDB key",
+    "body": "If you saved a TMDB API key rather than a Read Access Token, every detail page you opened came back as an error, and your player kept retrying it. TMDB cannot accept that older key at all, so Xperience now serves those pages with its own key instead of failing. Nothing to change on your end. Pasting the Read Access Token is still worth doing, since it is what the rest of your setup checks against."
+  },
+  {
+    "id": "custom-rows-unfiltered",
+    "date": "2026-08-29",
+    "tag": "fixed",
+    "title": "The quality floor on rows you build is now yours to set",
+    "body": "A row built from a watch provider id, or imported from a Nuvio pack, was quietly running under your profile-wide quality floor, so it held far fewer titles than the same query does in Nuvio. New rows are no longer filtered behind your back. Rows you already have keep exactly the titles they had, with that floor now shown on the row itself, so you can lower it, raise it or clear it. The minimum votes box on the builder also shows the number it will use, and accepts a zero to switch it off."
+  },
+  {
+    "id": "custom-rows-network-ids",
+    "date": "2026-08-29",
+    "tag": "added",
+    "title": "Build a series row from network ids",
+    "body": "The custom row builder now takes TMDB network ids the same way it takes watch provider ids, so you can pin a row to HBO, AMC or any other network."
+  },
+  {
+    "id": "themes-collection-folders",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Seven more folders in the Themes collection",
+    "body": "Best Fantasy, Magic, Vampire, Revenge, Treasure Hunt, Coming of Age and Satire were rows you could add to your home screen but had no folder to open in Collections. Each is now a folder in Themes with its own cover, and the Underrated Gems folder picked up the hand-picked list that used to sit outside it."
+  },
+  {
+    "id": "streams-per-service-results",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Keep stream links from every debrid account you connect",
+    "body": "With two accounts connected, the list could come back entirely from one of them: a release both accounts had counted as a duplicate, so only the first copy survived. The streams step now takes a number for how many links each account is guaranteed at every resolution. That also leaves you something to fall back on when one account refuses a link, and shows the version cached on your other account instead of hiding it. It stays off until you set it.",
+    "supporter": true
+  },
+  {
+    "id": "streams-unused-account",
+    "date": "2026-08-28",
+    "tag": "fixed",
+    "title": "A debrid account nothing was using now says so",
+    "body": "Connecting a second account saved the key and checked it, but set up nothing to actually ask it for links, so it sat there adding nothing to your streams. The streams step now points that out and offers to put the account to work.",
+    "supporter": true
+  },
+  {
+    "id": "catalog-copies",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Duplicate a row so each copy filters and sorts on its own",
+    "body": "Settings used to be shared by every placement of a row, so changing one changed them all. A copy keeps the same source but carries its own filters, sort and shuffle, which lets one list run as action in one folder and horror in another."
+  },
+  {
+    "id": "poster-provider-per-row",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Pick a poster provider for a single row",
+    "body": "Keep your usual artwork everywhere and give one row a different provider, or a different poster design from the same one. Rows you leave alone are unchanged, and an override that fails falls back to the rest of your providers rather than to plain artwork."
+  },
+  {
+    "id": "poster-provider-shared-health",
+    "date": "2026-08-28",
+    "tag": "fixed",
+    "title": "Posters stop dropping to standard artwork because of someone else",
+    "body": "A broken poster design on one account could mark BetterPosters, EasyRatings or XRDB as down for everyone using them, and those rows quietly served standard artwork for a while."
+  },
+  {
+    "id": "streams-proxy",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Play streams through your own proxy",
+    "body": "Point the streams step at your own MediaFlow or StremThru instance and each link is resolved once, then served through it. That clears the Wrong IP error some debrid accounts returned, and the case where your own network answers on one address and plays back on another.",
+    "supporter": true
+  },
+  {
+    "id": "streams-debridio-peerflix",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Debridio and Peerflix added as stream sources",
+    "supporter": true
+  },
+  {
+    "id": "patch-notes",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Patch notes",
+    "body": "This page. Come back after a break and see what has been added, changed, improved and fixed since your last visit, with anything new marked for you."
+  },
+  {
+    "id": "charts-malaysia",
+    "date": "2026-08-28",
+    "tag": "added",
+    "title": "Malaysia added to the Top 10 chart regions"
+  },
+  {
+    "id": "search-wrong-kind",
+    "date": "2026-08-28",
+    "tag": "fixed",
+    "title": "Search results no longer open the wrong kind of page",
+    "body": "A small number of titles are filed on TMDB as both a movie and a series under one IMDb id. Those results used to land on the wrong page."
+  },
+  {
+    "id": "anime-romaji-titles",
+    "date": "2026-08-27",
+    "tag": "added",
+    "title": "Anime rows can show romaji titles",
+    "body": "Pick romaji and anime keeps its transliterated name instead of falling back to the English one."
+  },
+  {
+    "id": "top-rated-real-ratings",
+    "date": "2026-08-27",
+    "tag": "improved",
+    "title": "Top Rated rows now rank on real rating data",
+    "body": "They used to be ordered by TMDB average, which buried well-rated titles with fewer votes. Rows badged with an IMDb score are now ordered by it too."
+  },
+  {
+    "id": "membership",
+    "date": "2026-08-26",
+    "tag": "added",
+    "title": "Membership",
+    "body": "Monthly and yearly support through Ko-fi, with a member card in your account, and every supporter feature unlocked while it is active.",
+    "link": {
+      "to": "/settings",
+      "label": "Open settings"
+    }
+  },
+  {
+    "id": "top10-blank-region",
+    "date": "2026-08-26",
+    "tag": "fixed",
+    "title": "Top 10 no longer offers a region it has no chart for",
+    "body": "Picking one of those regions used to add a row that served nothing."
+  },
+  {
+    "id": "letterboxd-genre-dropdown",
+    "date": "2026-08-26",
+    "tag": "fixed",
+    "title": "Letterboxd rows offer a genre dropdown again"
+  },
+  {
+    "id": "stream-bridge",
+    "date": "2026-08-25",
+    "tag": "added",
+    "title": "Stream results, with your own filtering, sorting and formatting",
+    "body": "An opt-in bridge that serves streams to Stremio and Nuvio from your own accounts, with per-account sources and a configurable result format you can preview as real rows.",
+    "supporter": true
+  },
+  {
+    "id": "profile-save-size",
+    "date": "2026-08-21",
+    "tag": "fixed",
+    "title": "Very large profiles save again",
+    "body": "A profile the size of a full community pack used to hit a request-size ceiling and fail to save."
+  },
+  {
+    "id": "search-franchise-container",
+    "date": "2026-08-20",
+    "tag": "added",
+    "title": "Search offers a franchise as one addable row",
+    "body": "Searching a franchise now returns a single container you can add, instead of a dozen separate films."
+  },
+  {
+    "id": "scrobble-real-runtime",
+    "date": "2026-08-20",
+    "tag": "fixed",
+    "title": "Episodes are marked watched on their real runtime",
+    "body": "Completion used to assume a flat 45 minutes, so short episodes were marked watched early and long ones never at all."
+  },
+  {
+    "id": "profile-share",
+    "date": "2026-08-19",
+    "tag": "added",
+    "title": "Share a whole profile",
+    "body": "Send someone your entire setup, carrying its catalog names and filters, and the page tells them what they still need to connect."
+  },
+  {
+    "id": "episode-stills",
+    "date": "2026-08-19",
+    "tag": "added",
+    "title": "Episode stills",
+    "body": "Per-episode thumbnails, served once the numbering is known to line up with the images."
+  },
+  {
+    "id": "search-thin-results",
+    "date": "2026-08-19",
+    "tag": "added",
+    "title": "Hide thin search results and order them by votes",
+    "link": {
+      "to": "/guide#wizard",
+      "label": "How to set it up"
+    }
+  },
+  {
+    "id": "kids-rating-cap",
+    "date": "2026-08-19",
+    "tag": "fixed",
+    "title": "The Kids folder is capped by age rating, not by genre",
+    "body": "It filtered on cartoon genres before, which let through animation that was never meant for children."
+  },
+  {
+    "id": "adult-company-gate",
+    "date": "2026-08-19",
+    "tag": "fixed",
+    "title": "Adult titles the keyword filter missed are now blocked",
+    "body": "Some releases carry no telling keywords, so they are matched on their production company instead."
+  },
+  {
+    "id": "trakt-429-empty-rows",
+    "date": "2026-08-19",
+    "tag": "fixed",
+    "title": "A rate-limited tracker no longer empties your recommendation rows",
+    "body": "Recommended For You and the AI rows used to come back blank when Trakt rate-limited a token refresh."
+  },
+  {
+    "id": "mixed-lists-author-order",
+    "date": "2026-08-13",
+    "tag": "fixed",
+    "title": "Mixed lists keep the order their author gave them",
+    "body": "They are served as one row again, and season entries are no longer dropped."
+  },
+  {
+    "id": "discover-dropdown-order",
+    "date": "2026-08-12",
+    "tag": "added",
+    "title": "Arrange the Nuvio catalog dropdown yourself"
+  },
+  {
+    "id": "indian-ott-folders",
+    "date": "2026-08-12",
+    "tag": "added",
+    "title": "Chaupal, aha and Sun NXT folders",
+    "body": "Punjabi, Telugu and Tamil regional services, each with its own cover art."
+  },
+  {
+    "id": "collection-release-order",
+    "date": "2026-08-12",
+    "tag": "fixed",
+    "title": "Franchise rows are served in release order"
+  },
+  {
+    "id": "bulk-edit-catalogs",
+    "date": "2026-08-11",
+    "tag": "added",
+    "title": "Bulk-edit catalogs from a row, a collection or a folder",
+    "body": "Change a setting once and apply it across everything you picked, instead of opening each row in turn.",
+    "link": {
+      "to": "/guide#wizard",
+      "label": "See it in the guide"
+    }
+  },
+  {
+    "id": "ai-picks-row",
+    "date": "2026-08-10",
+    "tag": "added",
+    "title": "AI picks can have a row of their own",
+    "body": "Opt in and the suggestions get their own shelf instead of being blended into search results. Empty rows now say why they are empty."
+  },
+  {
+    "id": "fanart-personal-key",
+    "date": "2026-08-10",
+    "tag": "added",
+    "title": "Add your own fanart.tv key",
+    "body": "One slow title no longer holds up the rest of the row either."
+  },
+  {
+    "id": "anime-search-row-names",
+    "date": "2026-08-10",
+    "tag": "added",
+    "title": "Name your anime search rows"
+  },
+  {
+    "id": "flixpatrol-charts",
+    "date": "2026-08-10",
+    "tag": "fixed",
+    "title": "Top 10 charts refresh daily again",
+    "body": "They were sourced from lists that had stopped updating, and now come from real daily charts."
+  },
+  {
+    "id": "effective-settings",
+    "date": "2026-08-07",
+    "tag": "added",
+    "title": "See which setting a row is actually using",
+    "body": "The editor now shows the value in effect and where it came from, whether that is the system default, the source, the catalog or your profile."
+  },
+  {
+    "id": "watch-availability",
+    "date": "2026-08-07",
+    "tag": "added",
+    "title": "Filter rows by where a title is streaming",
+    "body": "Build or import TMDB rows restricted to the services you actually pay for, by region and by rent, buy, free or subscription."
+  },
+  {
+    "id": "series-specials-row",
+    "date": "2026-08-06",
+    "tag": "fixed",
+    "title": "Every series gets its Specials row",
+    "body": "Only series sourced from TheTVDB used to show one."
+  },
+  {
+    "id": "anime-native-ids",
+    "date": "2026-08-05",
+    "tag": "added",
+    "title": "Anime addressed by its own ids",
+    "body": "Kitsu, MyAnimeList, AniList and AniDB ids resolve directly, so anime-native players and trackers line up with what you are watching."
+  },
+  {
+    "id": "betterposters-watch-state",
+    "date": "2026-08-05",
+    "tag": "added",
+    "title": "Your watch state is stamped onto poster art",
+    "supporter": true
+  },
+  {
+    "id": "search-ranking",
+    "date": "2026-08-04",
+    "tag": "improved",
+    "title": "Search ranks what you actually typed",
+    "body": "Exact matches lead again instead of being buried under fuzzy tails, and semantic search is on for everyone."
+  },
+  {
+    "id": "simkl-rows",
+    "date": "2026-08-03",
+    "tag": "added",
+    "title": "Simkl Continue Watching and Up Next rows",
+    "body": "For movies, shows and anime."
+  },
+  {
+    "id": "rename-any-catalog",
+    "date": "2026-08-03",
+    "tag": "added",
+    "title": "Rename the catalogs that had no rename option"
+  },
+  {
+    "id": "episode-airtimes",
+    "date": "2026-08-03",
+    "tag": "fixed",
+    "title": "Episode air dates land on the right day, at the right time",
+    "body": "Exact airtimes come from TVMaze and respect your timezone, so an episode no longer appears a day early or late."
+  },
+  {
+    "id": "poster-orientation",
+    "date": "2026-08-02",
+    "tag": "added",
+    "title": "Choose each row poster shape",
+    "body": "Portrait, landscape or square, per row."
+  },
+  {
+    "id": "series-year-ranges",
+    "date": "2026-08-02",
+    "tag": "added",
+    "title": "Series show their year range"
+  },
+  {
+    "id": "guide-tutorial",
+    "date": "2026-08-02",
+    "tag": "added",
+    "title": "An animated setup tutorial in the guide",
+    "body": "Rendered in all eight interface languages.",
+    "link": {
+      "to": "/guide#video",
+      "label": "Watch it"
+    }
+  },
+  {
+    "id": "recommended-folders",
+    "date": "2026-08-02",
+    "tag": "improved",
+    "title": "New profiles start with recommended folders",
+    "body": "You pick the rest instead of starting from nothing."
+  },
+  {
+    "id": "supporter-backdrops",
+    "date": "2026-07-31",
+    "tag": "added",
+    "title": "Pick a gated backdrop on its own",
+    "supporter": true
+  },
+  {
+    "id": "guide-section-links",
+    "date": "2026-07-31",
+    "tag": "improved",
+    "title": "Guide sections are shareable links",
+    "body": "Every heading can be copied as a deep link and scrolls smoothly into view.",
+    "link": {
+      "to": "/guide",
+      "label": "Open the guide"
+    }
+  },
+  {
+    "id": "nightly-cover-rotation",
+    "date": "2026-07-31",
+    "tag": "improved",
+    "title": "Content-driven cover art refreshes nightly"
+  },
+  {
+    "id": "key-art-covers",
+    "date": "2026-07-30",
+    "tag": "added",
+    "title": "Key Art cover set",
+    "body": "Real textless artwork for every collection folder, in both landscape and poster shapes.",
+    "supporter": true
+  },
+  {
+    "id": "supporter-cover-sets",
+    "date": "2026-07-29",
+    "tag": "added",
+    "title": "Four more cover sets in the picker",
+    "supporter": true
+  },
+  {
+    "id": "recently-watched-refresh",
+    "date": "2026-07-28",
+    "tag": "improved",
+    "title": "Recently Watched shelves refresh themselves",
+    "body": "They used to sit one watch behind until you pushed again."
+  },
+  {
+    "id": "martial-arts-folder",
+    "date": "2026-07-28",
+    "tag": "added",
+    "title": "A Martial Arts folder, with Bruce Lee, Jet Li and Donnie Yen"
+  },
+  {
+    "id": "preset-rows-shuffled",
+    "date": "2026-07-28",
+    "tag": "improved",
+    "title": "Popular and Top rows shuffle daily",
+    "body": "Their order used to sit frozen for weeks."
+  },
+  {
+    "id": "hide-builtin-browse-rows",
+    "date": "2026-07-27",
+    "tag": "added",
+    "title": "Hide the built-in Movies and Series browse rows"
+  },
+  {
+    "id": "poster-provider-art",
+    "date": "2026-07-27",
+    "tag": "added",
+    "title": "Backgrounds, title logos and episode stills from your poster provider"
+  },
+  {
+    "id": "posters-plus",
+    "date": "2026-07-27",
+    "tag": "added",
+    "title": "Posters+ added as a poster provider"
+  },
+  {
+    "id": "merged-row-controls",
+    "date": "2026-07-27",
+    "tag": "added",
+    "title": "Merged rows get sort, shuffle and filters"
+  },
+  {
+    "id": "south-indian-folders",
+    "date": "2026-07-27",
+    "tag": "added",
+    "title": "Malayalam and Kannada folders",
+    "body": "With art in all twelve cover sets."
+  },
+  {
+    "id": "tvdb-series-rescue",
+    "date": "2026-07-27",
+    "tag": "fixed",
+    "title": "Series TMDB has never heard of are found through TheTVDB"
+  },
+  {
+    "id": "episode-source-choice",
+    "date": "2026-07-26",
+    "tag": "added",
+    "title": "Choose where season and episode numbering comes from",
+    "body": "TheTVDB, TMDB or Kitsu, so the numbering matches the release you are playing."
+  },
+  {
+    "id": "because-you-watched",
+    "date": "2026-07-26",
+    "tag": "added",
+    "title": "Based on Recently Watched shelves",
+    "body": "Including director and writer lanes drawn from what you finished."
+  },
+  {
+    "id": "durable-scrobbling",
+    "date": "2026-07-26",
+    "tag": "added",
+    "title": "Playback scrobbling that survives a dropped connection"
+  },
+  {
+    "id": "home-layout-export",
+    "date": "2026-07-24",
+    "tag": "added",
+    "title": "Export a full home layout"
+  },
+  {
+    "id": "kofi-supporters",
+    "date": "2026-07-22",
+    "tag": "added",
+    "title": "Ko-fi supporter tracking and a claim flow"
+  },
+  {
+    "id": "list-sort-options",
+    "date": "2026-07-22",
+    "tag": "added",
+    "title": "Recently added and Random sorts for imported lists",
+    "body": "Across Trakt, Simkl, MDBList and TMDB list rows."
+  },
+  {
+    "id": "collections-merge-push",
+    "date": "2026-07-21",
+    "tag": "added",
+    "title": "Merge mode when pushing collections",
+    "body": "Add to what is already on the device instead of replacing it."
+  },
+  {
+    "id": "imported-addons",
+    "date": "2026-07-18",
+    "tag": "added",
+    "title": "Import another addon catalogs and merge them into your rows",
+    "body": "Foreign catalogs are proxied, their genres forwarded, and they can be merged with your own sources in one row."
+  },
+  {
+    "id": "mal-tracker",
+    "date": "2026-07-18",
+    "tag": "added",
+    "title": "MyAnimeList as a connected tracker, with scrobbling"
+  },
+  {
+    "id": "custom-discover-types",
+    "date": "2026-07-18",
+    "tag": "added",
+    "title": "Customize your Discover types"
+  },
+  {
+    "id": "catalog-control-center",
+    "date": "2026-07-17",
+    "tag": "improved",
+    "title": "A per-catalog control center, and a redesigned editor",
+    "body": "Every filter for a row in one place, with the data-quality knobs surfaced instead of buried."
+  },
+  {
+    "id": "indian-ott-first-wave",
+    "date": "2026-07-16",
+    "tag": "added",
+    "title": "JioHotstar, SonyLIV, Zee5 and MX Player folders"
+  },
+  {
+    "id": "canada-presets",
+    "date": "2026-07-15",
+    "tag": "added",
+    "title": "Crave, Hayu, Tubi and Pluto TV folders"
+  },
+  {
+    "id": "list-discover-tab",
+    "date": "2026-07-15",
+    "tag": "added",
+    "title": "Search public Trakt and MDBList lists from a Discover tab"
+  },
+  {
+    "id": "trakt-history-rows",
+    "date": "2026-07-14",
+    "tag": "added",
+    "title": "Trakt watch history rows for movies and series"
+  },
+  {
+    "id": "ai-model-choice",
+    "date": "2026-07-13",
+    "tag": "added",
+    "title": "Choose your AI provider and model"
+  },
+  {
+    "id": "multi-manifest-import",
+    "date": "2026-07-13",
+    "tag": "added",
+    "title": "Import several addon manifests at once"
+  },
+  {
+    "id": "folder-hero-backdrops",
+    "date": "2026-07-10",
+    "tag": "added",
+    "title": "Hero backdrops for every folder, and title logos for the rest"
+  },
+  {
+    "id": "original-language-filter",
+    "date": "2026-07-10",
+    "tag": "added",
+    "title": "Filter a row by original language",
+    "body": "Kept separate from the language your metadata is shown in."
+  },
+  {
+    "id": "xrdb-provider",
+    "date": "2026-07-10",
+    "tag": "added",
+    "title": "XRDB added as a poster provider"
+  },
+  {
+    "id": "manifest-json-urls",
+    "date": "2026-07-09",
+    "tag": "fixed",
+    "title": "Install links end in manifest.json",
+    "body": "Some clients refused to install from the old shape."
+  },
+  {
+    "id": "erdb-provider",
+    "date": "2026-07-06",
+    "tag": "added",
+    "title": "EasyRatings added as a poster provider",
+    "body": "Rating-badged posters and hero backdrops."
+  },
+  {
+    "id": "vietnamese",
+    "date": "2026-07-06",
+    "tag": "added",
+    "title": "Vietnamese interface language"
+  },
+  {
+    "id": "for-you-rows",
+    "date": "2026-07-05",
+    "tag": "added",
+    "title": "For You recommendation rows, and Because You Watched lanes",
+    "body": "Built from what you have actually finished, one seed title per lane."
+  },
+  {
+    "id": "per-catalog-language",
+    "date": "2026-07-04",
+    "tag": "added",
+    "title": "Override the metadata language per row"
+  },
+  {
+    "id": "letterboxd-lists",
+    "date": "2026-07-03",
+    "tag": "added",
+    "title": "Letterboxd lists as a catalog source"
+  },
+  {
+    "id": "shuffle-modes",
+    "date": "2026-07-03",
+    "tag": "added",
+    "title": "Per-row shuffle modes"
+  },
+  {
+    "id": "home-layout-pins",
+    "date": "2026-07-02",
+    "tag": "added",
+    "title": "Pin rows in your home layout",
+    "body": "A pinned row keeps its place when everything else is reordered or exported."
+  },
+  {
+    "id": "tmdb-account",
+    "date": "2026-07-01",
+    "tag": "added",
+    "title": "Connect a TMDB account for personal rows"
+  },
+  {
+    "id": "drag-reorder-sources",
+    "date": "2026-07-01",
+    "tag": "added",
+    "title": "Drag to reorder the sources inside a folder"
+  },
+  {
+    "id": "ai-catalog-preview",
+    "date": "2026-06-30",
+    "tag": "added",
+    "title": "Preview an AI catalog before you add it",
+    "body": "Regenerate it or edit the prompt from inside the editor."
+  },
+  {
+    "id": "guide-page",
+    "date": "2026-06-29",
+    "tag": "added",
+    "title": "A public how-to guide",
+    "link": {
+      "to": "/guide",
+      "label": "Read it"
+    }
+  },
+  {
+    "id": "custom-list-sources",
+    "date": "2026-06-28",
+    "tag": "added",
+    "title": "Add a custom Trakt, MDBList or TMDB list as a row"
+  },
+  {
+    "id": "exclude-watched",
+    "date": "2026-06-28",
+    "tag": "added",
+    "title": "Hide what you have already watched"
+  },
+  {
+    "id": "exclude-origin-countries",
+    "date": "2026-06-28",
+    "tag": "added",
+    "title": "Opt out of titles by country of origin"
+  },
+  {
+    "id": "more-languages",
+    "date": "2026-06-26",
+    "tag": "added",
+    "title": "Seven more interface languages",
+    "body": "Including Greek, each with its own content tuning and cover sets."
+  },
+  {
+    "id": "per-language-rows",
+    "date": "2026-06-25",
+    "tag": "added",
+    "title": "Latest rows per content language"
+  },
+  {
+    "id": "status-page",
+    "date": "2026-06-24",
+    "tag": "added",
+    "title": "A public status page",
+    "body": "Live component health, ninety days of uptime history and an incident feed.",
+    "link": {
+      "to": "/status",
+      "label": "Check status"
+    }
+  },
+  {
+    "id": "kitsu-anime",
+    "date": "2026-06-24",
+    "tag": "added",
+    "title": "Anime served through Kitsu, with absolute episode numbering"
+  },
+  {
+    "id": "hide-adult-content",
+    "date": "2026-06-23",
+    "tag": "added",
+    "title": "Hide adult content, and exclude categories per profile"
+  },
+  {
+    "id": "editable-catalog-names",
+    "date": "2026-06-22",
+    "tag": "added",
+    "title": "Edit the display name of any catalog row"
+  },
+  {
+    "id": "full-metadata",
+    "date": "2026-06-20",
+    "tag": "improved",
+    "title": "Full metadata on every title",
+    "body": "Cast, crew, ratings, runtime and artwork, at the level Cinemeta serves."
+  },
+  {
+    "id": "simkl-tracker",
+    "date": "2026-06-18",
+    "tag": "added",
+    "title": "Simkl as an alternative to Trakt"
+  },
+  {
+    "id": "genre-folder-tabs",
+    "date": "2026-06-15",
+    "tag": "added",
+    "title": "Latest and Top Rated tabs on genre folders"
+  },
+  {
+    "id": "endless-catalogs",
+    "date": "2026-06-13",
+    "tag": "improved",
+    "title": "Catalog rows page endlessly",
+    "body": "They used to stop at the first page."
+  },
+  {
+    "id": "live-preview",
+    "date": "2026-06-11",
+    "tag": "added",
+    "title": "A live preview that mirrors the Nuvio TV and mobile apps"
+  },
+  {
+    "id": "avatars-gallery",
+    "date": "2026-06-10",
+    "tag": "added",
+    "title": "An avatars gallery",
+    "link": {
+      "to": "/avatars",
+      "label": "Browse avatars"
+    }
+  },
+  {
+    "id": "badge-packs",
+    "date": "2026-06-09",
+    "tag": "added",
+    "title": "Signature badge sets and a badge pack editor",
+    "link": {
+      "to": "/badges",
+      "label": "Open badges"
+    }
+  }
+]
