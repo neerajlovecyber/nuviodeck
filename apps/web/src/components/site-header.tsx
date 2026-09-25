@@ -8,20 +8,23 @@ export function SiteHeader({ title }: { title?: string }) {
     select: (s) => s.location.pathname,
   })
 
-  const displayTitle =
-    title ||
-    (pathname === "/avatars" || pathname.startsWith("/avatars/")
-      ? "Avatars"
-      : pathname === "/badges" || pathname.startsWith("/badges/")
-      ? "Badges"
-      : pathname === "/settings"
-      ? "Settings"
-      : pathname === "/dashboard"
-      ? "Profiles"
-      : "Profiles")
+  const getAutoTitle = () => {
+    if (pathname === "/avatars" || pathname.startsWith("/avatars/")) return "Avatars"
+    if (pathname === "/badges" || pathname.startsWith("/badges/")) return "Badges"
+    if (pathname === "/settings" || pathname.startsWith("/settings/")) return "Settings"
+    if (pathname === "/studio" || pathname.startsWith("/studio/")) return "Cover Studio"
+    if (pathname === "/addons" || pathname.startsWith("/addons/")) return "Addon Manager"
+    if (pathname === "/status" || pathname.startsWith("/status/")) return "System Status"
+    if (pathname === "/whats-new" || pathname.startsWith("/whats-new/")) return "What's New"
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return "Profiles"
+    if (pathname.startsWith("/wizard/")) return "Profile Wizard"
+    return "Profiles"
+  }
+
+  const displayTitle = title || getAutoTitle()
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
+    <header className="flex h-14 md:h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 px-4 lg:px-6">
       <div className="flex items-center gap-1 lg:gap-2">
         <SidebarTrigger className="-ml-1" />
         <Separator

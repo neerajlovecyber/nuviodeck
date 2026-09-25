@@ -255,8 +255,8 @@ function SettingsPage() {
       <SidebarInset>
         <SiteHeader />
 
-        <div className="flex-1 w-full max-w-4xl mx-auto px-4 py-8 md:px-8">
-          <div className="mb-6">
+        <div className="flex-1 w-full max-w-5xl mx-auto px-6 py-8 md:px-10 lg:px-12 space-y-6">
+          <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
               Settings
             </h1>

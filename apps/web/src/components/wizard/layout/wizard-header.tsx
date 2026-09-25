@@ -12,7 +12,7 @@ export function WizardHeader() {
   const { profileName } = useWizard()
 
   return (
-    <header className="flex h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height) px-4 lg:px-6">
+    <header className="flex h-14 md:h-(--header-height) shrink-0 items-center justify-between gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14 px-4 lg:px-6">
       <div className="flex items-center gap-1.5 lg:gap-2 min-w-0">
         <SidebarTrigger className="-ml-1" />
         <Separator orientation="vertical" className="mx-1 h-4 data-vertical:self-auto" />

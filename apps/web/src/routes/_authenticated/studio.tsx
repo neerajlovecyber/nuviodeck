@@ -11,18 +11,13 @@ import { Input } from "@workspace/ui/components/input"
 import { Badge } from "@workspace/ui/components/badge"
 import { Slider } from "@workspace/ui/components/slider"
 import { Switch } from "@workspace/ui/components/switch"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@workspace/ui/components/tabs"
 import { toast } from "sonner"
 import {
   Palette,
   Sparkles,
   Type,
-  Sliders,
   Check,
   RotateCcw,
-  Download,
-  Share2,
-  Tv,
   Layers,
   Flame,
   Film,
@@ -30,7 +25,6 @@ import {
   Compass,
   Zap,
   Leaf,
-  Maximize2,
   RefreshCw,
 } from "lucide-react"
 
@@ -221,6 +215,12 @@ const ACCENT_SWATCHES = [
   "#3b82f6", // Royal Blue
   "#ffffff", // Clean White
 ]
+function getSliderValue(value: number | readonly number[]): number {
+  if (typeof value === "number") {
+    return value
+  }
+  return value[0] ?? 0
+}
 
 export function CoverStudioPage() {
   const [activeLook, setActiveLook] = React.useState<CoverLook>(COVER_LOOKS[0])
@@ -291,12 +291,19 @@ export function CoverStudioPage() {
   const displayTitle = uppercaseTitle ? currentTitle.toUpperCase() : currentTitle
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="min-h-screen bg-background flex flex-col">
-        <SiteHeader />
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "16rem",
+          "--header-height": "3.5rem",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader title="Cover Studio" />
 
-        <div className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 md:px-10 lg:px-12 space-y-8">
           {/* Header Title & Intro */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-6">
             <div className="space-y-1">
@@ -634,7 +641,7 @@ export function CoverStudioPage() {
                     min={0}
                     max={100}
                     step={5}
-                    onValueChange={(v) => setVignette((v[0] || 0) / 100)}
+                    onValueChange={(v) => setVignette(getSliderValue(v) / 100)}
                   />
                 </div>
 
@@ -648,7 +655,7 @@ export function CoverStudioPage() {
                     min={0}
                     max={40}
                     step={2}
-                    onValueChange={(v) => setGrain((v[0] || 0) / 100)}
+                    onValueChange={(v) => setGrain(getSliderValue(v) / 100)}
                   />
                 </div>
 
@@ -662,7 +669,7 @@ export function CoverStudioPage() {
                     min={20}
                     max={100}
                     step={5}
-                    onValueChange={(v) => setScrim((v[0] || 0) / 100)}
+                    onValueChange={(v) => setScrim(getSliderValue(v) / 100)}
                   />
                 </div>
 
@@ -676,7 +683,7 @@ export function CoverStudioPage() {
                     min={0}
                     max={8}
                     step={1}
-                    onValueChange={(v) => setFrameWidth(v[0] || 0)}
+                    onValueChange={(v) => setFrameWidth(getSliderValue(v))}
                   />
                 </div>
 
@@ -690,7 +697,7 @@ export function CoverStudioPage() {
                     min={0}
                     max={32}
                     step={2}
-                    onValueChange={(v) => setFrameRadius(v[0] || 0)}
+                    onValueChange={(v) => setFrameRadius(getSliderValue(v))}
                   />
                 </div>
               </div>

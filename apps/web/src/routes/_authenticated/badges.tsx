@@ -374,13 +374,19 @@ function BadgesPage() {
   }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="bg-background">
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "16rem",
+          "--header-height": "3.5rem",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
         <SiteHeader title="Badges" />
-        <div className="flex-1 overflow-y-auto">
-          <main className="container max-w-7xl mx-auto px-4 lg:px-8 py-6 lg:py-8 space-y-8">
-            {/* Page Header */}
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 md:px-10 lg:px-12 space-y-8">
+          {/* Page Header */}
             <div className="border-b pb-6 space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-xs">
@@ -644,7 +650,6 @@ function BadgesPage() {
                 </div>
               </div>
             </div>
-          </main>
         </div>
       </SidebarInset>
 

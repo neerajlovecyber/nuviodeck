@@ -26,7 +26,7 @@ import {
   Sparkles,
 } from "lucide-react"
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ variant = "inset", ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = useRouterState({
     select: (s) => s.location.pathname,
   })
@@ -90,7 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   ]
 
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="offcanvas" variant={variant} {...props}>
       <SidebarHeader className="w-full border-b border-sidebar-border/50 p-3">
         <div className="flex items-center gap-3 px-1 py-1">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-sm shadow-xs">

@@ -187,7 +187,7 @@ function AvatarsPage() {
         <SiteHeader />
 
         <div className="flex flex-1 flex-col">
-          <main className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+          <main className="max-w-7xl mx-auto w-full px-6 py-8 md:px-10 lg:px-12 space-y-8">
             {/* Header section matching reference design */}
             <div className="space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

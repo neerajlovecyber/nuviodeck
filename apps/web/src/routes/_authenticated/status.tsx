@@ -91,12 +91,19 @@ export function SystemStatusPage() {
   const groups = Array.from(new Set(components.map((c) => c.group)))
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset className="min-h-screen bg-background flex flex-col">
-        <SiteHeader />
+    <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "16rem",
+          "--header-height": "3.5rem",
+        } as React.CSSProperties
+      }
+    >
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader title="System Status" />
 
-        <div className="flex-1 p-6 md:p-8 max-w-7xl w-full mx-auto space-y-8">
+        <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 md:px-10 lg:px-12 space-y-8">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border/40 pb-6">
             <div className="space-y-1">
