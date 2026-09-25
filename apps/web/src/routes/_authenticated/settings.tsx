@@ -73,6 +73,7 @@ import {
 import { toast } from 'sonner'
 import { useAppStore } from '@/store/useStore'
 import { useSettingsStore, PosterProvider } from '@/store/useSettingsStore'
+import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -215,6 +216,7 @@ function SettingsPage() {
   } = useSettingsStore()
 
   // Password Visibility States
+  const [traktDialogOpen, setTraktDialogOpen] = React.useState(false)
   const [showMdb, setShowMdb] = React.useState(false)
   const [showTmdb, setShowTmdb] = React.useState(false)
   const [showGemini, setShowGemini] = React.useState(false)
@@ -1257,33 +1259,70 @@ function SettingsPage() {
 
               <div className="flex items-center justify-between gap-4 border-t pt-4">
                 <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                    <CircleCheck className="size-5" />
+                  <span
+                    className={`grid size-9 shrink-0 place-items-center rounded-full ${
+                      connections.trakt.connected
+                        ? 'bg-primary/10 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }`}
+                  >
+                    {connections.trakt.connected ? (
+                      <CircleCheck className="size-5" />
+                    ) : (
+                      <Link2 className="size-5" />
+                    )}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
-                      {connections.trakt.username}
+                      {connections.trakt.connected
+                        ? connections.trakt.username || 'Connected'
+                        : 'Not connected'}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      New profiles will use this Trakt account by default.
+                      {connections.trakt.connected
+                        ? 'New profiles will use this Trakt account by default.'
+                        : 'Link your Trakt account with official device code pairing.'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setConnection('trakt', { connected: false })
-                      toast.info('Trakt account disconnected')
-                    }}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                  >
-                    <Link2Off className="size-4" /> Disconnect
-                  </Button>
+                  {connections.trakt.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/trakt/disconnect', { method: 'DELETE' }).catch(() => {})
+                        setConnection('trakt', { connected: false, username: '' })
+                        toast.info('Trakt account disconnected')
+                      }}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-4" /> Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => setTraktDialogOpen(true)}
+                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#ed1c24] hover:bg-[#d0131a] text-white cursor-pointer"
+                    >
+                      <Link2 className="size-4" /> Connect Trakt
+                    </Button>
+                  )}
                 </div>
               </div>
+
+              <TraktConnectDialog
+                open={traktDialogOpen}
+                onOpenChange={setTraktDialogOpen}
+                onSuccess={(profile) => {
+                  setConnection('trakt', {
+                    connected: true,
+                    username: profile.username,
+                    scrobble: true,
+                  })
+                }}
+              />
 
               <div className="flex items-center justify-between gap-4 border-t pt-4">
                 <p className="min-w-0 text-xs text-muted-foreground">

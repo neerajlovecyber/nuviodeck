@@ -41,6 +41,8 @@ import { toast } from 'sonner'
 import { CatalogItem, DEFAULT_COLLECTIONS, getPresetRows } from '@/data/catalog-data'
 import { WIZARD_INFO_ITEMS } from '../wizard-constants'
 import { useWizard } from '../wizard-context'
+import { useSettingsStore } from '@/store/useSettingsStore'
+import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
 
 function SortableHomeRowItem({ row, onRemove }: { row: CatalogItem; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -125,6 +127,9 @@ export function WizardDialogs() {
     handleConfirmConnect,
     activeInfoKey,
     setActiveInfoKey,
+    setTraktConnected,
+    setTraktUsername,
+    setScrobbleTrakt,
   } = useWizard()
 
   const dndSensors = useSensors(
@@ -644,9 +649,26 @@ export function WizardDialogs() {
         </DialogContent>
       </Dialog>
 
-      {/* 6. Connect Account Modal */}
+      {/* 6a. Trakt Dedicated Device Code OAuth Activation Modal */}
+      <TraktConnectDialog
+        open={connectModalProvider === 'trakt'}
+        onOpenChange={(open) => !open && setConnectModalProvider(null)}
+        onSuccess={(profile) => {
+          setTraktConnected(true)
+          setTraktUsername(profile.username)
+          setScrobbleTrakt(true)
+          useSettingsStore.getState().setConnection('trakt', {
+            connected: true,
+            username: profile.username,
+            scrobble: true,
+          })
+          setConnectModalProvider(null)
+        }}
+      />
+
+      {/* 6b. Connect Account Modal for other providers */}
       <Dialog
-        open={!!connectModalProvider}
+        open={!!connectModalProvider && connectModalProvider !== 'trakt'}
         onOpenChange={(open) => !open && setConnectModalProvider(null)}
       >
         <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
