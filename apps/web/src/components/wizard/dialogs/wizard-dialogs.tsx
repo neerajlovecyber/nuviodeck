@@ -42,8 +42,6 @@ import { CatalogItem, DEFAULT_COLLECTIONS, getPresetRows } from '@/data/catalog-
 import { WIZARD_INFO_ITEMS } from '../wizard-constants'
 import { useWizard } from '../wizard-context'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
-import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
 import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
 import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
@@ -660,38 +658,6 @@ export function WizardDialogs() {
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* 6a. Trakt Dedicated Device Code OAuth Activation Modal */}
-      <TraktConnectDialog
-        open={connectModalProvider === 'trakt'}
-        onOpenChange={(open) => !open && setConnectModalProvider(null)}
-        onSuccess={(profile) => {
-          setTraktConnected(true)
-          setTraktUsername(profile.username)
-          setScrobbleTrakt(true)
-          useSettingsStore.getState().setConnection('trakt', {
-            connected: true,
-            username: profile.username,
-            scrobble: true,
-          })
-          setConnectModalProvider(null)
-        }}
-      />
-
-      {/* 6b. Simkl Dedicated PIN Activation Modal */}
-      <SimklConnectDialog
-        open={connectModalProvider === 'simkl'}
-        onOpenChange={(open) => !open && setConnectModalProvider(null)}
-        onSuccess={(profile) => {
-          setSimklConnected(true)
-          setSimklUsername(profile.username)
-          useSettingsStore.getState().setConnection('simkl', {
-            connected: true,
-            username: profile.username,
-          })
-          setConnectModalProvider(null)
-        }}
-      />
 
       {/* 6c. TMDB Dedicated OAuth Session Modal */}
       <TmdbConnectDialog

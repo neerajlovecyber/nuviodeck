@@ -45,6 +45,8 @@ import {
   POPULAR_LANGUAGES,
 } from '../wizard-constants'
 import { useWizard } from '../wizard-context'
+import { useSettingsStore } from '@/store/useSettingsStore'
+import { startOAuthFlow } from '@/lib/oauth'
 import { Switch } from '@workspace/ui/components/switch'
 
 export function Step1Setup() {
@@ -82,11 +84,15 @@ export function Step1Setup() {
     letterboxdError,
     handleVerifyLetterboxd,
     traktConnected,
+    setTraktConnected,
     traktUsername,
+    setTraktUsername,
     scrobbleTrakt,
     setScrobbleTrakt,
     simklConnected,
+    setSimklConnected,
     simklUsername,
+    setSimklUsername,
     anilistConnected,
     anilistUsername,
     malConnected,
@@ -366,7 +372,16 @@ export function Step1Setup() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => openConnectDialog('trakt')}
+                        onClick={() => {
+                          startOAuthFlow('trakt', (profile) => {
+                            setTraktConnected(true)
+                            setTraktUsername(profile.username)
+                            setScrobbleTrakt(true)
+                            useSettingsStore
+                              .getState()
+                              .setConnection('trakt', { connected: true, username: profile.username, scrobble: true })
+                          })
+                        }}
                         className="h-9 gap-2 text-xs font-medium cursor-pointer"
                       >
                         <Link2 className="size-3.5" /> Connect Trakt
@@ -425,7 +440,15 @@ export function Step1Setup() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => openConnectDialog('simkl')}
+                      onClick={() => {
+                        startOAuthFlow('simkl', (profile) => {
+                          setSimklConnected(true)
+                          setSimklUsername(profile.username)
+                          useSettingsStore
+                            .getState()
+                            .setConnection('simkl', { connected: true, username: profile.username })
+                        })
+                      }}
                       className="h-9 gap-2 text-xs font-medium cursor-pointer"
                     >
                       <Link2 className="size-3.5" /> Connect Simkl

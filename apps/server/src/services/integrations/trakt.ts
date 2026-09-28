@@ -49,16 +49,22 @@ export interface ScrobblePayload {
 }
 
 export class TraktService {
-  private clientId: string
-  private clientSecret: string
+  private get clientId(): string {
+    return (
+      process.env.TRAKT_CLIENT_ID ||
+      'd852bb071e62164e9e03dd90d9a6c6c74d6c758650df9de0bf749dfb2ad2b993'
+    )
+  }
+
+  private get clientSecret(): string {
+    return process.env.TRAKT_CLIENT_SECRET || ''
+  }
+
   private baseUrl = 'https://api.trakt.tv'
 
   constructor(clientId?: string, clientSecret?: string) {
-    this.clientId =
-      clientId ||
-      process.env.TRAKT_CLIENT_ID ||
-      'd852bb071e62164e9e03dd90d9a6c6c74d6c758650df9de0bf749dfb2ad2b993'
-    this.clientSecret = clientSecret || process.env.TRAKT_CLIENT_SECRET || ''
+    if (clientId) process.env.TRAKT_CLIENT_ID = clientId
+    if (clientSecret) process.env.TRAKT_CLIENT_SECRET = clientSecret
   }
 
   private headers(accessToken?: string): HeadersInit {
@@ -72,6 +78,53 @@ export class TraktService {
       headers['Authorization'] = `Bearer ${accessToken}`
     }
     return headers
+  }
+
+  getAuthUrl(redirectUri: string, state?: string): string {
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: this.clientId,
+      redirect_uri: redirectUri,
+    })
+    if (state) params.set('state', state)
+    return `https://trakt.tv/oauth/authorize?${params.toString()}`
+  }
+
+  async exchangeAuthCode(code: string, redirectUri: string): Promise<TraktTokenResponse> {
+    const candidateUris = [
+      redirectUri,
+      'http://localhost:3000/api/integrations/trakt/callback',
+      'http://localhost:3001/api/integrations/trakt/callback',
+      'urn:ietf:wg:oauth:2.0:oob',
+    ].filter((uri, idx, arr) => uri && arr.indexOf(uri) === idx)
+
+    let lastError = ''
+    for (const uri of candidateUris) {
+      try {
+        const res = await fetch(`${this.baseUrl}/oauth/token`, {
+          method: 'POST',
+          headers: this.headers(),
+          body: JSON.stringify({
+            code,
+            client_id: this.clientId,
+            client_secret: this.clientSecret,
+            redirect_uri: uri,
+            grant_type: 'authorization_code',
+          }),
+          signal: AbortSignal.timeout(6000),
+        })
+
+        if (res.ok) {
+          return await res.json()
+        }
+        const errText = await res.text().catch(() => '')
+        lastError = `(${res.status}): ${errText}`
+      } catch (err: any) {
+        lastError = err.message
+      }
+    }
+
+    throw new Error(`Trakt authorization code exchange failed ${lastError}`)
   }
 
   /**

@@ -4,7 +4,7 @@ import { accountConnections } from '../../db/schema'
 import { eq } from 'drizzle-orm'
 import { tmdbAccountService } from '../../services/integrations/tmdb-account'
 import { traktService } from '../../services/integrations/trakt'
-import { simklService } from '../../services/integrations/simkl'
+import { simklService, generateSimklPKCE } from '../../services/integrations/simkl'
 import { anilistService } from '../../services/integrations/anilist'
 import { myAnimeListService } from '../../services/integrations/myanimelist'
 
@@ -238,29 +238,196 @@ integrationsRouter.delete('/tmdb/disconnect', async (c) => {
   return c.json({ success: true, message: 'TMDB account disconnected' })
 })
 
+function renderOAuthPopupResponse(provider: string, profile?: { username: string; displayName?: string; avatarUrl?: string }, error?: string): string {
+  const isSuccess = !error && Boolean(profile)
+  const color = provider === 'trakt' ? '#ed1c24' : '#00e676'
+  const title = isSuccess ? 'Account Connected' : 'Authentication Failed'
+  const message = isSuccess
+    ? `Successfully connected ${provider.toUpperCase()} account @${profile?.username || ''}!`
+    : error || 'An error occurred during authentication.'
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${title} - NuvioDeck</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: #09090b;
+      color: #fafafa;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 16px;
+      padding: 32px 24px;
+      text-align: center;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+      background: ${isSuccess ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)'};
+      color: ${isSuccess ? '#22c55e' : '#ef4444'};
+      border: 1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
+    }
+    .icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 16px;
+      color: ${isSuccess ? '#22c55e' : '#ef4444'};
+    }
+    h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; }
+    p { margin: 0; color: #a1a1aa; font-size: 13px; line-height: 1.5; word-break: break-word; }
+    .btn {
+      margin-top: 16px;
+      display: inline-block;
+      padding: 8px 16px;
+      background: #27272a;
+      color: #fafafa;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      border: 1px solid #3f3f46;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <span class="badge">${provider}</span>
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      ${isSuccess
+        ? '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>'
+        : '<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>'
+      }
+    </svg>
+    <h2>${title}</h2>
+    <p>${message}</p>
+    ${isSuccess
+      ? '<p style="margin-top: 12px; font-size: 12px; opacity: 0.7;">This window will close automatically...</p>'
+      : '<button class="btn" onclick="window.close()">Close Window</button>'
+    }
+  </div>
+  <script>
+    const payload = {
+      type: 'oauth_complete',
+      provider: '${provider}',
+      success: ${isSuccess},
+      profile: ${JSON.stringify(profile || null)},
+      error: ${JSON.stringify(error || null)},
+      timestamp: Date.now()
+    };
+
+    try {
+      localStorage.setItem('nuviodeck_oauth_result', JSON.stringify(payload));
+    } catch(e) {}
+
+    try {
+      if (window.opener) {
+        window.opener.postMessage(payload, '*');
+      }
+    } catch(e) {}
+
+    ${isSuccess ? `setTimeout(() => {
+      try { window.close(); } catch(e) {}
+    }, 1200);` : ''}
+  </script>
+</body>
+</html>`
+}
+
 // ----------------------------------------------------
 // 3. Trakt Endpoints
 // ----------------------------------------------------
+integrationsRouter.get('/trakt/auth-url', async (c) => {
+  try {
+    const originParam = c.req.query('origin')
+    const origin = originParam || new URL(c.req.url).origin
+    const redirectUri = `${origin}/api/integrations/trakt/callback`
+    const authUrl = traktService.getAuthUrl(redirectUri, encodeURIComponent(redirectUri))
+    return c.json({ authUrl, redirectUri })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+integrationsRouter.get('/trakt/callback', async (c) => {
+  const code = c.req.query('code')
+  const error = c.req.query('error')
+  const stateParam = c.req.query('state')
+  const origin = new URL(c.req.url).origin
+  const redirectUri = stateParam ? decodeURIComponent(stateParam) : `${origin}/api/integrations/trakt/callback`
+
+  if (error || !code) {
+    return c.html(renderOAuthPopupResponse('trakt', undefined, error || 'Authorization was cancelled or code was missing.'))
+  }
+
+  try {
+    const tokenRes = await traktService.exchangeAuthCode(code, redirectUri)
+    const profile = await traktService.getUserProfile(tokenRes.access_token).catch(() => null)
+    const username = profile?.username || 'Trakt User'
+    const now = new Date().toISOString()
+
+    const connectionData = {
+      id: 'trakt',
+      provider: 'trakt',
+      username,
+      displayName: profile?.name || username,
+      avatarUrl: profile?.images?.avatar?.full || `https://avatar.vercel.sh/${encodeURIComponent(username)}.png`,
+      accessToken: tokenRes.access_token,
+      refreshToken: tokenRes.refresh_token,
+      expiresAt: (tokenRes.created_at || Math.floor(Date.now() / 1000)) + (tokenRes.expires_in || 7776000),
+      scrobbleEnabled: true,
+      extraJson: JSON.stringify({ scope: tokenRes.scope || 'public' }),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db
+      .insert(accountConnections)
+      .values(connectionData)
+      .onConflictDoUpdate({
+        target: accountConnections.id,
+        set: connectionData,
+      })
+
+    return c.html(renderOAuthPopupResponse('trakt', {
+      username: connectionData.username,
+      displayName: connectionData.displayName,
+      avatarUrl: connectionData.avatarUrl,
+    }))
+  } catch (err: any) {
+    return c.html(renderOAuthPopupResponse('trakt', undefined, err.message || 'Failed to exchange Trakt authorization code.'))
+  }
+})
+
 integrationsRouter.post('/trakt/device/code', async (c) => {
   try {
     const code = await traktService.getDeviceCode()
     return c.json(code)
   } catch (err: any) {
-    // If no external Trakt API credentials or Trakt rejected default client_id,
-    // generate an active local pairing session so the device flow works seamlessly.
-    const part1 = Math.random().toString(36).substring(2, 6).toUpperCase()
-    const part2 = Math.random().toString(36).substring(2, 6).toUpperCase()
-    const mockUserCode = `${part1}-${part2}`
-    const mockDeviceCode = 'dev_' + Buffer.from(mockUserCode).toString('hex')
     return c.json({
-      device_code: mockDeviceCode,
-      user_code: mockUserCode,
-      verification_url: 'https://trakt.tv/activate',
-      expires_in: 600,
-      interval: 5,
-      is_fallback: true,
-      note: 'Enter code at trakt.tv/activate or confirm when authorized',
-    })
+      error: 'Trakt OAuth Client ID is invalid or not configured on the server. Please provide a valid TRAKT_CLIENT_ID in .env.',
+      details: err.message,
+    }, 400)
   }
 })
 
@@ -487,18 +654,108 @@ integrationsRouter.delete('/trakt/disconnect', async (c) => {
 // ----------------------------------------------------
 // 4. Simkl Endpoints
 // ----------------------------------------------------
+integrationsRouter.get('/simkl/auth-url', async (c) => {
+  try {
+    const originParam = c.req.query('origin')
+    const origin = originParam || new URL(c.req.url).origin
+    const redirectUri = `${origin}/api/integrations/simkl/callback`
+
+    const { codeVerifier, codeChallenge } = generateSimklPKCE()
+    const statePayload = Buffer.from(
+      JSON.stringify({ redirectUri, codeVerifier })
+    ).toString('base64url')
+
+    const authUrl = simklService.getAuthUrl(redirectUri, codeChallenge, statePayload)
+    return c.json({ authUrl, redirectUri })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
+integrationsRouter.get('/simkl/callback', async (c) => {
+  const code = c.req.query('code')
+  const error = c.req.query('error')
+  const errorDesc = c.req.query('error_description')
+  const stateParam = c.req.query('state')
+  const origin = new URL(c.req.url).origin
+
+  let redirectUri = `${origin}/api/integrations/simkl/callback`
+  let codeVerifier: string | undefined
+
+  if (stateParam) {
+    try {
+      const parsed = JSON.parse(Buffer.from(stateParam, 'base64url').toString('utf8'))
+      if (parsed.redirectUri) redirectUri = parsed.redirectUri
+      if (parsed.codeVerifier) codeVerifier = parsed.codeVerifier
+    } catch {
+      redirectUri = decodeURIComponent(stateParam)
+    }
+  }
+
+  if (error || !code) {
+    return c.html(
+      renderOAuthPopupResponse(
+        'simkl',
+        undefined,
+        errorDesc || error || 'Authorization was cancelled or code was missing.'
+      )
+    )
+  }
+
+  try {
+    const tokenRes = await simklService.exchangeAuthCode(code, redirectUri, codeVerifier)
+    const settings = await simklService.getUserSettings(tokenRes.access_token).catch(() => null)
+    const user = settings?.user || {}
+    const username = user.name || 'Simkl User'
+    const now = new Date().toISOString()
+
+    const connectionData = {
+      id: 'simkl',
+      provider: 'simkl',
+      username,
+      displayName: username,
+      avatarUrl: user.avatar || `https://avatar.vercel.sh/${encodeURIComponent(username)}.png`,
+      accessToken: tokenRes.access_token,
+      scrobbleEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db
+      .insert(accountConnections)
+      .values(connectionData)
+      .onConflictDoUpdate({
+        target: accountConnections.id,
+        set: connectionData,
+      })
+
+    return c.html(
+      renderOAuthPopupResponse('simkl', {
+        username: connectionData.username,
+        displayName: connectionData.displayName,
+        avatarUrl: connectionData.avatarUrl,
+      })
+    )
+  } catch (err: any) {
+    return c.html(
+      renderOAuthPopupResponse(
+        'simkl',
+        undefined,
+        err.message || 'Failed to exchange Simkl authorization code.'
+      )
+    )
+  }
+})
+
 integrationsRouter.post('/simkl/pin', async (c) => {
   try {
     const pin = await simklService.getPinCode()
     return c.json(pin)
   } catch (err: any) {
-    const mockCode = 'SMKL-' + Math.random().toString(36).substring(2, 6).toUpperCase()
     return c.json({
-      user_code: mockCode,
-      verification_url: 'https://simkl.com/pin',
-      expires_in: 600,
-      interval: 4,
-    })
+      error: 'Simkl OAuth Client ID is invalid or not configured on the server. Please provide a valid SIMKL_CLIENT_ID in .env.',
+      details: err.message,
+    }, 400)
   }
 })
 
@@ -544,25 +801,22 @@ integrationsRouter.get('/simkl/pin/:userCode', async (c) => {
   try {
     const userCode = c.req.param('userCode')
 
-    if (userCode.startsWith('SMKL-') || userCode.startsWith('simkl_dev_')) {
-      return c.json({ success: false, connected: false, pending: true, message: 'Waiting for PIN authorization at simkl.com/pin' }, 400)
-    }
-
     const tokenRes = await simklService.exchangePin(userCode)
 
     if (tokenRes.access_token) {
       const now = new Date().toISOString()
       const settings = await simklService.getUserSettings(tokenRes.access_token).catch(() => null)
       const user = settings?.user || {}
+      const username = user.name || 'Simkl User'
 
       await db
         .insert(accountConnections)
         .values({
           id: 'simkl',
           provider: 'simkl',
-          username: user.name || 'Simkl User',
-          displayName: user.name,
-          avatarUrl: user.avatar,
+          username,
+          displayName: user.name || username,
+          avatarUrl: user.avatar || `https://avatar.vercel.sh/${encodeURIComponent(username)}.png`,
           accessToken: tokenRes.access_token,
           scrobbleEnabled: true,
           createdAt: now,
@@ -571,18 +825,30 @@ integrationsRouter.get('/simkl/pin/:userCode', async (c) => {
         .onConflictDoUpdate({
           target: accountConnections.id,
           set: {
-            username: user.name,
-            displayName: user.name,
-            avatarUrl: user.avatar,
+            username,
+            displayName: user.name || username,
+            avatarUrl: user.avatar || `https://avatar.vercel.sh/${encodeURIComponent(username)}.png`,
             accessToken: tokenRes.access_token,
             updatedAt: now,
           },
         })
 
-      return c.json({ success: true, connected: true, user })
+      return c.json({
+        success: true,
+        connected: true,
+        user: {
+          username,
+          displayName: user.name || username,
+          avatarUrl: user.avatar,
+        },
+      })
     }
 
-    return c.json(tokenRes)
+    if (tokenRes.pending || tokenRes.error === 'authorization_pending' || tokenRes.error === 'slow_down') {
+      return c.json({ pending: true, message: 'Waiting for PIN authorization at simkl.com/pin' })
+    }
+
+    return c.json({ error: tokenRes.error_description || tokenRes.error || 'Failed to exchange PIN' }, 400)
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
   }

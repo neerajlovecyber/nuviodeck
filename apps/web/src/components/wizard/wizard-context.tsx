@@ -882,6 +882,62 @@ export function WizardProvider({
     loadData()
   }, [profileId])
 
+  // Sync active backend credentials (Trakt, Simkl, TMDB, AniList, MAL) from server database
+  React.useEffect(() => {
+    fetch('/api/integrations/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'ok' && data.integrations) {
+          const intg = data.integrations
+          if (intg.trakt?.connected && intg.trakt?.username) {
+            setTraktConnected(true)
+            setTraktUsername(intg.trakt.username)
+            if (intg.trakt.scrobbleEnabled !== undefined) {
+              setScrobbleTrakt(intg.trakt.scrobbleEnabled)
+            }
+            useSettingsStore.getState().setConnection('trakt', {
+              connected: true,
+              username: intg.trakt.username,
+              scrobble: intg.trakt.scrobbleEnabled ?? true,
+            })
+          }
+          if (intg.simkl?.connected && intg.simkl?.username) {
+            setSimklConnected(true)
+            setSimklUsername(intg.simkl.username)
+            useSettingsStore.getState().setConnection('simkl', {
+              connected: true,
+              username: intg.simkl.username,
+            })
+          }
+          if (intg.anilist?.connected && intg.anilist?.username) {
+            setAnilistConnected(true)
+            setAnilistUsername(intg.anilist.username)
+            useSettingsStore.getState().setConnection('anilist', {
+              connected: true,
+              username: intg.anilist.username,
+            })
+          }
+          if (intg.myanimelist?.connected && intg.myanimelist?.username) {
+            setMalConnected(true)
+            setMalUsername(intg.myanimelist.username)
+            useSettingsStore.getState().setConnection('myanimelist', {
+              connected: true,
+              username: intg.myanimelist.username,
+            })
+          }
+          if (intg.tmdb?.connected && intg.tmdb?.username) {
+            setTmdbAccountConnected(true)
+            setTmdbAccountUsername(intg.tmdb.username)
+            useSettingsStore.getState().setConnection('tmdb', {
+              connected: true,
+              username: intg.tmdb.username,
+            })
+          }
+        }
+      })
+      .catch(() => {})
+  }, [profileId])
+
   // Toggle row selection
   const toggleRow = (item: CatalogItem) => {
     if (selectedRows.some((r) => r.id === item.id)) {

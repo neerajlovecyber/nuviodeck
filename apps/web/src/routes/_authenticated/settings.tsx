@@ -79,8 +79,7 @@ import { toast } from 'sonner'
 import { testApiKey } from '@/lib/test-key'
 import { useAppStore } from '@/store/useStore'
 import { useSettingsStore } from '@/store/useSettingsStore'
-import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
-import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
+import { startOAuthFlow } from '@/lib/oauth'
 import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
 import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
@@ -226,9 +225,7 @@ function SettingsPage() {
   } = useSettingsStore()
 
   // Dialog states for connections
-  const [traktDialogOpen, setTraktDialogOpen] = React.useState(false)
   const [tmdbDialogOpen, setTmdbDialogOpen] = React.useState(false)
-  const [simklDialogOpen, setSimklDialogOpen] = React.useState(false)
   const [anilistDialogOpen, setAnilistDialogOpen] = React.useState(false)
   const [malDialogOpen, setMalDialogOpen] = React.useState(false)
 
@@ -237,6 +234,49 @@ function SettingsPage() {
 
   // Dialog State for Delete Account
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
+
+  // Sync active connections from backend database on mount
+  React.useEffect(() => {
+    fetch('/api/integrations/status')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'ok' && data.integrations) {
+          const intg = data.integrations
+          if (intg.trakt?.connected && intg.trakt?.username) {
+            setConnection('trakt', {
+              connected: true,
+              username: intg.trakt.username,
+              scrobble: intg.trakt.scrobbleEnabled ?? true,
+            })
+          }
+          if (intg.simkl?.connected && intg.simkl?.username) {
+            setConnection('simkl', {
+              connected: true,
+              username: intg.simkl.username,
+            })
+          }
+          if (intg.tmdb?.connected && intg.tmdb?.username) {
+            setConnection('tmdb', {
+              connected: true,
+              username: intg.tmdb.username,
+            })
+          }
+          if (intg.anilist?.connected && intg.anilist?.username) {
+            setConnection('anilist', {
+              connected: true,
+              username: intg.anilist.username,
+            })
+          }
+          if (intg.myanimelist?.connected && intg.myanimelist?.username) {
+            setConnection('myanimelist', {
+              connected: true,
+              username: intg.myanimelist.username,
+            })
+          }
+        }
+      })
+      .catch(() => {})
+  }, [setConnection])
 
   const [verifying, setVerifying] = React.useState<Record<string, boolean>>({})
 
@@ -1256,7 +1296,15 @@ function SettingsPage() {
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => setTraktDialogOpen(true)}
+                      onClick={() => {
+                        startOAuthFlow('trakt', (profile) => {
+                          setConnection('trakt', {
+                            connected: true,
+                            username: profile.username,
+                            scrobble: true,
+                          })
+                        })
+                      }}
                       className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#ed1c24] hover:bg-[#d0131a] text-white cursor-pointer"
                     >
                       <Link2 className="size-4" /> Connect Trakt
@@ -1264,18 +1312,6 @@ function SettingsPage() {
                   )}
                 </div>
               </div>
-
-              <TraktConnectDialog
-                open={traktDialogOpen}
-                onOpenChange={setTraktDialogOpen}
-                onSuccess={(profile) => {
-                  setConnection('trakt', {
-                    connected: true,
-                    username: profile.username,
-                    scrobble: true,
-                  })
-                }}
-              />
 
               <div className="flex items-center justify-between gap-4 border-t pt-4">
                 <p className="min-w-0 text-xs text-muted-foreground">
@@ -1366,7 +1402,14 @@ function SettingsPage() {
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => setSimklDialogOpen(true)}
+                      onClick={() => {
+                        startOAuthFlow('simkl', (profile) => {
+                          setConnection('simkl', {
+                            connected: true,
+                            username: profile.username,
+                          })
+                        })
+                      }}
                       className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white cursor-pointer font-semibold"
                     >
                       <Link2 className="size-4" /> Connect Simkl
@@ -1374,17 +1417,6 @@ function SettingsPage() {
                   )}
                 </div>
               </div>
-
-              <SimklConnectDialog
-                open={simklDialogOpen}
-                onOpenChange={setSimklDialogOpen}
-                onSuccess={(res) => {
-                  setConnection('simkl', {
-                    connected: true,
-                    username: res.username,
-                  })
-                }}
-              />
             </section>
 
             {/* 9. AniList account */}

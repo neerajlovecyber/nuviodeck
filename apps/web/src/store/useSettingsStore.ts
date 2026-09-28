@@ -292,58 +292,10 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'nuviodeck-settings',
-      version: 2,
+      version: 3,
       migrate: (persistedState: any) => {
         if (!persistedState) return persistedState as SettingsState
         const state = persistedState as any
-        if (state.apiKeys) {
-          if (state.apiKeys.mdblist === 'neerajlovecyber-5qsn6f') {
-            state.apiKeys.mdblist = ''
-          }
-          if (
-            state.apiKeys.tmdb === '••••••••••••••••••••••••••••••••' ||
-            state.apiKeys.tmdb === 'eyJhbGciOiJIUzI1NiJ9.verified' ||
-            (typeof state.apiKeys.tmdb === 'string' && state.apiKeys.tmdb.includes('verified'))
-          ) {
-            state.apiKeys.tmdb = ''
-          }
-          if (
-            state.apiKeys.gemini === '••••••••••••••••••••••••••••••••' ||
-            (typeof state.apiKeys.gemini === 'string' && state.apiKeys.gemini.includes('sample'))
-          ) {
-            state.apiKeys.gemini = ''
-          }
-        }
-        if (
-          state.connections?.trakt?.username === 'Neerajlovecyber' ||
-          state.connections?.trakt?.username === 'trakt_user' ||
-          state.connections?.trakt?.username === 'Trakt User'
-        ) {
-          state.connections.trakt = {
-            connected: false,
-            username: '',
-            scrobble: true,
-          }
-        }
-        if (state.connections?.simkl?.username === 'SimklUser' || state.connections?.simkl?.username === 'Simkl User') {
-          state.connections.simkl = {
-            connected: false,
-            username: '',
-          }
-        }
-        if (state.connections?.tmdb?.username === 'TMDBUser' || state.connections?.tmdb?.username === 'TMDB Explorer') {
-          state.connections.tmdb = {
-            connected: false,
-            username: '',
-          }
-        }
-        if (state.connections?.nuvio?.email === 'neerajlovecyber@gmail.com') {
-          state.connections.nuvio = {
-            connected: false,
-            email: '',
-            profilesCount: 0,
-          }
-        }
         return state as SettingsState
       },
     }
