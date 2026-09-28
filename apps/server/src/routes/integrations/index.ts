@@ -56,20 +56,62 @@ integrationsRouter.post('/tmdb/request-token', async (c) => {
   }
 })
 
+integrationsRouter.post('/tmdb/user', async (c) => {
+  try {
+    const { username } = await c.req.json()
+    const cleanUser = (username || '').trim()
+    if (!cleanUser) {
+      return c.json({ error: 'Username is required' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    const connectionData = {
+      id: 'tmdb',
+      provider: 'tmdb',
+      username: cleanUser,
+      displayName: cleanUser,
+      avatarUrl: `https://avatar.vercel.sh/${encodeURIComponent(cleanUser)}.png`,
+      accessToken: 'tmdb_session_' + Date.now(),
+      extraJson: JSON.stringify({ accountId: cleanUser }),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db
+      .insert(accountConnections)
+      .values(connectionData)
+      .onConflictDoUpdate({
+        target: accountConnections.id,
+        set: connectionData,
+      })
+
+    return c.json({
+      success: true,
+      session: { username: cleanUser, name: cleanUser, sessionId: connectionData.accessToken },
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 integrationsRouter.post('/tmdb/session', async (c) => {
   try {
-    const { requestToken } = await c.req.json()
+    const { requestToken, username } = await c.req.json()
     if (!requestToken) {
       return c.json({ error: 'requestToken is required' }, 400)
     }
 
     let session: any
     if (requestToken.startsWith('dev_tmdb_')) {
+      if (!username || !username.trim()) {
+        return c.json({ success: false, pending: true, message: 'Please approve authorization on TMDB or enter your TMDB username.' }, 400)
+      }
+      const cleanUser = username.trim()
       session = {
         sessionId: 'tmdb_session_' + Date.now(),
-        accountId: 1001,
-        username: 'TMDBUser',
-        name: 'TMDB Explorer',
+        accountId: cleanUser,
+        username: cleanUser,
+        name: cleanUser,
         includeAdult: false,
       }
     } else {
@@ -230,14 +272,17 @@ integrationsRouter.post('/trakt/device/token', async (c) => {
     }
 
     if (deviceCode.startsWith('dev_')) {
-      const effectiveUsername = (username && username.trim()) || 'trakt_user'
+      if (!username || !username.trim()) {
+        return c.json({ success: false, pending: true, message: 'Waiting for authorization on trakt.tv/activate' }, 400)
+      }
+      const effectiveUsername = username.trim()
       const now = new Date().toISOString()
       const connectionData = {
         id: 'trakt',
         provider: 'trakt',
         username: effectiveUsername,
         displayName: effectiveUsername,
-        avatarUrl: `https://avatar.vercel.sh/${effectiveUsername}.png`,
+        avatarUrl: `https://avatar.vercel.sh/${encodeURIComponent(effectiveUsername)}.png`,
         accessToken: 'trakt_token_' + Date.now(),
         refreshToken: 'trakt_refresh_' + Date.now(),
         expiresAt: Math.floor(Date.now() / 1000) + 7776000,
@@ -384,6 +429,47 @@ integrationsRouter.post('/trakt/scrobble/stop', async (c) => {
   }
 })
 
+integrationsRouter.post('/trakt/user', async (c) => {
+  try {
+    const { username, scrobble = true } = await c.req.json()
+    const cleanUser = (username || '').trim()
+    if (!cleanUser) {
+      return c.json({ error: 'Username is required' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    const connectionData = {
+      id: 'trakt',
+      provider: 'trakt',
+      username: cleanUser,
+      displayName: cleanUser,
+      avatarUrl: `https://avatar.vercel.sh/${encodeURIComponent(cleanUser)}.png`,
+      accessToken: 'trakt_token_' + Date.now(),
+      refreshToken: 'trakt_refresh_' + Date.now(),
+      expiresAt: Math.floor(Date.now() / 1000) + 7776000,
+      scrobbleEnabled: Boolean(scrobble),
+      extraJson: JSON.stringify({ scope: 'public' }),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db
+      .insert(accountConnections)
+      .values(connectionData)
+      .onConflictDoUpdate({
+        target: accountConnections.id,
+        set: connectionData,
+      })
+
+    return c.json({
+      success: true,
+      profile: { username: cleanUser, displayName: cleanUser },
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 integrationsRouter.patch('/trakt/scrobble', async (c) => {
   const { enabled } = await c.req.json()
   await db
@@ -416,35 +502,50 @@ integrationsRouter.post('/simkl/pin', async (c) => {
   }
 })
 
+integrationsRouter.post('/simkl/user', async (c) => {
+  try {
+    const { username } = await c.req.json()
+    const cleanUser = (username || '').trim()
+    if (!cleanUser) {
+      return c.json({ error: 'Username is required' }, 400)
+    }
+
+    const now = new Date().toISOString()
+    const connectionData = {
+      id: 'simkl',
+      provider: 'simkl',
+      username: cleanUser,
+      displayName: cleanUser,
+      avatarUrl: `https://avatar.vercel.sh/${encodeURIComponent(cleanUser)}.png`,
+      accessToken: 'simkl_token_' + Date.now(),
+      scrobbleEnabled: true,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db
+      .insert(accountConnections)
+      .values(connectionData)
+      .onConflictDoUpdate({
+        target: accountConnections.id,
+        set: connectionData,
+      })
+
+    return c.json({
+      success: true,
+      user: { name: cleanUser, username: cleanUser },
+    })
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 integrationsRouter.get('/simkl/pin/:userCode', async (c) => {
   try {
     const userCode = c.req.param('userCode')
 
     if (userCode.startsWith('SMKL-') || userCode.startsWith('simkl_dev_')) {
-      const now = new Date().toISOString()
-      const user = { name: 'SimklUser', id: 45678 }
-      await db
-        .insert(accountConnections)
-        .values({
-          id: 'simkl',
-          provider: 'simkl',
-          username: user.name,
-          displayName: user.name,
-          accessToken: 'simkl_token_' + Date.now(),
-          scrobbleEnabled: true,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: accountConnections.id,
-          set: {
-            username: user.name,
-            displayName: user.name,
-            accessToken: 'simkl_token_' + Date.now(),
-            updatedAt: now,
-          },
-        })
-      return c.json({ success: true, connected: true, user })
+      return c.json({ success: false, connected: false, pending: true, message: 'Waiting for PIN authorization at simkl.com/pin' }, 400)
     }
 
     const tokenRes = await simklService.exchangePin(userCode)

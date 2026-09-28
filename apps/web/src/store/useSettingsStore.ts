@@ -314,11 +314,27 @@ export const useSettingsStore = create<SettingsState>()(
             state.apiKeys.gemini = ''
           }
         }
-        if (state.connections?.trakt?.username === 'Neerajlovecyber') {
+        if (
+          state.connections?.trakt?.username === 'Neerajlovecyber' ||
+          state.connections?.trakt?.username === 'trakt_user' ||
+          state.connections?.trakt?.username === 'Trakt User'
+        ) {
           state.connections.trakt = {
             connected: false,
             username: '',
             scrobble: true,
+          }
+        }
+        if (state.connections?.simkl?.username === 'SimklUser' || state.connections?.simkl?.username === 'Simkl User') {
+          state.connections.simkl = {
+            connected: false,
+            username: '',
+          }
+        }
+        if (state.connections?.tmdb?.username === 'TMDBUser' || state.connections?.tmdb?.username === 'TMDB Explorer') {
+          state.connections.tmdb = {
+            connected: false,
+            username: '',
           }
         }
         if (state.connections?.nuvio?.email === 'neerajlovecyber@gmail.com') {

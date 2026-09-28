@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { toast } from 'sonner'
 import { nuvioApi, DeckProfile } from '@/lib/nuvio-api'
+import { testApiKey } from '@/lib/test-key'
 import {
   CATALOG_CATEGORIES,
   DEFAULT_COLLECTIONS,
@@ -43,7 +44,25 @@ interface WizardContextType {
   setShowLetterboxd: (val: boolean | ((p: boolean) => boolean)) => void
   letterboxdVerified: boolean
   setLetterboxdVerified: (val: boolean) => void
-  handleVerifyLetterboxd: () => void
+  handleVerifyLetterboxd: () => Promise<boolean>
+
+  // Real Key Verification States
+  mdbListStatus: 'idle' | 'checking' | 'valid' | 'invalid'
+  setMdbListStatus: (val: 'idle' | 'checking' | 'valid' | 'invalid') => void
+  mdbListError: string | null
+  handleVerifyMdbList: () => Promise<boolean>
+
+  tmdbStatus: 'idle' | 'checking' | 'valid' | 'invalid'
+  setTmdbStatus: (val: 'idle' | 'checking' | 'valid' | 'invalid') => void
+  tmdbError: string | null
+  handleVerifyTmdb: () => Promise<boolean>
+
+  letterboxdStatus: 'idle' | 'checking' | 'valid' | 'invalid'
+  letterboxdError: string | null
+
+  aiKeyStatus: 'idle' | 'checking' | 'valid' | 'invalid'
+  aiKeyError: string | null
+  handleVerifyAiKey: () => Promise<boolean>
 
   // Trackers & Connections
   traktConnected: boolean
@@ -306,12 +325,44 @@ export function WizardProvider({
 
   // Step 1: Setup State
   const [profileName, setProfileName] = React.useState('')
-  const [mdbListKey, setMdbListKey] = React.useState('')
+  const [mdbListKey, setMdbListKeyState] = React.useState('')
   const [scrobbleMdbList, setScrobbleMdbList] = React.useState(true)
-  const [tmdbToken, setTmdbToken] = React.useState('')
-  const [letterboxd, setLetterboxd] = React.useState('')
+  const [tmdbToken, setTmdbTokenState] = React.useState('')
+  const [letterboxd, setLetterboxdState] = React.useState('')
   const [showLetterboxd, setShowLetterboxd] = React.useState(false)
   const [letterboxdVerified, setLetterboxdVerified] = React.useState(false)
+
+  // Real Key Verification States (idle | checking | valid | invalid)
+  const [mdbListStatus, setMdbListStatus] = React.useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
+  const [mdbListError, setMdbListError] = React.useState<string | null>(null)
+
+  const [tmdbStatus, setTmdbStatus] = React.useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
+  const [tmdbError, setTmdbError] = React.useState<string | null>(null)
+
+  const [letterboxdStatus, setLetterboxdStatus] = React.useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
+  const [letterboxdError, setLetterboxdError] = React.useState<string | null>(null)
+
+  const [aiKeyStatus, setAiKeyStatus] = React.useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle')
+  const [aiKeyError, setAiKeyError] = React.useState<string | null>(null)
+
+  const setMdbListKey = (key: string) => {
+    setMdbListKeyState(key)
+    setMdbListStatus('idle')
+    setMdbListError(null)
+  }
+
+  const setTmdbToken = (token: string) => {
+    setTmdbTokenState(token)
+    setTmdbStatus('idle')
+    setTmdbError(null)
+  }
+
+  const setLetterboxd = (val: string) => {
+    setLetterboxdState(val)
+    setLetterboxdStatus('idle')
+    setLetterboxdVerified(false)
+    setLetterboxdError(null)
+  }
 
   // Trackers & Connections
   const [traktConnected, setTraktConnected] = React.useState(false)
@@ -342,9 +393,9 @@ export function WizardProvider({
   const [connectModalUsername, setConnectModalUsername] = React.useState('')
   const [activeInfoKey, setActiveInfoKey] = React.useState<string | null>(null)
 
-  // Validation
-  const isMdbListValid = Boolean(mdbListKey.trim())
-  const isTmdbValid = Boolean(tmdbToken.trim())
+  // Validation: Strictly require valid verification status
+  const isMdbListValid = mdbListStatus === 'valid'
+  const isTmdbValid = tmdbStatus === 'valid'
   const isStep1Valid = isMdbListValid && isTmdbValid
   const setupPercent = Math.round(
     ((Number(isMdbListValid) + Number(isTmdbValid)) / 2) * 50 + ((step - 1) / 4) * 50
@@ -716,15 +767,24 @@ export function WizardProvider({
                 }
               }
               if (cfg.integrations) {
-                if (cfg.integrations.mdbListKey !== undefined)
-                  setMdbListKey(cfg.integrations.mdbListKey)
-                if (cfg.integrations.tmdbToken !== undefined)
-                  setTmdbToken(cfg.integrations.tmdbToken)
+                if (cfg.integrations.mdbListKey !== undefined) {
+                  setMdbListKeyState(cfg.integrations.mdbListKey)
+                  if (cfg.integrations.mdbListKey.trim()) setMdbListStatus('valid')
+                }
+                if (cfg.integrations.tmdbToken !== undefined) {
+                  setTmdbTokenState(cfg.integrations.tmdbToken)
+                  if (cfg.integrations.tmdbToken.trim()) setTmdbStatus('valid')
+                }
                 if (cfg.integrations.proxyUrl !== undefined) setProxyUrl(cfg.integrations.proxyUrl)
                 if (cfg.integrations.scrobbleMdbList !== undefined)
                   setScrobbleMdbList(cfg.integrations.scrobbleMdbList)
-                if (cfg.integrations.letterboxd !== undefined)
-                  setLetterboxd(cfg.integrations.letterboxd)
+                if (cfg.integrations.letterboxd !== undefined) {
+                  setLetterboxdState(cfg.integrations.letterboxd)
+                  if (cfg.integrations.letterboxd.trim()) {
+                    setLetterboxdStatus('valid')
+                    setLetterboxdVerified(true)
+                  }
+                }
                 if (cfg.integrations.playbackEndRule !== undefined)
                   setPlaybackEndRule(cfg.integrations.playbackEndRule)
                 if (cfg.integrations.trakt) {
@@ -758,9 +818,19 @@ export function WizardProvider({
               } else {
                 // Brand new profile: inherit global defaults cleanly from Settings Store
                 const settings = useSettingsStore.getState()
-                if (settings.apiKeys.mdblist) setMdbListKey(settings.apiKeys.mdblist)
-                if (settings.apiKeys.tmdb) setTmdbToken(settings.apiKeys.tmdb)
-                if (settings.apiKeys.letterboxd) setLetterboxd(settings.apiKeys.letterboxd)
+                if (settings.apiKeys.mdblist) {
+                  setMdbListKeyState(settings.apiKeys.mdblist)
+                  setMdbListStatus('valid')
+                }
+                if (settings.apiKeys.tmdb) {
+                  setTmdbTokenState(settings.apiKeys.tmdb)
+                  setTmdbStatus('valid')
+                }
+                if (settings.apiKeys.letterboxd) {
+                  setLetterboxdState(settings.apiKeys.letterboxd)
+                  setLetterboxdStatus('valid')
+                  setLetterboxdVerified(true)
+                }
                 if (settings.apiKeys.mdblistScrobble !== undefined)
                   setScrobbleMdbList(settings.apiKeys.mdblistScrobble)
                 if (settings.playbackCompletion) {
@@ -968,13 +1038,126 @@ export function WizardProvider({
     )
   }
 
-  const handleVerifyLetterboxd = () => {
+  const handleVerifyMdbList = async (): Promise<boolean> => {
+    if (!mdbListKey.trim()) {
+      toast.error('Please enter an MDBList API key first.')
+      setMdbListStatus('invalid')
+      setMdbListError('MDBList API key cannot be empty.')
+      return false
+    }
+
+    setMdbListStatus('checking')
+    setMdbListError(null)
+
+    const res = await testApiKey('mdblist', mdbListKey)
+    if (res.status === 'valid') {
+      setMdbListStatus('valid')
+      setMdbListError(null)
+      useSettingsStore.getState().setApiKey('mdblist', mdbListKey)
+      const user = res.details?.user ? ` (${res.details.user})` : ''
+      toast.success(`MDBList API key verified!${user}`)
+      void saveProfileConfig()
+      return true
+    } else {
+      setMdbListStatus('invalid')
+      const msg = res.message || 'MDBList rejected API key'
+      setMdbListError(msg)
+      toast.error(msg)
+      return false
+    }
+  }
+
+  const handleVerifyTmdb = async (): Promise<boolean> => {
+    if (!tmdbToken.trim()) {
+      toast.error('Please enter a TMDB token first.')
+      setTmdbStatus('invalid')
+      setTmdbError('TMDB Read Access Token cannot be empty.')
+      return false
+    }
+
+    setTmdbStatus('checking')
+    setTmdbError(null)
+
+    const res = await testApiKey('tmdb', tmdbToken, { proxyUrl })
+    if (res.status === 'valid') {
+      setTmdbStatus('valid')
+      setTmdbError(null)
+      useSettingsStore.getState().setApiKey('tmdb', tmdbToken)
+      toast.success('TMDB Read Access Token verified successfully!')
+      void saveProfileConfig()
+      return true
+    } else {
+      setTmdbStatus('invalid')
+      const msg = res.message || 'TMDB token authentication failed'
+      setTmdbError(msg)
+      toast.error(msg)
+      return false
+    }
+  }
+
+  const handleVerifyLetterboxd = async (): Promise<boolean> => {
     if (!letterboxd.trim()) {
       toast.error('Please enter a Letterboxd username')
-      return
+      setLetterboxdStatus('invalid')
+      setLetterboxdError('Please enter a Letterboxd username')
+      return false
     }
-    setLetterboxdVerified(true)
-    toast.success(`Letterboxd user "${letterboxd.trim()}" verified`)
+
+    setLetterboxdStatus('checking')
+    setLetterboxdError(null)
+
+    const res = await testApiKey('letterboxd', letterboxd)
+    if (res.status === 'valid') {
+      setLetterboxdStatus('valid')
+      setLetterboxdVerified(true)
+      setLetterboxdError(null)
+      useSettingsStore.getState().setApiKey('letterboxd', letterboxd)
+      toast.success(`Letterboxd user "${letterboxd.trim()}" verified!`)
+      void saveProfileConfig()
+      return true
+    } else {
+      setLetterboxdStatus('invalid')
+      setLetterboxdVerified(false)
+      const msg = res.message || 'Letterboxd user not found'
+      setLetterboxdError(msg)
+      toast.error(msg)
+      return false
+    }
+  }
+
+  const handleVerifyAiKey = async (): Promise<boolean> => {
+    const key = aiProvider === 'Groq' ? groqApiKey : aiApiKey
+    const service = aiProvider === 'Groq' ? 'groq' : 'gemini'
+
+    if (!key.trim()) {
+      toast.error(`Please enter a ${aiProvider} API key first`)
+      setAiKeyStatus('invalid')
+      setAiKeyError('API key cannot be empty')
+      return false
+    }
+
+    setAiKeyStatus('checking')
+    setAiKeyError(null)
+
+    const res = await testApiKey(service, key)
+    if (res.status === 'valid') {
+      setAiKeyStatus('valid')
+      setAiKeyError(null)
+      if (aiProvider === 'Groq') {
+        useSettingsStore.getState().setApiKey('groq', groqApiKey)
+      } else {
+        useSettingsStore.getState().setApiKey('gemini', aiApiKey)
+      }
+      toast.success(`${aiProvider} API key verified!`)
+      void saveProfileConfig()
+      return true
+    } else {
+      setAiKeyStatus('invalid')
+      const msg = res.message || `${aiProvider} rejected key`
+      setAiKeyError(msg)
+      toast.error(msg)
+      return false
+    }
   }
 
   const openConnectDialog = (provider: ConnectProviderType) => {
@@ -1109,6 +1292,19 @@ export function WizardProvider({
     isTmdbValid,
     isStep1Valid,
     setupPercent,
+    mdbListStatus,
+    setMdbListStatus,
+    mdbListError,
+    handleVerifyMdbList,
+    tmdbStatus,
+    setTmdbStatus,
+    tmdbError,
+    handleVerifyTmdb,
+    letterboxdStatus,
+    letterboxdError,
+    aiKeyStatus,
+    aiKeyError,
+    handleVerifyAiKey,
     connectModalProvider,
     setConnectModalProvider,
     connectModalUsername,

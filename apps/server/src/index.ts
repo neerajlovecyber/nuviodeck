@@ -179,6 +179,27 @@ app.route('/api/cover-sets', coverSetsPopularityRouter)
 
 // 18. Service Key Verification & AI Model Detection
 app.route('/api/verify', verifyRouter)
+app.post('/api/test-keys', async (c) => {
+  const body = await c.req.json().catch(() => ({}))
+  const apiKeys = body.apiKeys || {}
+  const { validateSingleKey } = await import('./routes/verify')
+  const details: Record<string, any> = {}
+
+  await Promise.all(
+    Object.entries(apiKeys).map(async ([keyId, value]) => {
+      if (typeof value === 'string' && value.trim()) {
+        const res = await validateSingleKey(keyId, value.trim())
+        details[keyId] = {
+          status: res.status || (res.ok ? 'valid' : 'invalid'),
+          message: res.message || res.error,
+          details: res.details,
+        }
+      }
+    })
+  )
+
+  return c.json({ success: true, details })
+})
 
 // 19. Profile Discovery, Previews, AI Row Titles & Jellyfin
 app.route('/api/profile', profileRouter)

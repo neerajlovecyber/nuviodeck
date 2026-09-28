@@ -15,11 +15,14 @@ import {
   KeyRound,
   Link2,
   Link2Off,
+  Loader2,
   Search,
   SlidersHorizontal,
   Sparkles,
   Tv,
 } from 'lucide-react'
+import { toast } from 'sonner'
+import { testApiKey } from '@/lib/test-key'
 import { Button } from '@workspace/ui/components/button'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import {
@@ -30,8 +33,8 @@ import {
 } from '@workspace/ui/components/dropdown-menu'
 import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
-import { Switch } from '@workspace/ui/components/switch'
 import { PostersConfigSection } from '@/components/posters-config-section'
+import { IntegrationKeyField } from '@/components/integration-key-field'
 import { AGE_RATINGS } from '@/data/age-ratings'
 import languagesData from '@/data/languages.json'
 import { STREAMING_REGIONS } from '@/data/streamings'
@@ -42,6 +45,7 @@ import {
   POPULAR_LANGUAGES,
 } from '../wizard-constants'
 import { useWizard } from '../wizard-context'
+import { Switch } from '@workspace/ui/components/switch'
 
 export function Step1Setup() {
   const {
@@ -51,6 +55,10 @@ export function Step1Setup() {
     setOpenSection,
     mdbListKey,
     setMdbListKey,
+    mdbListStatus,
+    setMdbListStatus,
+    mdbListError,
+    handleVerifyMdbList,
     scrobbleMdbList,
     setScrobbleMdbList,
     isMdbListValid,
@@ -58,6 +66,10 @@ export function Step1Setup() {
     isStep1Valid,
     tmdbToken,
     setTmdbToken,
+    tmdbStatus,
+    setTmdbStatus,
+    tmdbError,
+    handleVerifyTmdb,
     isTmdbValid,
     proxyUrl,
     setProxyUrl,
@@ -66,6 +78,8 @@ export function Step1Setup() {
     showLetterboxd,
     setShowLetterboxd,
     letterboxdVerified,
+    letterboxdStatus,
+    letterboxdError,
     handleVerifyLetterboxd,
     traktConnected,
     traktUsername,
@@ -92,6 +106,9 @@ export function Step1Setup() {
     setAiApiKey,
     groqApiKey,
     setGroqApiKey,
+    aiKeyStatus,
+    aiKeyError,
+    handleVerifyAiKey,
     aiPoweredSearch,
     setAiPoweredSearch,
     searchEnabled,
@@ -223,57 +240,30 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'integrations' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'integrations' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
           {openSection === 'integrations' && (
             <div className="px-4 pb-6 pt-2 sm:px-6 border-t border-border/60 space-y-6 text-sm">
               {/* 1. MDBList */}
-              <div className="space-y-2 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground text-xs">
-                      MDBList Key <span className="text-destructive font-bold">*</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-destructive uppercase tracking-wider bg-destructive/10 border border-destructive/20 rounded px-1.5 py-0.2">
-                      Required
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isMdbListValid && (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/30">
-                        <CheckCircle2 className="size-3" /> Verified
-                      </span>
-                    )}
-                    <a
-                      href="https://mdblist.com/preferences/"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Get a key <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                </div>
-                <Input
-                  value={mdbListKey}
-                  onChange={(e) => setMdbListKey(e.target.value)}
-                  placeholder="Enter your MDBList API key"
-                  className={`font-mono text-xs ${
-                    step1Submitted && !isMdbListValid
-                      ? 'border-destructive focus-visible:ring-destructive'
-                      : ''
-                  }`}
-                />
-                {step1Submitted && !isMdbListValid && (
-                  <p className="text-xs text-destructive flex items-center gap-1 font-medium">
-                    <AlertCircle className="size-3 shrink-0" /> MDBList Key is required to generate
-                    catalogs and watchlists.
-                  </p>
-                )}
+              <IntegrationKeyField
+                id="wizard-mdblist"
+                serviceId="mdblist"
+                label="MDBList Key"
+                required
+                value={mdbListKey}
+                onChange={setMdbListKey}
+                placeholder="Enter your MDBList API key"
+                getKeyUrl="https://mdblist.com/preferences/"
+                status={mdbListStatus}
+                error={mdbListError}
+                onVerify={handleVerifyMdbList}
+                successMessage="Key accepted and quota verified."
+                isSubmitted={step1Submitted}
+                className="pt-2"
+              >
                 <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer pt-1">
                   <Checkbox
                     checked={scrobbleMdbList}
@@ -281,71 +271,28 @@ export function Step1Setup() {
                   />
                   <span>Scrobble now watching to MDBList</span>
                 </label>
-              </div>
+              </IntegrationKeyField>
 
               {/* 2. TMDB */}
-              <div className="space-y-2 border-t border-border/40 pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground text-xs">
-                      TMDB Read Access Token <span className="text-destructive font-bold">*</span>
-                    </span>
-                    <span className="text-[10px] font-semibold text-destructive uppercase tracking-wider bg-destructive/10 border border-destructive/20 rounded px-1.5 py-0.2">
-                      Required
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {isTmdbValid && tmdbToken.startsWith('eyJ') ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium border border-emerald-500/30">
-                        <CheckCircle2 className="size-3" /> Verified
-                      </span>
-                    ) : isTmdbValid ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 font-medium border border-amber-500/30">
-                        Token entered
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium border border-destructive/20">
-                        Required
-                      </span>
-                    )}
-                    <a
-                      href="https://www.themoviedb.org/settings/api"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Get a key <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                </div>
-                <Input
-                  value={tmdbToken}
-                  onChange={(e) => setTmdbToken(e.target.value)}
-                  placeholder="eyJhbGciOiJIUzI1NiJ9..."
-                  className={`font-mono text-xs ${
-                    step1Submitted && !isTmdbValid
-                      ? 'border-destructive focus-visible:ring-destructive'
-                      : ''
-                  }`}
-                />
-                {step1Submitted && !isTmdbValid && (
-                  <p className="text-xs text-destructive flex items-center gap-1 font-medium">
-                    <AlertCircle className="size-3 shrink-0" /> TMDB API Read Access Token is
-                    required to fetch movie and TV metadata.
-                  </p>
-                )}
-                {isTmdbValid && !tmdbToken.startsWith('eyJ') && (
-                  <p className="text-xs text-amber-500 flex items-center gap-1 font-medium">
-                    <AlertCircle className="size-3 shrink-0" /> Note: TMDB API Read Access Token
-                    should start with "eyJ...". Make sure to copy the long token, not the short API
-                    key.
-                  </p>
-                )}
-                <p className="text-[11px] text-muted-foreground">
-                  On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ",
-                  not the short API key.
-                </p>
-
+              <IntegrationKeyField
+                id="wizard-tmdb"
+                serviceId="tmdb"
+                label="TMDB Read Access Token"
+                required
+                value={tmdbToken}
+                onChange={setTmdbToken}
+                placeholder="eyJhbGciOiJIUzI1NiJ9..."
+                getKeyUrl="https://www.themoviedb.org/settings/api"
+                getKeyText="Get a token"
+                proxyUrl={proxyUrl}
+                status={tmdbStatus}
+                error={tmdbError}
+                onVerify={handleVerifyTmdb}
+                successMessage="Token accepted and TMDB connection confirmed."
+                note='On TMDB (Settings → API), copy the long API Read Access Token starting with "eyJ", not the short API key.'
+                isSubmitted={step1Submitted}
+                className="border-t border-border/40 pt-4"
+              >
                 {/* TMDB Reverse Proxy / Mirror URL */}
                 <div className="space-y-1.5 pt-3 border-t border-border/40">
                   <div className="flex items-center justify-between">
@@ -361,60 +308,30 @@ export function Step1Setup() {
                     className="font-mono text-xs"
                   />
                   <p className="text-[11px] text-muted-foreground">
-                    Optional proxy URL to bypass regional blocks (e.g., in India or restricted
-                    networks).
+                    Optional proxy URL to bypass regional blocks (e.g., in India or restricted networks).
                   </p>
                 </div>
-              </div>
+              </IntegrationKeyField>
 
               {/* 3. Letterboxd */}
-              <div className="space-y-2 border-t border-border/40 pt-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-medium text-foreground text-xs">Letterboxd</span>
-                    <button
-                      type="button"
-                      onClick={() => setActiveInfoKey('letterboxd')}
-                      className="text-muted-foreground hover:text-foreground cursor-pointer"
-                      title="Letterboxd info"
-                    >
-                      <Info className="size-3.5" />
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">Public lists & watchlist</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Input
-                      type={showLetterboxd ? 'text' : 'password'}
-                      value={letterboxd}
-                      onChange={(e) => setLetterboxd(e.target.value)}
-                      placeholder="Letterboxd username"
-                      className="font-mono text-xs pr-9"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLetterboxd((prev) => !prev)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer p-0.5"
-                    >
-                      {showLetterboxd ? (
-                        <EyeOff className="size-3.5" />
-                      ) : (
-                        <Eye className="size-3.5" />
-                      )}
-                    </button>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleVerifyLetterboxd}
-                    className="h-9 px-3 text-xs font-medium cursor-pointer"
-                  >
-                    {letterboxdVerified ? 'Verified' : 'Verify'}
-                  </Button>
-                </div>
-              </div>
+              <IntegrationKeyField
+                id="wizard-letterboxd"
+                serviceId="letterboxd"
+                label="Letterboxd"
+                value={letterboxd}
+                onChange={setLetterboxd}
+                placeholder="Letterboxd username"
+                getKeyUrl="https://letterboxd.com/"
+                getKeyText="letterboxd.com"
+                infoKey="letterboxd"
+                onInfoClick={() => setActiveInfoKey('letterboxd')}
+                status={letterboxdStatus}
+                error={letterboxdError}
+                onVerify={handleVerifyLetterboxd}
+                successMessage="Letterboxd username confirmed."
+                note="Public lists & watchlist"
+                className="border-t border-border/40 pt-4"
+              />
 
               {/* 4. Trakt */}
               <div className="space-y-3 border-t border-border/40 pt-4">
@@ -606,18 +523,16 @@ export function Step1Setup() {
                   <button
                     type="button"
                     onClick={() => setPlaybackEndRule('watched')}
-                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                      playbackEndRule === 'watched'
+                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${playbackEndRule === 'watched'
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border bg-background hover:bg-accent/40 text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`size-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
-                        playbackEndRule === 'watched'
+                      className={`size-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${playbackEndRule === 'watched'
                           ? 'border-primary bg-primary'
                           : 'border-muted-foreground'
-                      }`}
+                        }`}
                     >
                       {playbackEndRule === 'watched' && (
                         <div className="size-1.5 rounded-full bg-primary-foreground" />
@@ -636,18 +551,16 @@ export function Step1Setup() {
                   <button
                     type="button"
                     onClick={() => setPlaybackEndRule('finished')}
-                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${
-                      playbackEndRule === 'finished'
+                    className={`p-3 rounded-xl border text-left flex items-start gap-2.5 transition-colors cursor-pointer ${playbackEndRule === 'finished'
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border bg-background hover:bg-accent/40 text-muted-foreground'
-                    }`}
+                      }`}
                   >
                     <div
-                      className={`size-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
-                        playbackEndRule === 'finished'
+                      className={`size-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${playbackEndRule === 'finished'
                           ? 'border-primary bg-primary'
                           : 'border-muted-foreground'
-                      }`}
+                        }`}
                     >
                       {playbackEndRule === 'finished' && (
                         <div className="size-1.5 rounded-full bg-primary-foreground" />
@@ -729,9 +642,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'ai' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'ai' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
@@ -746,11 +658,10 @@ export function Step1Setup() {
                       setAiProvider('Google Gemini')
                       setAiModel('gemini-3.5-flash-lite')
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
-                      aiProvider === 'Google Gemini'
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${aiProvider === 'Google Gemini'
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                    }`}
+                      }`}
                   >
                     <span>Google Gemini</span>
                     {aiProvider === 'Google Gemini' && (
@@ -763,11 +674,10 @@ export function Step1Setup() {
                       setAiProvider('Groq')
                       setAiModel('openai/gpt-oss-120b')
                     }}
-                    className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${
-                      aiProvider === 'Groq'
+                    className={`px-3 py-2 rounded-lg text-xs font-medium border flex items-center justify-between transition-colors cursor-pointer ${aiProvider === 'Groq'
                         ? 'border-primary bg-primary/10 text-foreground'
                         : 'border-border/60 bg-muted/20 text-muted-foreground hover:bg-muted/40'
-                    }`}
+                      }`}
                   >
                     <span>Groq</span>
                     {aiProvider === 'Groq' && <Check className="size-3 text-primary" />}
@@ -828,45 +738,33 @@ export function Step1Setup() {
 
               {/* API Key Input */}
               {aiProvider === 'Google Gemini' ? (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-foreground">Google Gemini API Key</Label>
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Get a key <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                  <Input
-                    value={aiApiKey}
-                    onChange={(e) => setAiApiKey(e.target.value)}
-                    placeholder="AIzaSy..."
-                    className="font-mono text-xs"
-                  />
-                </div>
+                <IntegrationKeyField
+                  id="wizard-gemini"
+                  serviceId="gemini"
+                  label="Google Gemini API Key"
+                  value={aiApiKey}
+                  onChange={setAiApiKey}
+                  placeholder="AIzaSy..."
+                  getKeyUrl="https://aistudio.google.com/apikey"
+                  status={aiKeyStatus}
+                  error={aiKeyError}
+                  onVerify={handleVerifyAiKey}
+                  successMessage="Gemini API key accepted."
+                />
               ) : (
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-foreground">Groq API Key</Label>
-                    <a
-                      href="https://console.groq.com/keys"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                    >
-                      Get a key <ExternalLink className="size-3" />
-                    </a>
-                  </div>
-                  <Input
-                    value={groqApiKey}
-                    onChange={(e) => setGroqApiKey(e.target.value)}
-                    placeholder="gsk_..."
-                    className="font-mono text-xs"
-                  />
-                </div>
+                <IntegrationKeyField
+                  id="wizard-groq"
+                  serviceId="groq"
+                  label="Groq API Key"
+                  value={groqApiKey}
+                  onChange={setGroqApiKey}
+                  placeholder="gsk_..."
+                  getKeyUrl="https://console.groq.com/keys"
+                  status={aiKeyStatus}
+                  error={aiKeyError}
+                  onVerify={handleVerifyAiKey}
+                  successMessage="Groq API key accepted."
+                />
               )}
 
               <p className="text-[11px] text-muted-foreground">
@@ -903,9 +801,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'search' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'search' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
@@ -986,9 +883,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'discover' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'discover' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
@@ -1040,9 +936,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'posters' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'posters' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
@@ -1051,6 +946,35 @@ export function Step1Setup() {
               <PostersConfigSection
                 providers={posterProviders}
                 onProvidersChange={setPosterProviders}
+                onProviderKeyChange={(id, key) => {
+                  setPosterProviders((prev) =>
+                    prev.map((p) => (p.id === id ? { ...p, key, verified: false } : p))
+                  )
+                }}
+                onVerify={async (providerName) => {
+                  const target = posterProviders.find(
+                    (p) =>
+                      p.name.toLowerCase() === providerName.toLowerCase() ||
+                      p.id.toLowerCase() === providerName.toLowerCase()
+                  )
+                  if (!target || !target.key.trim()) {
+                    toast.error(`Enter a key for ${providerName} first`)
+                    return
+                  }
+                  const tId = toast.loading(`Verifying ${target.name}...`)
+                  const res = await testApiKey(target.id === 'rpdb' ? 'rpdb' : 'fanart', target.key)
+                  if (res.status === 'valid') {
+                    toast.success(`${target.name} verified successfully!`, { id: tId })
+                    setPosterProviders((prev) =>
+                      prev.map((p) => (p.id === target.id ? { ...p, verified: true, active: true } : p))
+                    )
+                  } else {
+                    toast.error(res.message || `Failed to verify ${target.name}`, { id: tId })
+                    setPosterProviders((prev) =>
+                      prev.map((p) => (p.id === target.id ? { ...p, verified: false } : p))
+                    )
+                  }
+                }}
                 showRatingsOnPosters={showRatingsOnPosters}
                 onShowRatingsChange={setShowRatingsOnPosters}
                 badgedEpisodeStills={ratingBadgedStills}
@@ -1083,9 +1007,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'preferences' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'preferences' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 
@@ -1143,11 +1066,10 @@ export function Step1Setup() {
                         key={r.id}
                         type="button"
                         onClick={() => setAgeRating(r.id)}
-                        className={`px-2 py-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${
-                          isSelected
+                        className={`px-2 py-2 rounded-lg text-xs font-medium border text-center transition-all cursor-pointer ${isSelected
                             ? 'border-primary bg-primary/10 text-foreground ring-1 ring-primary'
                             : 'border-border bg-background text-muted-foreground hover:text-foreground'
-                        }`}
+                          }`}
                       >
                         <div className="font-bold">{r.badge.text}</div>
                       </button>
@@ -1229,11 +1151,10 @@ export function Step1Setup() {
                             isExcluded ? prev.filter((g) => g !== genre) : [...prev, genre]
                           )
                         }}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                          isExcluded
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${isExcluded
                             ? 'bg-destructive/15 text-destructive border border-destructive/40'
                             : 'bg-muted text-muted-foreground hover:text-foreground border border-border'
-                        }`}
+                          }`}
                       >
                         {genre}
                       </button>
@@ -1263,9 +1184,8 @@ export function Step1Setup() {
               </span>
             </span>
             <ChevronRight
-              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${
-                openSection === 'anime' ? 'rotate-90' : ''
-              }`}
+              className={`size-4 shrink-0 text-muted-foreground transition-transform duration-200 ${openSection === 'anime' ? 'rotate-90' : ''
+                }`}
             />
           </button>
 

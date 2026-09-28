@@ -12,6 +12,7 @@ import { Label } from '@workspace/ui/components/label'
 import { Switch } from '@workspace/ui/components/switch'
 import { Checkbox } from '@workspace/ui/components/checkbox'
 import { PostersConfigSection } from '@/components/posters-config-section'
+import { IntegrationKeyField } from '@/components/integration-key-field'
 import { RadioGroup, RadioGroupItem } from '@workspace/ui/components/radio-group'
 import {
   DropdownMenu,
@@ -54,6 +55,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import {
+  AlertCircle,
   CircleCheck,
   ExternalLink,
   Eye,
@@ -62,6 +64,7 @@ import {
   Info,
   GripVertical,
   ChevronDown,
+  Loader2,
   Sun,
   Moon,
   LogOut,
@@ -73,6 +76,7 @@ import {
   Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { testApiKey } from '@/lib/test-key'
 import { useAppStore } from '@/store/useStore'
 import { useSettingsStore, PosterProvider } from '@/store/useSettingsStore'
 import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
@@ -219,16 +223,10 @@ function SettingsPage() {
     setConnection,
   } = useSettingsStore()
 
-  // Password Visibility States
+  // Dialog states for connections
   const [traktDialogOpen, setTraktDialogOpen] = React.useState(false)
   const [tmdbDialogOpen, setTmdbDialogOpen] = React.useState(false)
   const [simklDialogOpen, setSimklDialogOpen] = React.useState(false)
-  const [showMdb, setShowMdb] = React.useState(false)
-  const [showTmdb, setShowTmdb] = React.useState(false)
-  const [showGemini, setShowGemini] = React.useState(false)
-  const [showGroq, setShowGroq] = React.useState(false)
-  const [showDeepseek, setShowDeepseek] = React.useState(false)
-  const [showLetterboxd, setShowLetterboxd] = React.useState(false)
 
   // Sheet State for Info
   const [infoSheetKey, setInfoSheetKey] = React.useState<string | null>(null)
@@ -236,8 +234,54 @@ function SettingsPage() {
   // Dialog State for Delete Account
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false)
 
-  const handleVerify = (name: string) => {
-    toast.success(`${name} verified successfully`)
+  const [verifying, setVerifying] = React.useState<Record<string, boolean>>({})
+
+  const handleVerify = async (name: string, customValue?: string) => {
+    const keyMap: Record<string, string> = {
+      RPDB: 'rpdb',
+      'Fanart.tv': 'fanart',
+      Fanart: 'fanart',
+    }
+
+    const serviceKey = keyMap[name] || name.toLowerCase()
+    let keyVal = customValue
+    if (!keyVal) {
+      const found = posterProviders.find(
+        (p) => p.id === serviceKey || p.name.toLowerCase() === name.toLowerCase()
+      )
+      if (found) keyVal = found.key
+    }
+
+    if (!keyVal || !keyVal.trim()) {
+      toast.error(`Enter a key for ${name} first`)
+      return
+    }
+
+    setVerifying((prev) => ({ ...prev, [serviceKey]: true }))
+
+    try {
+      const res = await testApiKey(serviceKey, keyVal.trim())
+      if (res.status === 'valid') {
+        toast.success(`${name} verified successfully!`)
+        setPosterProviders(
+          posterProviders.map((p) =>
+            p.id === serviceKey ? { ...p, verified: true, active: true } : p
+          )
+        )
+      } else {
+        const msg = res.message || `${name} verification failed`
+        toast.error(msg)
+        setPosterProviders(
+          posterProviders.map((p) =>
+            p.id === serviceKey ? { ...p, verified: false } : p
+          )
+        )
+      }
+    } catch (err: any) {
+      toast.error(err.message || `Failed to verify ${name}`)
+    } finally {
+      setVerifying((prev) => ({ ...prev, [serviceKey]: false }))
+    }
   }
 
   const handleApplyToAll = (sectionName: string) => {
@@ -284,337 +328,114 @@ function SettingsPage() {
               </div>
 
               {/* MDBList */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-mdblist" className="text-sm font-medium">
-                    MDBList API key <span className="text-destructive">*</span>
-                  </Label>
-                  <a
-                    href="https://mdblist.com/preferences/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Get a key <ExternalLink className="size-3" />
-                  </a>
-                  {apiKeys.mdblist.trim() ? (
-                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                      <CircleCheck className="size-3 shrink-0" />
-                      <span className="min-w-0 truncate">Verified</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive sm:ml-auto">
-                      Required
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-mdblist"
-                      type={showMdb ? 'text' : 'password'}
-                      value={apiKeys.mdblist}
-                      onChange={(e) => setApiKey('mdblist', e.target.value)}
-                      placeholder="mdblist api key"
-                      className="h-11 pr-10 text-sm"
+              <IntegrationKeyField
+                id="default-mdblist"
+                serviceId="mdblist"
+                label="MDBList API key"
+                required
+                value={apiKeys.mdblist}
+                onChange={(val) => setApiKey('mdblist', val)}
+                placeholder="mdblist api key"
+                getKeyUrl="https://mdblist.com/preferences/"
+              >
+                {/* MDBList Scrobble */}
+                <div className="flex flex-col gap-3 border-t pt-4 mt-3">
+                  <div className="flex items-center gap-3">
+                    <Switch
+                      id="default-mdblist-scrobble"
+                      checked={apiKeys.mdblistScrobble}
+                      onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
+                      aria-label="Scrobble now watching to MDBList"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowMdb(!showMdb)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showMdb ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
+                    <div className="flex min-h-5 items-center gap-1.5">
+                      <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
+                        Scrobble now watching to MDBList
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => openInfo('mdblist-scrobble')}
+                        aria-label="About Scrobble now watching to MDBList"
+                        className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      >
+                        <Info className="size-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleVerify('MDBList')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
-
-              {/* MDBList Scrobble */}
-              <div className="flex flex-col gap-3 border-b pb-5">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    id="default-mdblist-scrobble"
-                    checked={apiKeys.mdblistScrobble}
-                    onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
-                    aria-label="Scrobble now watching to MDBList"
-                  />
-                  <div className="flex min-h-5 items-center gap-1.5">
-                    <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
-                      Scrobble now watching to MDBList
-                    </Label>
-                    <button
-                      type="button"
-                      onClick={() => openInfo('mdblist-scrobble')}
-                      aria-label="About Scrobble now watching to MDBList"
-                      className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="min-w-0 text-xs text-muted-foreground">
+                      Apply this MDBList scrobble setting to your existing profiles.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleApplyToAll('MDBList scrobble')}
+                      className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
                     >
-                      <Info className="size-3.5" />
-                    </button>
+                      <RefreshCw className="size-3.5" /> Apply to profiles
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-4">
-                  <p className="min-w-0 text-xs text-muted-foreground">
-                    Apply this MDBList scrobble setting to your existing profiles.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleApplyToAll('MDBList scrobble')}
-                    className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium"
-                  >
-                    <RefreshCw className="size-3.5" /> Apply to profiles
-                  </Button>
-                </div>
-              </div>
+              </IntegrationKeyField>
 
               {/* TMDB */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-tmdb" className="text-sm font-medium">
-                    TMDB Read Access Token <span className="text-destructive">*</span>
-                  </Label>
-                  <a
-                    href="https://www.themoviedb.org/settings/api"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Get a key <ExternalLink className="size-3" />
-                  </a>
-                  {apiKeys.tmdb.trim() ? (
-                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                      <CircleCheck className="size-3 shrink-0" />
-                      <span className="min-w-0 truncate">Verified</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex h-5 items-center gap-1 rounded-full border border-destructive/30 bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive sm:ml-auto">
-                      Required
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-tmdb"
-                      type={showTmdb ? 'text' : 'password'}
-                      value={apiKeys.tmdb}
-                      onChange={(e) => setApiKey('tmdb', e.target.value)}
-                      placeholder="eyJhbGci..."
-                      className="h-11 pr-10 text-sm font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowTmdb(!showTmdb)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showTmdb ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleVerify('TMDB')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
+              <IntegrationKeyField
+                id="default-tmdb"
+                serviceId="tmdb"
+                label="TMDB Read Access Token"
+                required
+                value={apiKeys.tmdb}
+                onChange={(val) => setApiKey('tmdb', val)}
+                placeholder="eyJhbGci..."
+                getKeyUrl="https://www.themoviedb.org/settings/api"
+              />
 
               {/* Gemini */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-gemini" className="text-sm font-medium">
-                    Gemini API key
-                  </Label>
-                  <a
-                    href="https://aistudio.google.com/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Get a key <ExternalLink className="size-3" />
-                  </a>
-                  {apiKeys.gemini.trim() ? (
-                    <span className="inline-flex h-5 max-w-full items-center gap-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 sm:ml-auto">
-                      <CircleCheck className="size-3 shrink-0" />
-                      <span className="min-w-0 truncate">Configured</span>
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-gemini"
-                      type={showGemini ? 'text' : 'password'}
-                      value={apiKeys.gemini}
-                      onChange={(e) => setApiKey('gemini', e.target.value)}
-                      className="h-11 pr-10 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowGemini(!showGemini)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showGemini ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleVerify('Gemini')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
+              <IntegrationKeyField
+                id="default-gemini"
+                serviceId="gemini"
+                label="Gemini API key"
+                value={apiKeys.gemini}
+                onChange={(val) => setApiKey('gemini', val)}
+                placeholder="AIzaSy..."
+                getKeyUrl="https://aistudio.google.com/apikey"
+              />
 
               {/* Groq */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-groq" className="text-sm font-medium">
-                    Groq API key
-                  </Label>
-                  <a
-                    href="https://console.groq.com/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Get a key <ExternalLink className="size-3" />
-                  </a>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-groq"
-                      type={showGroq ? 'text' : 'password'}
-                      placeholder="gsk_..."
-                      value={apiKeys.groq}
-                      onChange={(e) => setApiKey('groq', e.target.value)}
-                      className="h-11 pr-10 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowGroq(!showGroq)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showGroq ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    disabled={!apiKeys.groq.trim()}
-                    onClick={() => handleVerify('Groq')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
+              <IntegrationKeyField
+                id="default-groq"
+                serviceId="groq"
+                label="Groq API key"
+                value={apiKeys.groq}
+                onChange={(val) => setApiKey('groq', val)}
+                placeholder="gsk_..."
+                getKeyUrl="https://console.groq.com/keys"
+              />
 
               {/* DeepSeek */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-deepseek" className="text-sm font-medium">
-                    DeepSeek API key
-                  </Label>
-                  <a
-                    href="https://platform.deepseek.com/api_keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    Get a key <ExternalLink className="size-3" />
-                  </a>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-deepseek"
-                      type={showDeepseek ? 'text' : 'password'}
-                      placeholder="sk-..."
-                      value={apiKeys.deepseek}
-                      onChange={(e) => setApiKey('deepseek', e.target.value)}
-                      className="h-11 pr-10 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowDeepseek(!showDeepseek)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showDeepseek ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    disabled={!apiKeys.deepseek.trim()}
-                    onClick={() => handleVerify('DeepSeek')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-              </div>
+              <IntegrationKeyField
+                id="default-deepseek"
+                serviceId="deepseek"
+                label="DeepSeek API key"
+                value={apiKeys.deepseek}
+                onChange={(val) => setApiKey('deepseek', val)}
+                placeholder="sk-..."
+                getKeyUrl="https://platform.deepseek.com/api_keys"
+              />
 
               {/* Letterboxd */}
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <Label htmlFor="default-letterboxd" className="text-sm font-medium">
-                    Letterboxd Username
-                  </Label>
-                  <a
-                    href="https://letterboxd.com/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                  >
-                    letterboxd.com <ExternalLink className="size-3" />
-                  </a>
-                </div>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <div className="relative flex-1">
-                    <Input
-                      id="default-letterboxd"
-                      type={showLetterboxd ? 'text' : 'password'}
-                      placeholder="username"
-                      value={apiKeys.letterboxd}
-                      onChange={(e) => setApiKey('letterboxd', e.target.value)}
-                      className="h-11 pr-10 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowLetterboxd(!showLetterboxd)}
-                      aria-label="Show key"
-                      className="absolute inset-y-0 right-0 flex items-center justify-center px-3 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showLetterboxd ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                  <Button
-                    variant="outline"
-                    disabled={!apiKeys.letterboxd.trim()}
-                    onClick={() => handleVerify('Letterboxd')}
-                    className="h-11 shrink-0 px-4 text-sm font-medium"
-                  >
-                    Verify
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Optional. Your public Letterboxd username powers the “My Letterboxd Watchlist” row.
-                </p>
-              </div>
+              <IntegrationKeyField
+                id="default-letterboxd"
+                serviceId="letterboxd"
+                label="Letterboxd Username"
+                type="text"
+                allowToggleVisibility={false}
+                value={apiKeys.letterboxd}
+                onChange={(val) => setApiKey('letterboxd', val)}
+                placeholder="username"
+                getKeyUrl="https://letterboxd.com/"
+                getKeyText="letterboxd.com"
+                note="Optional. Your public Letterboxd username powers the “My Letterboxd Watchlist” row."
+              />
 
               <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <p className="min-w-0 text-xs text-muted-foreground">

@@ -44,6 +44,11 @@ export function SimklConnectDialog({
   onOpenChange,
   onSuccess,
 }: SimklConnectDialogProps) {
+  const [activeTab, setActiveTab] = React.useState<'username' | 'pin'>('username')
+  const [usernameInput, setUsernameInput] = React.useState('')
+  const [connecting, setConnecting] = React.useState(false)
+
+  // PIN state
   const [loading, setLoading] = React.useState(false)
   const [checking, setChecking] = React.useState(false)
   const [userCode, setUserCode] = React.useState<string | null>(null)
@@ -54,11 +59,6 @@ export function SimklConnectDialog({
   const [status, setStatus] = React.useState<'idle' | 'waiting' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [connectedUsername, setConnectedUsername] = React.useState<string | null>(null)
-
-  // Manual fallback state
-  const [showManual, setShowManual] = React.useState(false)
-  const [manualUsername, setManualUsername] = React.useState('')
-  const [manualLoading, setManualLoading] = React.useState(false)
 
   const pollingRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
   const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null)
@@ -112,16 +112,16 @@ export function SimklConnectDialog({
         const res = await fetch(`/api/integrations/simkl/pin/${encodeURIComponent(codeToPoll)}`)
         const data = await res.json()
 
-        if (data.connected || data.success) {
+        if (data.connected && data.user?.name) {
           clearTimers()
           setStatus('success')
-          const username = data.user?.name || data.user?.username || 'SimklUser'
+          const username = data.user.name || data.user.username
           setConnectedUsername(username)
           toast.success(`Successfully connected Simkl (@${username})!`)
           onSuccess?.({
             username,
-            displayName: data.user?.name,
-            avatarUrl: data.user?.avatar,
+            displayName: data.user.name,
+            avatarUrl: data.user.avatar,
           })
           return
         }
@@ -129,7 +129,7 @@ export function SimklConnectDialog({
         if (data.result === 'KO' || data.error === 'expired') {
           clearTimers()
           setStatus('error')
-          setErrorMsg('The PIN has expired. Please generate a new code.')
+          setErrorMsg('The PIN has expired. Please request a new PIN.')
         }
       } catch (err: any) {
         console.warn('Simkl PIN check failed:', err)
@@ -140,29 +140,64 @@ export function SimklConnectDialog({
     [checking, clearTimers, onSuccess]
   )
 
+  const handleConnectByUsername = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const clean = usernameInput.trim()
+    if (!clean) {
+      toast.error('Please enter your Simkl username')
+      return
+    }
+
+    try {
+      setConnecting(true)
+      const res = await fetch('/api/integrations/simkl/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: clean }),
+      })
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        setConnectedUsername(clean)
+        setStatus('success')
+        toast.success(`Connected Simkl as @${clean}`)
+        onSuccess?.({ username: clean, displayName: clean })
+        setTimeout(() => onOpenChange(false), 1200)
+      } else {
+        toast.error(data.error || 'Failed to connect Simkl account')
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Could not reach server')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
   // Start polling when in waiting state
   React.useEffect(() => {
     if (!open) {
       clearTimers()
       setStatus('idle')
       setUserCode(null)
-      setShowManual(false)
+      setUsernameInput('')
       return
     }
 
-    fetchPinCode()
+    if (activeTab === 'pin') {
+      fetchPinCode()
+    }
 
     return () => {
       clearTimers()
     }
-  }, [open, fetchPinCode, clearTimers])
+  }, [open, activeTab, fetchPinCode, clearTimers])
 
   React.useEffect(() => {
-    if (status !== 'waiting' || !userCode) {
+    if (status !== 'waiting' || !userCode || activeTab !== 'pin') {
       return
     }
 
-    const pollMs = Math.max(pollIntervalSec, 3) * 1000
+    const pollMs = Math.max(pollIntervalSec, 4) * 1000
     pollingRef.current = setInterval(() => {
       checkAuthorization(userCode)
     }, pollMs)
@@ -182,7 +217,7 @@ export function SimklConnectDialog({
     return () => {
       clearTimers()
     }
-  }, [status, userCode, pollIntervalSec, checkAuthorization, clearTimers])
+  }, [status, userCode, activeTab, pollIntervalSec, checkAuthorization, clearTimers])
 
   const handleCopyCode = () => {
     if (!userCode) return
@@ -190,25 +225,6 @@ export function SimklConnectDialog({
     setCopied(true)
     toast.success('PIN copied to clipboard!')
     setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleManualSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!manualUsername.trim()) return
-
-    setManualLoading(true)
-    try {
-      // Connect fallback
-      clearTimers()
-      setStatus('success')
-      const username = manualUsername.trim()
-      setConnectedUsername(username)
-      toast.success(`Connected Simkl as @${username}`)
-      onSuccess?.({ username })
-      setTimeout(() => onOpenChange(false), 1200)
-    } finally {
-      setManualLoading(false)
-    }
   }
 
   const formatTime = (seconds: number) => {
@@ -262,8 +278,86 @@ export function SimklConnectDialog({
             </div>
           )}
 
+          {/* Tab selector */}
+          {status !== 'success' && (
+            <div className="grid grid-cols-2 p-1 bg-muted/50 rounded-lg border border-border text-xs">
+              <button
+                type="button"
+                onClick={() => setActiveTab('username')}
+                className={`py-1.5 px-3 rounded-md font-medium transition-colors cursor-pointer text-center ${
+                  activeTab === 'username'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Enter Username
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab('pin')
+                  if (!userCode) fetchPinCode()
+                }}
+                className={`py-1.5 px-3 rounded-md font-medium transition-colors cursor-pointer text-center ${
+                  activeTab === 'pin'
+                    ? 'bg-background text-foreground shadow-xs'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Simkl PIN Code
+              </button>
+            </div>
+          )}
+
+          {/* USERNAME FORM TAB */}
+          {status !== 'success' && activeTab === 'username' && (
+            <form onSubmit={handleConnectByUsername} className="space-y-4 pt-1">
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Simkl.com Username</span>
+                  <a
+                    href="https://simkl.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-sky-400 hover:underline font-normal inline-flex items-center gap-1"
+                  >
+                    simkl.com <ExternalLink className="size-3" />
+                  </a>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    placeholder="e.g. your_simkl_username"
+                    autoFocus
+                    className="pl-9 h-10 text-sm font-medium"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Enter your Simkl username. This enables Simkl Plan to Watch, Recommendations, and History catalogs.
+                </p>
+              </div>
+
+              <Button
+                type="submit"
+                disabled={connecting || !usernameInput.trim()}
+                className="w-full bg-sky-600 hover:bg-sky-500 text-white font-medium h-10 shadow-sm cursor-pointer gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Connecting...
+                  </>
+                ) : (
+                  'Connect Simkl Account'
+                )}
+              </Button>
+            </form>
+          )}
+
           {/* LOADING STATE */}
-          {loading && (
+          {status !== 'success' && activeTab === 'pin' && loading && (
             <div className="py-12 text-center space-y-3">
               <Loader2 className="size-8 mx-auto animate-spin text-sky-400" />
               <p className="text-xs text-muted-foreground">Requesting PIN code from Simkl...</p>
@@ -271,7 +365,7 @@ export function SimklConnectDialog({
           )}
 
           {/* WAITING / ACTIVE PIN FLOW */}
-          {!loading && status === 'waiting' && userCode && (
+          {status !== 'success' && activeTab === 'pin' && !loading && status === 'waiting' && userCode && (
             <div className="space-y-5 animate-in fade-in duration-200">
               {/* Step instructions */}
               <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4 space-y-3">
@@ -366,7 +460,7 @@ export function SimklConnectDialog({
           )}
 
           {/* ERROR STATE */}
-          {!loading && status === 'error' && (
+          {status !== 'success' && activeTab === 'pin' && !loading && status === 'error' && (
             <div className="py-4 text-center space-y-4">
               <div className="size-12 mx-auto rounded-full bg-destructive/10 text-destructive grid place-items-center">
                 <AlertCircle className="size-6" />
@@ -380,61 +474,10 @@ export function SimklConnectDialog({
                   <RefreshCw className="size-3.5 mr-2" />
                   Try Again
                 </Button>
-                <Button variant="outline" onClick={() => setShowManual(true)}>
-                  Manual Setup
+                <Button variant="outline" onClick={() => setActiveTab('username')}>
+                  Enter Username
                 </Button>
               </div>
-            </div>
-          )}
-
-          {/* MANUAL OVERRIDE ACCORDION */}
-          {!loading && status !== 'success' && (
-            <div className="pt-2 border-t border-border/60">
-              {!showManual ? (
-                <button
-                  type="button"
-                  onClick={() => setShowManual(true)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors w-full text-center"
-                >
-                  Having trouble? Link via username instead →
-                </button>
-              ) : (
-                <form onSubmit={handleManualSubmit} className="space-y-3 pt-1 animate-in fade-in">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      <User className="size-3.5 text-muted-foreground" />
-                      Manual Username Link
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setShowManual(false)}
-                      className="text-[11px] text-muted-foreground hover:underline"
-                    >
-                      Back to PIN
-                    </button>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="e.g. simkl_user"
-                      value={manualUsername}
-                      onChange={(e) => setManualUsername(e.target.value)}
-                      className="h-9 text-xs"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={manualLoading || !manualUsername.trim()}
-                      className="h-9 px-4 shrink-0 bg-sky-600 hover:bg-sky-500"
-                    >
-                      {manualLoading ? <Loader2 className="size-3.5 animate-spin" /> : 'Connect'}
-                    </Button>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground leading-tight">
-                    Manual username linking enables catalog rows and recommendations.
-                  </p>
-                </form>
-              )}
             </div>
           )}
         </div>
