@@ -78,10 +78,12 @@ import {
 import { toast } from 'sonner'
 import { testApiKey } from '@/lib/test-key'
 import { useAppStore } from '@/store/useStore'
-import { useSettingsStore, PosterProvider } from '@/store/useSettingsStore'
+import { useSettingsStore } from '@/store/useSettingsStore'
 import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
 import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
 import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
+import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
+import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -227,6 +229,8 @@ function SettingsPage() {
   const [traktDialogOpen, setTraktDialogOpen] = React.useState(false)
   const [tmdbDialogOpen, setTmdbDialogOpen] = React.useState(false)
   const [simklDialogOpen, setSimklDialogOpen] = React.useState(false)
+  const [anilistDialogOpen, setAnilistDialogOpen] = React.useState(false)
+  const [malDialogOpen, setMalDialogOpen] = React.useState(false)
 
   // Sheet State for Info
   const [infoSheetKey, setInfoSheetKey] = React.useState<string | null>(null)
@@ -1398,32 +1402,52 @@ function SettingsPage() {
               <div className="flex items-center justify-between gap-4 border-t pt-4">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.anilist.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.anilist.connected ? <CircleCheck className="size-5" /> : <Link2 className="size-5" />}
+                    {connections.anilist.connected ? <CircleCheck className="size-5 text-emerald-500" /> : <Link2 className="size-5" />}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
-                      {connections.anilist.connected ? connections.anilist.username : 'Not connected'}
+                      {connections.anilist.connected ? `@${connections.anilist.username}` : 'Not connected'}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      Connect to bring your lists and history into new profiles.
+                      Connect to bring your anime lists and history into new profiles.
                     </p>
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={connections.anilist.connected ? 'outline' : 'default'}
-                  onClick={() => {
-                    const next = !connections.anilist.connected
-                    setConnection('anilist', { connected: next, username: next ? 'AniListUser' : '' })
-                    toast.success(next ? 'Connected AniList' : 'Disconnected AniList')
-                  }}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  {connections.anilist.connected ? <Link2Off className="size-4" /> : <Link2 className="size-4" />}
-                  {connections.anilist.connected ? 'Disconnect' : 'Connect'}
-                </Button>
+                {connections.anilist.connected ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      await fetch('/api/integrations/anilist/disconnect', { method: 'DELETE' }).catch(() => {})
+                      setConnection('anilist', { connected: false, username: '' })
+                      toast.info('AniList account disconnected')
+                    }}
+                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                  >
+                    <Link2Off className="size-4" /> Disconnect
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setAnilistDialogOpen(true)}
+                    className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#02A9FF] hover:bg-[#0295e0] text-white cursor-pointer font-semibold"
+                  >
+                    <Link2 className="size-4" /> Connect AniList
+                  </Button>
+                )}
               </div>
+
+              <AniListConnectDialog
+                open={anilistDialogOpen}
+                onOpenChange={setAnilistDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('anilist', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
             </section>
 
             {/* 10. MyAnimeList account */}
@@ -1441,32 +1465,52 @@ function SettingsPage() {
               <div className="flex items-center justify-between gap-4 border-t pt-4">
                 <div className="flex min-w-0 items-center gap-2.5">
                   <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.myanimelist.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.myanimelist.connected ? <CircleCheck className="size-5" /> : <Link2 className="size-5" />}
+                    {connections.myanimelist.connected ? <CircleCheck className="size-5 text-emerald-500" /> : <Link2 className="size-5" />}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-foreground">
-                      {connections.myanimelist.connected ? connections.myanimelist.username : 'Not connected'}
+                      {connections.myanimelist.connected ? `@${connections.myanimelist.username}` : 'Not connected'}
                     </p>
                     <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      Connect to bring your lists and history into new profiles.
+                      Connect to bring your anime lists and history into new profiles.
                     </p>
                   </div>
                 </div>
 
-                <Button
-                  size="sm"
-                  variant={connections.myanimelist.connected ? 'outline' : 'default'}
-                  onClick={() => {
-                    const next = !connections.myanimelist.connected
-                    setConnection('myanimelist', { connected: next, username: next ? 'MALUser' : '' })
-                    toast.success(next ? 'Connected MyAnimeList' : 'Disconnected MyAnimeList')
-                  }}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  {connections.myanimelist.connected ? <Link2Off className="size-4" /> : <Link2 className="size-4" />}
-                  {connections.myanimelist.connected ? 'Disconnect' : 'Connect'}
-                </Button>
+                {connections.myanimelist.connected ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={async () => {
+                      await fetch('/api/integrations/myanimelist/disconnect', { method: 'DELETE' }).catch(() => {})
+                      setConnection('myanimelist', { connected: false, username: '' })
+                      toast.info('MyAnimeList account disconnected')
+                    }}
+                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                  >
+                    <Link2Off className="size-4" /> Disconnect
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setMalDialogOpen(true)}
+                    className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#2e51a2] hover:bg-[#254285] text-white cursor-pointer font-semibold"
+                  >
+                    <Link2 className="size-4" /> Connect MyAnimeList
+                  </Button>
+                )}
               </div>
+
+              <MyAnimeListConnectDialog
+                open={malDialogOpen}
+                onOpenChange={setMalDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('myanimelist', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
             </section>
 
             {/* 11. When playback ends */}

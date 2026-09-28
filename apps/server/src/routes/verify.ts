@@ -374,6 +374,111 @@ export async function validateSingleKey(
         }
       }
 
+      // 12. AniList (Token or Username)
+      case 'anilist': {
+        if (cleanKey.length > 40 || cleanKey.startsWith('eyJ')) {
+          const q = `query { Viewer { id name avatar { medium large } } }`
+          const res = await serviceRequest('https://graphql.anilist.co', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${cleanKey}`,
+            },
+            body: JSON.stringify({ query: q }),
+            timeout: 6000,
+          })
+          if (res.ok && res.data?.data?.Viewer?.name) {
+            const viewer = res.data.data.Viewer
+            return {
+              ok: true,
+              status: 'valid',
+              details: {
+                username: viewer.name,
+                userId: viewer.id,
+                avatarUrl: viewer.avatar?.medium || viewer.avatar?.large,
+              },
+            }
+          }
+        }
+
+        const q = `query ($name: String) { User(name: $name) { id name avatar { medium large } statistics { anime { count episodesWatched } } } }`
+        const res = await serviceRequest('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({ query: q, variables: { name: cleanKey } }),
+          timeout: 6000,
+        })
+
+        if (res.ok && res.data?.data?.User?.name) {
+          const user = res.data.data.User
+          return {
+            ok: true,
+            status: 'valid',
+            details: {
+              username: user.name,
+              userId: user.id,
+              avatarUrl: user.avatar?.medium || user.avatar?.large,
+              animeCount: user.statistics?.anime?.count,
+            },
+          }
+        }
+
+        return {
+          ok: false,
+          status: 'invalid',
+          error: 'AniList user or token not found',
+          message: 'AniList username or token not found',
+        }
+      }
+
+      // 13. MyAnimeList (Token or Username)
+      case 'myanimelist':
+      case 'mal': {
+        if (cleanKey.length > 40) {
+          const res = await serviceRequest('https://api.myanimelist.net/v2/users/@me', {
+            headers: { Authorization: `Bearer ${cleanKey}` },
+            timeout: 6000,
+          })
+          if (res.ok && res.data?.name) {
+            return {
+              ok: true,
+              status: 'valid',
+              details: {
+                username: res.data.name,
+                avatarUrl: res.data.picture,
+              },
+            }
+          }
+        }
+
+        const res = await serviceRequest(`https://api.jikan.moe/v4/users/${encodeURIComponent(cleanKey)}`, {
+          timeout: 6000,
+        })
+
+        if (res.ok && res.data?.data?.username) {
+          const u = res.data.data
+          return {
+            ok: true,
+            status: 'valid',
+            details: {
+              username: u.username,
+              avatarUrl: u.images?.jpg?.image_url,
+            },
+          }
+        }
+
+        return {
+          ok: false,
+          status: 'invalid',
+          error: 'MyAnimeList user not found',
+          message: 'MyAnimeList user not found',
+        }
+      }
+
       // 12. Debrid providers
       case 'realdebrid':
       case 'real-debrid':

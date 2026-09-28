@@ -45,6 +45,8 @@ import { useSettingsStore } from '@/store/useSettingsStore'
 import { TraktConnectDialog } from '@/components/trakt-connect-dialog'
 import { SimklConnectDialog } from '@/components/simkl-connect-dialog'
 import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
+import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
+import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
 
 function SortableHomeRowItem({ row, onRemove }: { row: CatalogItem; onRemove: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -136,6 +138,10 @@ export function WizardDialogs() {
     setSimklUsername,
     setTmdbAccountConnected,
     setTmdbAccountUsername,
+    setAnilistConnected,
+    setAnilistUsername,
+    setMalConnected,
+    setMalUsername,
   } = useWizard()
 
   const dndSensors = useSensors(
@@ -702,63 +708,35 @@ export function WizardDialogs() {
         }}
       />
 
-      {/* 6d. Connect Account Modal for other providers */}
-      <Dialog
-        open={!!connectModalProvider && !['trakt', 'simkl', 'tmdb'].includes(connectModalProvider)}
+      {/* 6d. AniList Dedicated Dialog */}
+      <AniListConnectDialog
+        open={connectModalProvider === 'anilist'}
         onOpenChange={(open) => !open && setConnectModalProvider(null)}
-      >
-        <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
-          <DialogHeader>
-            <DialogTitle className="text-base capitalize">
-              Connect{' '}
-              {connectModalProvider === 'tmdb'
-                ? 'TMDB Account'
-                : connectModalProvider === 'myanimelist'
-                ? 'MyAnimeList'
-                : connectModalProvider}
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Enter your account username to link your watchlist, history, and tracking.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
-                {connectModalProvider === 'tmdb'
-                  ? 'TMDB Username'
-                  : `${connectModalProvider?.toUpperCase()} Username`}
-              </label>
-              <Input
-                placeholder="e.g. moviebuff_99"
-                value={connectModalUsername}
-                onChange={(e) => setConnectModalUsername(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleConfirmConnect()
-                }}
-                autoFocus
-                className="h-10 text-sm"
-              />
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Linking allows Nuvio to personalize your catalog rows and sync your watch progress
-              seamlessly.
-            </p>
-          </div>
-          <DialogFooter className="flex items-center justify-between sm:justify-end gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setConnectModalProvider(null)}
-              className="cursor-pointer"
-            >
-              Cancel
-            </Button>
-            <Button size="sm" onClick={handleConfirmConnect} className="cursor-pointer">
-              Confirm Connection
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onSuccess={(profile) => {
+          setAnilistConnected(true)
+          setAnilistUsername(profile.username)
+          useSettingsStore.getState().setConnection('anilist', {
+            connected: true,
+            username: profile.username,
+          })
+          setConnectModalProvider(null)
+        }}
+      />
+
+      {/* 6e. MyAnimeList Dedicated Dialog */}
+      <MyAnimeListConnectDialog
+        open={connectModalProvider === 'myanimelist'}
+        onOpenChange={(open) => !open && setConnectModalProvider(null)}
+        onSuccess={(profile) => {
+          setMalConnected(true)
+          setMalUsername(profile.username)
+          useSettingsStore.getState().setConnection('myanimelist', {
+            connected: true,
+            username: profile.username,
+          })
+          setConnectModalProvider(null)
+        }}
+      />
 
       {/* 7. Info Dialog */}
       <Dialog open={!!activeInfoKey} onOpenChange={(open) => !open && setActiveInfoKey(null)}>
