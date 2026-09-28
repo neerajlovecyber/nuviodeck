@@ -9,6 +9,7 @@ export class MyAnimeListService {
   private headers(accessToken?: string): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'User-Agent': 'NuvioDeck/1.0',
     }
     if (accessToken) {
       headers['Authorization'] = `Bearer ${accessToken}`

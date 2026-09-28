@@ -51,6 +51,7 @@ export class SimklService {
   private headers(accessToken?: string): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'User-Agent': 'NuvioDeck/1.0',
       'simkl-api-key': this.clientId,
     }
     if (accessToken) {

@@ -64,6 +64,7 @@ export class TraktService {
   private headers(accessToken?: string): HeadersInit {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
+      'User-Agent': 'NuvioDeck/1.0',
       'trakt-api-version': '2',
       'trakt-api-key': this.clientId,
     }
