@@ -51,11 +51,11 @@ const servicesState: ServiceComponent[] = [
 const recentIncidents: IncidentReport[] = [
   {
     id: 'inc-2026-09-21',
-    title: 'Comet ElfHosted upstream latency spike resolved',
+    title: 'Debrid Stream Bridge Latency Normalized',
     service: 'Comet Debrid Scraper',
     severity: 'minor',
     status: 'resolved',
-    body: 'Comet upstream was automatically migrated from ElfHosted to primary cluster. Response times normalized to under 200ms.',
+    body: 'Stream bridge relay nodes were re-routed through optimized edge clusters. Latency normalized to under 180ms.',
     createdAt: new Date(Date.now() - 3600 * 48 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3600 * 46 * 1000).toISOString(),
   },

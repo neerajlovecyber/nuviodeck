@@ -15,7 +15,6 @@ export function SiteHeader({ title }: { title?: string }) {
     if (pathname === "/studio" || pathname.startsWith("/studio/")) return "Cover Studio"
     if (pathname === "/addons" || pathname.startsWith("/addons/")) return "Addon Manager"
     if (pathname === "/status" || pathname.startsWith("/status/")) return "System Status"
-    if (pathname === "/whats-new" || pathname.startsWith("/whats-new/")) return "What's New"
     if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return "Profiles"
     if (pathname.startsWith("/wizard/")) return "Profile Wizard"
     return "Profiles"

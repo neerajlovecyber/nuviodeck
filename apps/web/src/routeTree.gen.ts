@@ -20,7 +20,6 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedStatusRouteImport } from './routes/_authenticated/status'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
-import { Route as AuthenticatedWhatsNewRouteImport } from './routes/_authenticated/whats-new'
 import { Route as AuthenticatedWizardProfileIdRouteImport } from './routes/_authenticated/wizard.$profileId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -77,11 +76,6 @@ const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   path: '/studio',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedWhatsNewRoute = AuthenticatedWhatsNewRouteImport.update({
-  id: '/whats-new',
-  path: '/whats-new',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedWizardProfileIdRoute =
   AuthenticatedWizardProfileIdRouteImport.update({
     id: '/wizard/$profileId',
@@ -100,7 +94,6 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/status': typeof AuthenticatedStatusRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesByTo {
@@ -114,7 +107,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/status': typeof AuthenticatedStatusRoute
   '/studio': typeof AuthenticatedStudioRoute
-  '/whats-new': typeof AuthenticatedWhatsNewRoute
   '/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRoutesById {
@@ -130,7 +122,6 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/status': typeof AuthenticatedStatusRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
-  '/_authenticated/whats-new': typeof AuthenticatedWhatsNewRoute
   '/_authenticated/wizard/$profileId': typeof AuthenticatedWizardProfileIdRoute
 }
 export interface FileRouteTypes {
@@ -146,7 +137,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/status'
     | '/studio'
-    | '/whats-new'
     | '/wizard/$profileId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -160,7 +150,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/status'
     | '/studio'
-    | '/whats-new'
     | '/wizard/$profileId'
   id:
     | '__root__'
@@ -175,7 +164,6 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/status'
     | '/_authenticated/studio'
-    | '/_authenticated/whats-new'
     | '/_authenticated/wizard/$profileId'
   fileRoutesById: FileRoutesById
 }
@@ -265,13 +253,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/whats-new': {
-      id: '/_authenticated/whats-new'
-      path: '/whats-new'
-      fullPath: '/whats-new'
-      preLoaderRoute: typeof AuthenticatedWhatsNewRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/wizard/$profileId': {
       id: '/_authenticated/wizard/$profileId'
       path: '/wizard/$profileId'
@@ -290,7 +271,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedStatusRoute: typeof AuthenticatedStatusRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
-  AuthenticatedWhatsNewRoute: typeof AuthenticatedWhatsNewRoute
   AuthenticatedWizardProfileIdRoute: typeof AuthenticatedWizardProfileIdRoute
 }
 
@@ -302,7 +282,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedStatusRoute: AuthenticatedStatusRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
-  AuthenticatedWhatsNewRoute: AuthenticatedWhatsNewRoute,
   AuthenticatedWizardProfileIdRoute: AuthenticatedWizardProfileIdRoute,
 }
 

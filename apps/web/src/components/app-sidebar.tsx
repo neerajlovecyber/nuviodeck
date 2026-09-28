@@ -76,16 +76,13 @@ export function AppSidebar({ variant = "inset", ...props }: React.ComponentProps
       title: "Settings",
       url: "/settings",
       icon: <Settings2Icon />,
+      isActive: pathname === "/settings" || pathname.startsWith("/settings"),
     },
     {
       title: "System Status",
       url: "/status",
       icon: <Activity />,
-    },
-    {
-      title: "What's New",
-      url: "/whats-new",
-      icon: <Sparkles />,
+      isActive: pathname === "/status" || pathname.startsWith("/status"),
     },
   ]
 

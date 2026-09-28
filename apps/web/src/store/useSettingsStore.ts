@@ -13,6 +13,8 @@ export interface PosterProvider {
   hasConfig?: boolean
 }
 
+export type KeyVerificationStatus = 'idle' | 'checking' | 'valid' | 'invalid'
+
 export interface SettingsState {
   // API Keys
   apiKeys: {
@@ -24,7 +26,9 @@ export interface SettingsState {
     deepseek: string
     letterboxd: string
   }
+  apiKeysStatus: Record<string, KeyVerificationStatus>
   setApiKey: (key: keyof SettingsState['apiKeys'], value: string | boolean) => void
+  setApiKeyStatus: (key: string, status: KeyVerificationStatus) => void
 
   // Posters
   posterProviders: PosterProvider[]
@@ -194,9 +198,14 @@ export const useSettingsStore = create<SettingsState>()(
         deepseek: '',
         letterboxd: '',
       },
+      apiKeysStatus: {},
       setApiKey: (key, value) =>
         set((state) => ({
           apiKeys: { ...state.apiKeys, [key]: value },
+        })),
+      setApiKeyStatus: (key, status) =>
+        set((state) => ({
+          apiKeysStatus: { ...state.apiKeysStatus, [key]: status },
         })),
 
       posterProviders: INITIAL_POSTER_PROVIDERS,

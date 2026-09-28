@@ -1110,12 +1110,14 @@ export function WizardProvider({
       setMdbListStatus('valid')
       setMdbListError(null)
       useSettingsStore.getState().setApiKey('mdblist', mdbListKey)
+      useSettingsStore.getState().setApiKeyStatus('mdblist', 'valid')
       const user = res.details?.user ? ` (${res.details.user})` : ''
       toast.success(`MDBList API key verified!${user}`)
       void saveProfileConfig()
       return true
     } else {
       setMdbListStatus('invalid')
+      useSettingsStore.getState().setApiKeyStatus('mdblist', 'invalid')
       const msg = res.message || 'MDBList rejected API key'
       setMdbListError(msg)
       toast.error(msg)
@@ -1139,11 +1141,13 @@ export function WizardProvider({
       setTmdbStatus('valid')
       setTmdbError(null)
       useSettingsStore.getState().setApiKey('tmdb', tmdbToken)
+      useSettingsStore.getState().setApiKeyStatus('tmdb', 'valid')
       toast.success('TMDB Read Access Token verified successfully!')
       void saveProfileConfig()
       return true
     } else {
       setTmdbStatus('invalid')
+      useSettingsStore.getState().setApiKeyStatus('tmdb', 'invalid')
       const msg = res.message || 'TMDB token authentication failed'
       setTmdbError(msg)
       toast.error(msg)
@@ -1168,12 +1172,14 @@ export function WizardProvider({
       setLetterboxdVerified(true)
       setLetterboxdError(null)
       useSettingsStore.getState().setApiKey('letterboxd', letterboxd)
+      useSettingsStore.getState().setApiKeyStatus('letterboxd', 'valid')
       toast.success(`Letterboxd user "${letterboxd.trim()}" verified!`)
       void saveProfileConfig()
       return true
     } else {
       setLetterboxdStatus('invalid')
       setLetterboxdVerified(false)
+      useSettingsStore.getState().setApiKeyStatus('letterboxd', 'invalid')
       const msg = res.message || 'Letterboxd user not found'
       setLetterboxdError(msg)
       toast.error(msg)
@@ -1201,14 +1207,17 @@ export function WizardProvider({
       setAiKeyError(null)
       if (aiProvider === 'Groq') {
         useSettingsStore.getState().setApiKey('groq', groqApiKey)
+        useSettingsStore.getState().setApiKeyStatus('groq', 'valid')
       } else {
         useSettingsStore.getState().setApiKey('gemini', aiApiKey)
+        useSettingsStore.getState().setApiKeyStatus('gemini', 'valid')
       }
       toast.success(`${aiProvider} API key verified!`)
       void saveProfileConfig()
       return true
     } else {
       setAiKeyStatus('invalid')
+      useSettingsStore.getState().setApiKeyStatus(service, 'invalid')
       const msg = res.message || `${aiProvider} rejected key`
       setAiKeyError(msg)
       toast.error(msg)

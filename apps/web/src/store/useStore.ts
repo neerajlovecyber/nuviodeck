@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import { nuvioApi } from '@/lib/nuvio-api'
 
 import rawAvatars from '@/data/avatars.json'
@@ -18,75 +19,86 @@ interface AppState {
   incrementCounter: () => void
   setUser: (user: UserProfile | null) => void
   setAvatar: (avatar: string) => void
-  checkSession: () => Promise<UserProfile | null>
+  checkSession: (force?: boolean) => Promise<UserProfile | null>
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
-  theme: 'light',
-  user: null,
-  isLoadingSession: true,
-  counter: 0,
-  toggleTheme: () =>
-    set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
-  incrementCounter: () => set((state) => ({ counter: state.counter + 1 })),
-  setUser: (user) => set({ user }),
-  setAvatar: (avatar) =>
-    set((state) => ({
-      user: state.user ? { ...state.user, avatar } : null,
-    })),
-  checkSession: async (force = false) => {
-    if (!get().user || force) {
-      set({ isLoadingSession: true })
-    }
-    try {
-      const res = await nuvioApi.getSession()
-      if (res.session && !res.session.isExpired) {
-        const email = res.session.email || 'User'
-        const defaultName = email.split('@')[0]
-        let name = defaultName.charAt(0).toUpperCase() + defaultName.slice(1)
-        let avatar = ''
-
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      theme: 'light',
+      user: null,
+      isLoadingSession: false,
+      counter: 0,
+      toggleTheme: () =>
+        set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+      incrementCounter: () => set((state) => ({ counter: state.counter + 1 })),
+      setUser: (user) => set({ user }),
+      setAvatar: (avatar) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, avatar } : null,
+        })),
+      checkSession: async (force = false) => {
+        if (!get().user || force) {
+          set({ isLoadingSession: true })
+        }
         try {
-          // Fetch live profiles from connected Nuvio account
-          const profilesRes = await nuvioApi.getProfiles()
-          // In Nuvio, profile_index 1 is the primary account profile
-          const primaryProfile =
-            profilesRes.profiles?.find((p) => p.profile_index === 1) ||
-            profilesRes.profiles?.[0]
+          const res = await nuvioApi.getSession()
+          if (res.session && !res.session.isExpired) {
+            const email = res.session.email || 'User'
+            const defaultName = email.split('@')[0]
+            let name = defaultName.charAt(0).toUpperCase() + defaultName.slice(1)
+            let avatar = ''
 
-          if (primaryProfile) {
-            if (primaryProfile.name) {
-              name = primaryProfile.name
-            }
-            if (primaryProfile.avatar_url) {
-              avatar = primaryProfile.avatar_url
-            } else if (primaryProfile.avatar_id) {
-              const matched = (rawAvatars as any[]).find(
-                (a) => a.id === primaryProfile.avatar_id
-              )
-              if (matched?.remoteUrl || matched?.localUrl) {
-                avatar = matched.remoteUrl || matched.localUrl
+            try {
+              // Fetch live profiles from connected Nuvio account
+              const profilesRes = await nuvioApi.getProfiles()
+              // In Nuvio, profile_index 1 is the primary account profile
+              const primaryProfile =
+                profilesRes.profiles?.find((p) => p.profile_index === 1) ||
+                profilesRes.profiles?.[0]
+
+              if (primaryProfile) {
+                if (primaryProfile.name) {
+                  name = primaryProfile.name
+                }
+                if (primaryProfile.avatar_url) {
+                  avatar = primaryProfile.avatar_url
+                } else if (primaryProfile.avatar_id) {
+                  const matched = (rawAvatars as any[]).find(
+                    (a) => a.id === primaryProfile.avatar_id
+                  )
+                  if (matched?.remoteUrl || matched?.localUrl) {
+                    avatar = matched.remoteUrl || matched.localUrl
+                  }
+                }
               }
+            } catch (err) {
+              console.warn('Could not fetch primary profile avatar from Nuvio:', err)
             }
-          }
-        } catch (err) {
-          console.warn('Could not fetch primary profile avatar from Nuvio:', err)
-        }
 
-        const user: UserProfile = {
-          name,
-          email,
-          avatar,
+            const user: UserProfile = {
+              name,
+              email,
+              avatar,
+            }
+            set({ user, isLoadingSession: false })
+            return user
+          } else {
+            set({ user: null, isLoadingSession: false })
+            return null
+          }
+        } catch {
+          set({ user: null, isLoadingSession: false })
+          return null
         }
-        set({ user, isLoadingSession: false })
-        return user
-      } else {
-        set({ user: null, isLoadingSession: false })
-        return null
-      }
-    } catch {
-      set({ user: null, isLoadingSession: false })
-      return null
+      },
+    }),
+    {
+      name: 'nuviodeck-auth',
+      partialize: (state) => ({
+        theme: state.theme,
+        user: state.user,
+      }),
     }
-  },
-}))
+  )
+)

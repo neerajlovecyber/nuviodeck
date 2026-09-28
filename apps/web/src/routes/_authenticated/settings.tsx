@@ -206,7 +206,9 @@ function SettingsPage() {
   const { theme, toggleTheme } = useAppStore()
   const {
     apiKeys,
+    apiKeysStatus,
     setApiKey,
+    setApiKeyStatus,
     posterProviders,
     setPosterProviders,
     updatePosterProviderKey,
@@ -378,7 +380,13 @@ function SettingsPage() {
                 label="MDBList API key"
                 required
                 value={apiKeys.mdblist}
-                onChange={(val) => setApiKey('mdblist', val)}
+                onChange={(val) => {
+                  setApiKey('mdblist', val)
+                  setApiKeyStatus('mdblist', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.mdblist || (apiKeys.mdblist ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('mdblist', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('mdblist', isValid ? 'valid' : 'invalid')}
                 placeholder="mdblist api key"
                 getKeyUrl="https://mdblist.com/preferences/"
               >
@@ -386,40 +394,40 @@ function SettingsPage() {
                 <div className="flex flex-col gap-3 border-t pt-4 mt-3">
                   <div className="flex items-center gap-3">
                     <Switch
-                      id="default-mdblist-scrobble"
-                      checked={apiKeys.mdblistScrobble}
-                      onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
-                      aria-label="Scrobble now watching to MDBList"
-                    />
-                    <div className="flex min-h-5 items-center gap-1.5">
-                      <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
-                        Scrobble now watching to MDBList
-                      </Label>
-                      <button
-                        type="button"
-                        onClick={() => openInfo('mdblist-scrobble')}
-                        aria-label="About Scrobble now watching to MDBList"
-                        className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                      >
-                        <Info className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <p className="min-w-0 text-xs text-muted-foreground">
-                      Apply this MDBList scrobble setting to your existing profiles.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleApplyToAll('MDBList scrobble')}
-                      className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                    >
-                      <RefreshCw className="size-3.5" /> Apply to profiles
-                    </Button>
-                  </div>
-                </div>
-              </IntegrationKeyField>
+                       id="default-mdblist-scrobble"
+                       checked={apiKeys.mdblistScrobble}
+                       onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
+                       aria-label="Scrobble now watching to MDBList"
+                     />
+                     <div className="flex min-h-5 items-center gap-1.5">
+                       <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
+                         Scrobble now watching to MDBList
+                       </Label>
+                       <button
+                         type="button"
+                         onClick={() => openInfo('mdblist-scrobble')}
+                         aria-label="About Scrobble now watching to MDBList"
+                         className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                       >
+                         <Info className="size-3.5" />
+                       </button>
+                     </div>
+                   </div>
+                   <div className="flex items-center justify-between gap-4">
+                     <p className="min-w-0 text-xs text-muted-foreground">
+                       Apply this MDBList scrobble setting to your existing profiles.
+                     </p>
+                     <Button
+                       variant="outline"
+                       size="sm"
+                       onClick={() => handleApplyToAll('MDBList scrobble')}
+                       className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                     >
+                       <RefreshCw className="size-3.5" /> Apply to profiles
+                     </Button>
+                   </div>
+                 </div>
+               </IntegrationKeyField>
 
               {/* TMDB */}
               <IntegrationKeyField
@@ -428,7 +436,13 @@ function SettingsPage() {
                 label="TMDB Read Access Token"
                 required
                 value={apiKeys.tmdb}
-                onChange={(val) => setApiKey('tmdb', val)}
+                onChange={(val) => {
+                  setApiKey('tmdb', val)
+                  setApiKeyStatus('tmdb', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.tmdb || (apiKeys.tmdb ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('tmdb', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('tmdb', isValid ? 'valid' : 'invalid')}
                 placeholder="eyJhbGci..."
                 getKeyUrl="https://www.themoviedb.org/settings/api"
               />
@@ -439,7 +453,13 @@ function SettingsPage() {
                 serviceId="gemini"
                 label="Gemini API key"
                 value={apiKeys.gemini}
-                onChange={(val) => setApiKey('gemini', val)}
+                onChange={(val) => {
+                  setApiKey('gemini', val)
+                  setApiKeyStatus('gemini', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.gemini || (apiKeys.gemini ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('gemini', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('gemini', isValid ? 'valid' : 'invalid')}
                 placeholder="AIzaSy..."
                 getKeyUrl="https://aistudio.google.com/apikey"
               />
@@ -450,7 +470,13 @@ function SettingsPage() {
                 serviceId="groq"
                 label="Groq API key"
                 value={apiKeys.groq}
-                onChange={(val) => setApiKey('groq', val)}
+                onChange={(val) => {
+                  setApiKey('groq', val)
+                  setApiKeyStatus('groq', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.groq || (apiKeys.groq ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('groq', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('groq', isValid ? 'valid' : 'invalid')}
                 placeholder="gsk_..."
                 getKeyUrl="https://console.groq.com/keys"
               />
@@ -461,7 +487,13 @@ function SettingsPage() {
                 serviceId="deepseek"
                 label="DeepSeek API key"
                 value={apiKeys.deepseek}
-                onChange={(val) => setApiKey('deepseek', val)}
+                onChange={(val) => {
+                  setApiKey('deepseek', val)
+                  setApiKeyStatus('deepseek', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.deepseek || (apiKeys.deepseek ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('deepseek', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('deepseek', isValid ? 'valid' : 'invalid')}
                 placeholder="sk-..."
                 getKeyUrl="https://platform.deepseek.com/api_keys"
               />
@@ -474,7 +506,13 @@ function SettingsPage() {
                 type="text"
                 allowToggleVisibility={false}
                 value={apiKeys.letterboxd}
-                onChange={(val) => setApiKey('letterboxd', val)}
+                onChange={(val) => {
+                  setApiKey('letterboxd', val)
+                  setApiKeyStatus('letterboxd', val.trim() ? 'idle' : 'idle')
+                }}
+                status={apiKeysStatus.letterboxd || (apiKeys.letterboxd ? 'valid' : 'idle')}
+                onStatusChange={(st) => setApiKeyStatus('letterboxd', st)}
+                onVerifiedChange={(isValid) => setApiKeyStatus('letterboxd', isValid ? 'valid' : 'invalid')}
                 placeholder="username"
                 getKeyUrl="https://letterboxd.com/"
                 getKeyText="letterboxd.com"
