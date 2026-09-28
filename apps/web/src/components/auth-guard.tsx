@@ -18,7 +18,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     }
   }, [user, isLoadingSession, navigate])
 
-  if (isLoadingSession) {
+  if (isLoadingSession && !user) {
     return (
       <div className="flex min-h-screen w-full flex-col items-center justify-center bg-background gap-3">
         <div className="flex items-center gap-2 font-bold text-xl tracking-tight">

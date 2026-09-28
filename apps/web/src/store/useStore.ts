@@ -34,8 +34,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((state) => ({
       user: state.user ? { ...state.user, avatar } : null,
     })),
-  checkSession: async () => {
-    set({ isLoadingSession: true })
+  checkSession: async (force = false) => {
+    if (!get().user || force) {
+      set({ isLoadingSession: true })
+    }
     try {
       const res = await nuvioApi.getSession()
       if (res.session && !res.session.isExpired) {
