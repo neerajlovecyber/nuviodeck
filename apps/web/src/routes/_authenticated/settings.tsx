@@ -73,11 +73,37 @@ import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
 import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
 import { GEMINI_MODELS, GROQ_MODELS } from '@/components/wizard/wizard-constants'
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxGroup,
+  ComboboxLabel,
+  ComboboxEmpty,
+} from '@workspace/ui/components/combobox'
 
 const DEEPSEEK_MODELS = [
   { id: 'deepseek-chat', label: 'deepseek-chat' },
   { id: 'deepseek-reasoner', label: 'deepseek-reasoner' },
 ]
+
+// Build a grouped timezone list from the browser's native Intl API.
+// Intl.supportedValuesOf is available in all modern browsers and covers all
+// IANA timezones — no backend call or manual list needed.
+const TIMEZONE_GROUPS: Record<string, string[]> = (() => {
+  const zones: string[] = typeof Intl !== 'undefined' && 'supportedValuesOf' in Intl
+    ? (Intl as any).supportedValuesOf('timeZone')
+    : []
+  const groups: Record<string, string[]> = {}
+  for (const zone of zones) {
+    const region = zone.includes('/') ? zone.split('/')[0] : 'Other'
+    if (!groups[region]) groups[region] = []
+    groups[region].push(zone)
+  }
+  return groups
+})()
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
@@ -153,7 +179,7 @@ const INFO_DESCRIPTIONS: Record<string, { title: string; description: string; de
   },
   'anime-stream-id': {
     title: 'Anime stream ID',
-    description: 'Specifies which identification convention (IMDb, Kitsu, AniList) is queried when scraping streams.',
+    description: 'Specifies which identification convention (IMDb or Kitsu) is queried when scraping streams.',
   },
   'anime-titles': {
     title: 'Anime titles',
@@ -167,6 +193,10 @@ const INFO_DESCRIPTIONS: Record<string, { title: string; description: string; de
   'origin-countries': {
     title: 'Origin countries',
     description: 'Filter catalog rows to prioritize titles originating from selected countries or production regions.',
+  },
+  'ratings-standard': {
+    title: 'Ratings system',
+    description: 'Normalizes age certifications and content warnings to your selected region’s cinema rating standard.',
   },
   'exclude-countries': {
     title: 'Exclude countries',
@@ -832,20 +862,34 @@ function SettingsPage() {
                     <Info className="size-3.5" />
                   </button>
                 </div>
-                <select
+                <Combobox
                   value={profileDefaults.timezone}
-                  onChange={(e) => setProfileDefault('timezone', e.target.value)}
-                  className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                  onValueChange={(val) => setProfileDefault('timezone', val as string)}
                 >
-                  <option value="Automatic (source air date)" className="bg-popover text-popover-foreground">
-                    Automatic (source air date)
-                  </option>
-                  <option value="UTC" className="bg-popover text-popover-foreground">UTC</option>
-                  <option value="America/New_York" className="bg-popover text-popover-foreground">America/New_York (EST)</option>
-                  <option value="America/Los_Angeles" className="bg-popover text-popover-foreground">America/Los_Angeles (PST)</option>
-                  <option value="Europe/London" className="bg-popover text-popover-foreground">Europe/London (GMT)</option>
-                  <option value="Asia/Tokyo" className="bg-popover text-popover-foreground">Asia/Tokyo (JST)</option>
-                </select>
+                  <ComboboxInput
+                    placeholder={profileDefaults.timezone || 'Search timezone…'}
+                    className="w-full rounded-lg"
+                  />
+                  <ComboboxContent align="start" className="w-full">
+                    <ComboboxEmpty>No timezone found.</ComboboxEmpty>
+                    <ComboboxList>
+                      <ComboboxItem value="Automatic (source air date)">
+                        Automatic (source air date)
+                      </ComboboxItem>
+                      <ComboboxItem value="UTC">UTC</ComboboxItem>
+                      {Object.entries(TIMEZONE_GROUPS).map(([region, zones]) => (
+                        <ComboboxGroup key={region}>
+                          <ComboboxLabel>{region}</ComboboxLabel>
+                          {zones.map((tz) => (
+                            <ComboboxItem key={tz} value={tz}>
+                              {tz}
+                            </ComboboxItem>
+                          ))}
+                        </ComboboxGroup>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
               </div>
 
               {/* Series season & episode source */}
@@ -962,7 +1006,6 @@ function SettingsPage() {
                     IMDb (tt2098220:2:49)
                   </option>
                   <option value="Kitsu" className="bg-popover text-popover-foreground">Kitsu</option>
-                  <option value="AniList" className="bg-popover text-popover-foreground">AniList</option>
                 </select>
               </div>
 
@@ -993,24 +1036,56 @@ function SettingsPage() {
                 </select>
               </div>
 
-              {/* Max rating */}
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm font-medium">Max rating</Label>
-                <select
-                  value={profileDefaults.maxRating}
-                  onChange={(e) => setProfileDefault('maxRating', e.target.value)}
-                  className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-                >
-                  <option value="any" className="bg-popover text-popover-foreground">any</option>
-                  <option value="G" className="bg-popover text-popover-foreground">G</option>
-                  <option value="PG" className="bg-popover text-popover-foreground">PG</option>
-                  <option value="PG-13" className="bg-popover text-popover-foreground">PG-13</option>
-                  <option value="R" className="bg-popover text-popover-foreground">R</option>
-                  <option value="NC-17" className="bg-popover text-popover-foreground">NC-17</option>
-                </select>
+              {/* Ratings system & Maximum age rating */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-sm font-medium">Rating system</Label>
+                    <button
+                      type="button"
+                      onClick={() => openInfo('ratings-standard')}
+                      className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <Info className="size-3.5" />
+                    </button>
+                  </div>
+                  <select
+                    value={profileDefaults.ratingCountry || 'US'}
+                    onChange={(e) => setProfileDefault('ratingCountry', e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                  >
+                    <option value="US" className="bg-popover text-popover-foreground">Automatic (United States)</option>
+                    <option value="GB" className="bg-popover text-popover-foreground">United Kingdom (BBFC)</option>
+                    <option value="CA" className="bg-popover text-popover-foreground">Canada (CHVRS)</option>
+                    <option value="AU" className="bg-popover text-popover-foreground">Australia (ACB)</option>
+                    <option value="DE" className="bg-popover text-popover-foreground">Germany (FSK)</option>
+                    <option value="FR" className="bg-popover text-popover-foreground">France (CNC)</option>
+                    <option value="IT" className="bg-popover text-popover-foreground">Italy (MiC)</option>
+                    <option value="ES" className="bg-popover text-popover-foreground">Spain (ICAA)</option>
+                    <option value="BR" className="bg-popover text-popover-foreground">Brazil (ClassInd)</option>
+                    <option value="IN" className="bg-popover text-popover-foreground">India (CBFC)</option>
+                    <option value="VN" className="bg-popover text-popover-foreground">Vietnam</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label className="text-sm font-medium">Max rating</Label>
+                  <select
+                    value={profileDefaults.maxRating || 'any'}
+                    onChange={(e) => setProfileDefault('maxRating', e.target.value)}
+                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
+                  >
+                    <option value="any" className="bg-popover text-popover-foreground">Any</option>
+                    <option value="G" className="bg-popover text-popover-foreground">G / TV-Y</option>
+                    <option value="PG" className="bg-popover text-popover-foreground">PG / TV-PG</option>
+                    <option value="PG-13" className="bg-popover text-popover-foreground">PG-13 / 12+</option>
+                    <option value="R" className="bg-popover text-popover-foreground">R / 15+ / 16+</option>
+                    <option value="NC-17" className="bg-popover text-popover-foreground">NC-17 / 18+</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Quality floor */}
+              {/* Quality Floor */}
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-1.5">
                   <Label className="text-sm font-medium">Quality floor</Label>
@@ -1027,168 +1102,72 @@ function SettingsPage() {
                   onChange={(e) => setProfileDefault('qualityFloor', e.target.value)}
                   className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
                 >
-                  <option value="Good (6.5+ rating, 100+ votes)" className="bg-popover text-popover-foreground">
-                    Good (6.5+ rating, 100+ votes)
-                  </option>
-                  <option value="High (7.5+ rating, 500+ votes)" className="bg-popover text-popover-foreground">
-                    High (7.5+ rating, 500+ votes)
-                  </option>
-                  <option value="None (any rating)" className="bg-popover text-popover-foreground">
-                    None (any rating)
-                  </option>
+                  <option value="None" className="bg-popover text-popover-foreground">None (show everything)</option>
+                  <option value="Decent (5.0+ rating, 50+ votes)" className="bg-popover text-popover-foreground">Decent (5.0+ rating, 50+ votes)</option>
+                  <option value="Good (6.5+ rating, 100+ votes)" className="bg-popover text-popover-foreground">Good (6.5+ rating, 100+ votes)</option>
+                  <option value="Great (7.5+ rating, 500+ votes)" className="bg-popover text-popover-foreground">Great (7.5+ rating, 500+ votes)</option>
+                  <option value="Excellent (8.0+ rating, 1000+ votes)" className="bg-popover text-popover-foreground">Excellent (8.0+ rating, 1000+ votes)</option>
                 </select>
               </div>
 
-              {/* Origin countries */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Label className="text-sm font-medium">Origin countries</Label>
-                  <button
-                    type="button"
-                    onClick={() => openInfo('origin-countries')}
-                    className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  >
-                    <Info className="size-3.5" />
-                  </button>
-                </div>
-                <div className="flex min-h-10 w-full cursor-pointer items-start justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-3 text-sm select-none">
-                  <span className="text-muted-foreground">All countries</span>
-                  <ChevronDown className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                </div>
-              </div>
+              {/* Catalog visibility filters */}
+              <div className="flex flex-col gap-3 pt-3 border-t">
+                <Label className="text-sm font-medium">Catalog visibility</Label>
 
-              {/* Exclude countries */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Label className="text-sm font-medium">Exclude countries</Label>
-                  <button
-                    type="button"
-                    onClick={() => openInfo('exclude-countries')}
-                    className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                  >
-                    <Info className="size-3.5" />
-                  </button>
-                </div>
-                <div className="flex min-h-10 w-full cursor-pointer items-start justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-3 text-sm select-none">
-                  <span className="text-muted-foreground">All countries</span>
-                  <ChevronDown className="size-4 text-muted-foreground shrink-0 mt-0.5" />
-                </div>
-              </div>
-
-              {/* Filter Checkboxes */}
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-exclude-watched"
-                  checked={profileDefaults.hideWatched}
-                  onCheckedChange={(c) => setProfileDefault('hideWatched', Boolean(c))}
-                />
-                <Label htmlFor="default-exclude-watched" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Hide content I've already watched</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Hide titles you've already watched (from your connected trackers or linked Nuvio account) from every catalog row. Your own lists (watchlists, favorites, your Trakt/TMDB lists) and search are not affected.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-exclude-caught-up"
-                  checked={profileDefaults.hideCaughtUp}
-                  onCheckedChange={(c) => setProfileDefault('hideCaughtUp', Boolean(c))}
-                />
-                <Label htmlFor="default-exclude-caught-up" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Hide TV shows I'm caught up on</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Hide series where you've watched every episode that has aired so far, until a new one is released. Separate from the setting above, which can only hide shows your tracker records as fully finished.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-exclude-unreleased"
-                  checked={profileDefaults.excludeUnreleased}
-                  onCheckedChange={(c) => setProfileDefault('excludeUnreleased', Boolean(c))}
-                />
-                <Label htmlFor="default-exclude-unreleased" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Exclude unreleased titles</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Hide content with no release date or in the future. Search is not affected.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-exclude-pre-digital"
-                  checked={profileDefaults.preDigitalOnly}
-                  onCheckedChange={(c) => setProfileDefault('preDigitalOnly', Boolean(c))}
-                />
-                <Label htmlFor="default-exclude-pre-digital" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Movies: digital release only</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Hide movies until a digital, physical, or TV release date has passed on TMDB, a good sign a decent-quality version exists. Series and search are not affected.
-                  </span>
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-hide-adult"
-                  checked={profileDefaults.hideAdult}
-                  onCheckedChange={(c) => setProfileDefault('hideAdult', Boolean(c))}
-                />
-                <Label htmlFor="default-hide-adult" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Hide adult content</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Hide pornographic and hentai titles from every catalog and search. R-rated movies are not affected.
-                  </span>
-                </Label>
-              </div>
-
-              {/* Parental Ratings & International Certification Matrix */}
-              <div className="grid gap-4 sm:grid-cols-2 pt-3 border-t">
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Ratings standard & region</Label>
-                  <select
-                    value={profileDefaults.ratingCountry || 'US'}
-                    onChange={(e) => setProfileDefault('ratingCountry', e.target.value)}
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-                  >
-                    <option value="US" className="bg-popover text-popover-foreground">United States (MPAA / FCC)</option>
-                    <option value="GB" className="bg-popover text-popover-foreground">United Kingdom (BBFC)</option>
-                    <option value="CA" className="bg-popover text-popover-foreground">Canada (CHVRS)</option>
-                    <option value="AU" className="bg-popover text-popover-foreground">Australia (ACB)</option>
-                    <option value="DE" className="bg-popover text-popover-foreground">Germany (FSK)</option>
-                    <option value="FR" className="bg-popover text-popover-foreground">France (CNC)</option>
-                    <option value="IT" className="bg-popover text-popover-foreground">Italy (MiC)</option>
-                    <option value="ES" className="bg-popover text-popover-foreground">Spain (ICAA)</option>
-                    <option value="BR" className="bg-popover text-popover-foreground">Brazil (ClassInd)</option>
-                    <option value="IN" className="bg-popover text-popover-foreground">India (CBFC)</option>
-                    <option value="VN" className="bg-popover text-popover-foreground">Vietnam</option>
-                  </select>
-                  <span className="text-[11px] text-muted-foreground">
-                    Normalizes age certifications to this region's cinema standards.
-                  </span>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="hide-watched"
+                    checked={profileDefaults.hideWatched}
+                    onCheckedChange={(c) => setProfileDefault('hideWatched', Boolean(c))}
+                  />
+                  <Label htmlFor="hide-watched" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Hide content I've already watched</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Hides titles your connected trackers or linked Nuvio account record as fully watched from catalog rows, AI rows, and your own lists. Search, watch-history rows, and imported add-on rows are not affected.
+                    </span>
+                  </Label>
                 </div>
 
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm font-medium">Maximum age rating</Label>
-                  <select
-                    value={profileDefaults.maxRating || 'any'}
-                    onChange={(e) => setProfileDefault('maxRating', e.target.value)}
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
-                  >
-                    <option value="any" className="bg-popover text-popover-foreground">No Restriction (All Content)</option>
-                    <option value="G" className="bg-popover text-popover-foreground">G / TV-Y (All Ages / Young Children)</option>
-                    <option value="PG" className="bg-popover text-popover-foreground">PG / TV-PG (Parental Guidance)</option>
-                    <option value="PG-13" className="bg-popover text-popover-foreground">PG-13 / 12+ (Teens & Pre-Adults)</option>
-                    <option value="R" className="bg-popover text-popover-foreground">R / 15+ / 16+ (Mature Audiences)</option>
-                    <option value="NC-17" className="bg-popover text-popover-foreground">NC-17 / 18+ (Adults Only)</option>
-                  </select>
-                  <span className="text-[11px] text-muted-foreground">
-                    Excludes any catalog titles classified above this severity tier.
-                  </span>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="hide-caught-up"
+                    checked={profileDefaults.hideCaughtUp}
+                    onCheckedChange={(c) => setProfileDefault('hideCaughtUp', Boolean(c))}
+                  />
+                  <Label htmlFor="hide-caught-up" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Hide TV shows I'm caught up on</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Hides series where you've watched every aired episode, until a new one releases. Separate from the setting above — this hides shows your tracker records as still ongoing, not fully finished.
+                    </span>
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="exclude-unreleased"
+                    checked={profileDefaults.excludeUnreleased}
+                    onCheckedChange={(c) => setProfileDefault('excludeUnreleased', Boolean(c))}
+                  />
+                  <Label htmlFor="exclude-unreleased" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Exclude unreleased titles</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Hides content with no release date or a future release date. Search is not affected.
+                    </span>
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="pre-digital-only"
+                    checked={profileDefaults.preDigitalOnly}
+                    onCheckedChange={(c) => setProfileDefault('preDigitalOnly', Boolean(c))}
+                  />
+                  <Label htmlFor="pre-digital-only" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Movies: digital release only</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Hides movies until a digital, physical, or TV release date has passed.
+                    </span>
+                  </Label>
                 </div>
               </div>
 
