@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppSidebar } from '@/components/app-sidebar'
 import { SiteHeader } from '@/components/site-header'
 import {
@@ -14,12 +14,6 @@ import { Checkbox } from '@workspace/ui/components/checkbox'
 import { PostersConfigSection } from '@/components/posters-config-section'
 import { IntegrationKeyField } from '@/components/integration-key-field'
 import { RadioGroup, RadioGroupItem } from '@workspace/ui/components/radio-group'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@workspace/ui/components/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -57,6 +51,7 @@ import { CSS } from '@dnd-kit/utilities'
 import {
   AlertCircle,
   CircleCheck,
+  CheckCircle2,
   ExternalLink,
   Eye,
   EyeOff,
@@ -64,16 +59,10 @@ import {
   Info,
   GripVertical,
   ChevronDown,
-  Loader2,
-  Sun,
-  Moon,
   LogOut,
   Trash2,
   Link2,
   Link2Off,
-  Globe,
-  Send,
-  Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { testApiKey } from '@/lib/test-key'
@@ -83,66 +72,49 @@ import { startOAuthFlow } from '@/lib/oauth'
 import { TmdbConnectDialog } from '@/components/tmdb-connect-dialog'
 import { AniListConnectDialog } from '@/components/anilist-connect-dialog'
 import { MyAnimeListConnectDialog } from '@/components/myanimelist-connect-dialog'
+import { GEMINI_MODELS, GROQ_MODELS } from '@/components/wizard/wizard-constants'
+
+const DEEPSEEK_MODELS = [
+  { id: 'deepseek-chat', label: 'deepseek-chat' },
+  { id: 'deepseek-reasoner', label: 'deepseek-reasoner' },
+]
 
 export const Route = createFileRoute('/_authenticated/settings')({
   component: SettingsPage,
 })
 
-// Brand SVG Logos
-function NuvioLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-primary/15 text-primary p-1.5 ${className}`}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-full">
-        <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" fillOpacity="0.3" />
-      </svg>
-    </div>
-  )
-}
-
-function TmdbLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-[#0d253f] text-[#01b4e4] p-1 font-black text-xs tracking-tighter ${className}`}>
-      TMDB
-    </div>
-  )
-}
-
-function TraktLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-[#ed1c24] text-white p-1 font-black text-xs ${className}`}>
-      <svg viewBox="0 0 24 24" fill="currentColor" className="size-5">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z" />
-      </svg>
-    </div>
-  )
-}
-
-function SimklLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-[#000] text-[#00e676] border border-border p-1 font-bold text-xs ${className}`}>
-      SIMKL
-    </div>
-  )
-}
-
-function AniListLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-[#02A9FF] text-white p-1 font-bold text-xs ${className}`}>
-      AL
-    </div>
-  )
-}
-
-function MalLogo({ className = 'size-8' }: { className?: string }) {
-  return (
-    <div className={`grid place-items-center rounded-lg bg-[#2e51a2] text-white p-1 font-black text-xs ${className}`}>
-      MAL
-    </div>
-  )
-}
-
 // Info Descriptions Directory for Tooltips / Sheet
 const INFO_DESCRIPTIONS: Record<string, { title: string; description: string; detail?: string }> = {
+  letterboxd: {
+    title: 'Letterboxd Username',
+    description: 'Your public Letterboxd username powers the "My Letterboxd Watchlist" catalog row.',
+    detail: 'No password or token required. Only public lists and watchlists are fetched.',
+  },
+  trakt: {
+    title: 'Trakt account',
+    description: 'Connect your Trakt account to automatically sync your watchlist, ratings, and watch progress.',
+    detail: 'Supports real-time scrobbling when watching in your player.',
+  },
+  'trakt-scrobble': {
+    title: 'Scrobble now watching to Trakt',
+    description: 'When you press play in your streaming app, report what you are currently watching to your Trakt account.',
+  },
+  simkl: {
+    title: 'Simkl account',
+    description: 'Link your Simkl account to bring your Plan to Watch lists, anime watching, and TV progress into catalog rows.',
+  },
+  anilist: {
+    title: 'AniList account',
+    description: 'Link your AniList account to sync your current anime watching progress, custom lists, and recommendations.',
+  },
+  myanimelist: {
+    title: 'MyAnimeList account',
+    description: 'Link your MyAnimeList account to sync your anime watching status and completed lists.',
+  },
+  'tmdb-account': {
+    title: 'TMDB account',
+    description: 'Connect your user TMDB account to import your TMDB favorites, custom lists, and rated titles.',
+  },
   'mdblist-scrobble': {
     title: 'Scrobble now watching to MDBList',
     description:
@@ -203,7 +175,8 @@ const INFO_DESCRIPTIONS: Record<string, { title: string; description: string; de
 }
 
 function SettingsPage() {
-  const { theme, toggleTheme } = useAppStore()
+  const { user, setUser } = useAppStore()
+  const navigate = useNavigate()
   const {
     apiKeys,
     apiKeysStatus,
@@ -218,8 +191,6 @@ function SettingsPage() {
     setBadgedEpisodeStills,
     profileDefaults,
     setProfileDefault,
-    appLanguage,
-    setAppLanguage,
     playbackCompletion,
     setPlaybackCompletion,
     connections,
@@ -277,7 +248,7 @@ function SettingsPage() {
           }
         }
       })
-      .catch(() => {})
+      .catch(() => { })
   }, [setConnection])
 
   const [verifying, setVerifying] = React.useState<Record<string, boolean>>({})
@@ -364,16 +335,16 @@ function SettingsPage() {
           </div>
 
           <div className="flex flex-col gap-5 sm:gap-6">
-            {/* 1. Default API keys */}
+            {/* 1. Default Integrations & Accounts */}
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
               <div>
-                <h2 className="text-sm font-semibold text-foreground">Default API keys</h2>
+                <h2 className="text-sm font-semibold text-foreground">Integrations & Connected Accounts</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Entered once and copied into every new profile you create.
                 </p>
               </div>
 
-              {/* MDBList */}
+              {/* 1. MDBList */}
               <IntegrationKeyField
                 id="default-mdblist"
                 serviceId="mdblist"
@@ -394,42 +365,42 @@ function SettingsPage() {
                 <div className="flex flex-col gap-3 border-t pt-4 mt-3">
                   <div className="flex items-center gap-3">
                     <Switch
-                       id="default-mdblist-scrobble"
-                       checked={apiKeys.mdblistScrobble}
-                       onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
-                       aria-label="Scrobble now watching to MDBList"
-                     />
-                     <div className="flex min-h-5 items-center gap-1.5">
-                       <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
-                         Scrobble now watching to MDBList
-                       </Label>
-                       <button
-                         type="button"
-                         onClick={() => openInfo('mdblist-scrobble')}
-                         aria-label="About Scrobble now watching to MDBList"
-                         className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-                       >
-                         <Info className="size-3.5" />
-                       </button>
-                     </div>
-                   </div>
-                   <div className="flex items-center justify-between gap-4">
-                     <p className="min-w-0 text-xs text-muted-foreground">
-                       Apply this MDBList scrobble setting to your existing profiles.
-                     </p>
-                     <Button
-                       variant="outline"
-                       size="sm"
-                       onClick={() => handleApplyToAll('MDBList scrobble')}
-                       className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                     >
-                       <RefreshCw className="size-3.5" /> Apply to profiles
-                     </Button>
-                   </div>
-                 </div>
-               </IntegrationKeyField>
+                      id="default-mdblist-scrobble"
+                      checked={apiKeys.mdblistScrobble}
+                      onCheckedChange={(checked) => setApiKey('mdblistScrobble', Boolean(checked))}
+                      aria-label="Scrobble now watching to MDBList"
+                    />
+                    <div className="flex min-h-5 items-center gap-1.5">
+                      <Label htmlFor="default-mdblist-scrobble" className="cursor-pointer text-sm font-medium text-foreground">
+                        Scrobble now watching to MDBList
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => openInfo('mdblist-scrobble')}
+                        aria-label="About Scrobble now watching to MDBList"
+                        className="relative flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+                      >
+                        <Info className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <p className="min-w-0 text-xs text-muted-foreground">
+                      Apply this MDBList scrobble setting to your existing profiles.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleApplyToAll('MDBList scrobble')}
+                      className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                    >
+                      <RefreshCw className="size-3.5" /> Apply to profiles
+                    </Button>
+                  </div>
+                </div>
+              </IntegrationKeyField>
 
-              {/* TMDB */}
+              {/* 2. TMDB */}
               <IntegrationKeyField
                 id="default-tmdb"
                 serviceId="tmdb"
@@ -445,60 +416,10 @@ function SettingsPage() {
                 onVerifiedChange={(isValid) => setApiKeyStatus('tmdb', isValid ? 'valid' : 'invalid')}
                 placeholder="eyJhbGci..."
                 getKeyUrl="https://www.themoviedb.org/settings/api"
+                className="border-t border-border/40 pt-4"
               />
 
-              {/* Gemini */}
-              <IntegrationKeyField
-                id="default-gemini"
-                serviceId="gemini"
-                label="Gemini API key"
-                value={apiKeys.gemini}
-                onChange={(val) => {
-                  setApiKey('gemini', val)
-                  setApiKeyStatus('gemini', val.trim() ? 'idle' : 'idle')
-                }}
-                status={apiKeysStatus.gemini || (apiKeys.gemini ? 'valid' : 'idle')}
-                onStatusChange={(st) => setApiKeyStatus('gemini', st)}
-                onVerifiedChange={(isValid) => setApiKeyStatus('gemini', isValid ? 'valid' : 'invalid')}
-                placeholder="AIzaSy..."
-                getKeyUrl="https://aistudio.google.com/apikey"
-              />
-
-              {/* Groq */}
-              <IntegrationKeyField
-                id="default-groq"
-                serviceId="groq"
-                label="Groq API key"
-                value={apiKeys.groq}
-                onChange={(val) => {
-                  setApiKey('groq', val)
-                  setApiKeyStatus('groq', val.trim() ? 'idle' : 'idle')
-                }}
-                status={apiKeysStatus.groq || (apiKeys.groq ? 'valid' : 'idle')}
-                onStatusChange={(st) => setApiKeyStatus('groq', st)}
-                onVerifiedChange={(isValid) => setApiKeyStatus('groq', isValid ? 'valid' : 'invalid')}
-                placeholder="gsk_..."
-                getKeyUrl="https://console.groq.com/keys"
-              />
-
-              {/* DeepSeek */}
-              <IntegrationKeyField
-                id="default-deepseek"
-                serviceId="deepseek"
-                label="DeepSeek API key"
-                value={apiKeys.deepseek}
-                onChange={(val) => {
-                  setApiKey('deepseek', val)
-                  setApiKeyStatus('deepseek', val.trim() ? 'idle' : 'idle')
-                }}
-                status={apiKeysStatus.deepseek || (apiKeys.deepseek ? 'valid' : 'idle')}
-                onStatusChange={(st) => setApiKeyStatus('deepseek', st)}
-                onVerifiedChange={(isValid) => setApiKeyStatus('deepseek', isValid ? 'valid' : 'invalid')}
-                placeholder="sk-..."
-                getKeyUrl="https://platform.deepseek.com/api_keys"
-              />
-
-              {/* Letterboxd */}
+              {/* 3. Letterboxd */}
               <IntegrationKeyField
                 id="default-letterboxd"
                 serviceId="letterboxd"
@@ -517,21 +438,308 @@ function SettingsPage() {
                 getKeyUrl="https://letterboxd.com/"
                 getKeyText="letterboxd.com"
                 note="Optional. Your public Letterboxd username powers the “My Letterboxd Watchlist” row."
+                className="border-t border-border/40 pt-4"
               />
+
+              {/* 4. Trakt */}
+              <div className="space-y-3 border-t border-border/40 pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-medium text-foreground text-xs">Trakt account</span>
+                    <button
+                      type="button"
+                      onClick={() => openInfo('trakt')}
+                      className="text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Trakt info"
+                    >
+                      <Info className="size-3.5" />
+                    </button>
+                    {connections.trakt.connected && (
+                      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <CheckCircle2 className="size-3 shrink-0" /> Connected as {connections.trakt.username}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    {connections.trakt.connected ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          await fetch('/api/integrations/trakt/disconnect', { method: 'DELETE' }).catch(() => { })
+                          setConnection('trakt', { connected: false, username: '' })
+                          toast.info('Trakt account disconnected')
+                        }}
+                        className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                      >
+                        <Link2Off className="size-3.5" /> Disconnect Trakt
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          startOAuthFlow('trakt', (profile) => {
+                            setConnection('trakt', {
+                              connected: true,
+                              username: profile.username,
+                              scrobble: true,
+                            })
+                          })
+                        }}
+                        className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                      >
+                        <Link2 className="size-3.5" /> Connect Trakt
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">
+                      Scrobble now watching to Trakt
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => openInfo('trakt-scrobble')}
+                      className="text-muted-foreground hover:text-foreground cursor-pointer"
+                      title="Scrobble info"
+                    >
+                      <Info className="size-3" />
+                    </button>
+                  </div>
+                  <Switch
+                    checked={connections.trakt.scrobble}
+                    onCheckedChange={(c) => setConnection('trakt', { scrobble: Boolean(c) })}
+                  />
+                </div>
+              </div>
+
+              {/* 5. Simkl */}
+              <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium text-foreground text-xs">Simkl account</span>
+                  <button
+                    type="button"
+                    onClick={() => openInfo('simkl')}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="Simkl info"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                  {connections.simkl.connected && (
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <CheckCircle2 className="size-3 shrink-0" /> Connected as {connections.simkl.username}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {connections.simkl.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/simkl/disconnect', { method: 'DELETE' }).catch(() => { })
+                        setConnection('simkl', { connected: false, username: '' })
+                        toast.info('Simkl account disconnected')
+                      }}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-3.5" /> Disconnect Simkl
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        startOAuthFlow('simkl', (profile) => {
+                          setConnection('simkl', {
+                            connected: true,
+                            username: profile.username,
+                          })
+                        })
+                      }}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2 className="size-3.5" /> Connect Simkl
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* 6. TMDB Account */}
+              <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium text-foreground text-xs">TMDB account</span>
+                  {connections.tmdb.connected && (
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <CheckCircle2 className="size-3 shrink-0" /> Connected as {connections.tmdb.username}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {connections.tmdb.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/tmdb/disconnect', { method: 'DELETE' }).catch(() => { })
+                        setConnection('tmdb', { connected: false, username: '' })
+                        toast.info('TMDB account disconnected')
+                      }}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-3.5" /> Disconnect TMDB
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTmdbDialogOpen(true)}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2 className="size-3.5" /> Connect TMDB
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* 7. AniList */}
+              <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium text-foreground text-xs">AniList account</span>
+                  <button
+                    type="button"
+                    onClick={() => openInfo('anilist')}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="AniList info"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                  {connections.anilist.connected && (
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <CheckCircle2 className="size-3 shrink-0" /> Connected as @{connections.anilist.username}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {connections.anilist.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/anilist/disconnect', { method: 'DELETE' }).catch(() => { })
+                        setConnection('anilist', { connected: false, username: '' })
+                        toast.info('AniList account disconnected')
+                      }}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-3.5" /> Disconnect AniList
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnilistDialogOpen(true)}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2 className="size-3.5" /> Connect AniList
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* 8. MyAnimeList */}
+              <div className="flex items-center justify-between border-t border-border/40 pt-4">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-medium text-foreground text-xs">MyAnimeList account</span>
+                  <button
+                    type="button"
+                    onClick={() => openInfo('myanimelist')}
+                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    title="MyAnimeList info"
+                  >
+                    <Info className="size-3.5" />
+                  </button>
+                  {connections.myanimelist.connected && (
+                    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-medium">
+                      <CheckCircle2 className="size-3 shrink-0" /> Connected as @{connections.myanimelist.username}
+                    </span>
+                  )}
+                </div>
+                <div>
+                  {connections.myanimelist.connected ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        await fetch('/api/integrations/myanimelist/disconnect', { method: 'DELETE' }).catch(() => { })
+                        setConnection('myanimelist', { connected: false, username: '' })
+                        toast.info('MyAnimeList account disconnected')
+                      }}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2Off className="size-3.5" /> Disconnect MyAnimeList
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setMalDialogOpen(true)}
+                      className="h-9 gap-2 text-xs font-medium cursor-pointer"
+                    >
+                      <Link2 className="size-3.5" /> Connect MyAnimeList
+                    </Button>
+                  )}
+                </div>
+              </div>
 
               <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <p className="min-w-0 text-xs text-muted-foreground">
-                  Apply this section to your existing profiles.
+                  Apply all integrations and accounts to your existing profiles.
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleApplyToAll('Default API keys')}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
+                  onClick={() => handleApplyToAll('Integrations and connected accounts')}
+                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
                 >
                   <RefreshCw className="size-4" /> Apply to all profiles
                 </Button>
               </div>
+
+              {/* Dialogs */}
+              <TmdbConnectDialog
+                open={tmdbDialogOpen}
+                onOpenChange={setTmdbDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('tmdb', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
+              <AniListConnectDialog
+                open={anilistDialogOpen}
+                onOpenChange={setAnilistDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('anilist', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
+              <MyAnimeListConnectDialog
+                open={malDialogOpen}
+                onOpenChange={setMalDialogOpen}
+                onSuccess={(res) => {
+                  setConnection('myanimelist', {
+                    connected: true,
+                    username: res.username,
+                  })
+                }}
+              />
             </section>
 
             {/* 2. Posters */}
@@ -1006,13 +1214,43 @@ function SettingsPage() {
                 </span>
               </div>
 
-              {/* AI Section */}
-              <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t">
+              <div className="flex items-center justify-between gap-3 border-t pt-4">
+                <p className="min-w-0 text-xs text-muted-foreground">
+                  Apply profile defaults to your existing profiles.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleApplyToAll('Profile defaults')}
+                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
+                >
+                  <RefreshCw className="size-4" /> Apply to all profiles
+                </Button>
+              </div>
+            </section>
+
+            {/* 4. AI & Smart Search */}
+            <section className="flex flex-col gap-5 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">AI &amp; Smart Search</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Configure your AI provider, model, and API keys to power natural-language search and personalized recommendation rows.
+                </p>
+              </div>
+
+              {/* Provider & Model */}
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm font-medium">AI provider</Label>
                   <select
                     value={profileDefaults.aiProvider}
-                    onChange={(e) => setProfileDefault('aiProvider', e.target.value)}
+                    onChange={(e) => {
+                      const provider = e.target.value
+                      setProfileDefault('aiProvider', provider)
+                      if (provider === 'Google Gemini') setProfileDefault('aiModel', 'gemini-3.5-flash-lite')
+                      else if (provider === 'Groq') setProfileDefault('aiModel', 'openai/gpt-oss-120b')
+                      else if (provider === 'DeepSeek') setProfileDefault('aiModel', 'deepseek-chat')
+                    }}
                     className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
                   >
                     <option value="Google Gemini" className="bg-popover text-popover-foreground">Google Gemini</option>
@@ -1028,562 +1266,136 @@ function SettingsPage() {
                     onChange={(e) => setProfileDefault('aiModel', e.target.value)}
                     className="flex h-10 w-full items-center justify-between rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 outline-none"
                   >
-                    <option value="gemini-3.5-flash-lite" className="bg-popover text-popover-foreground">gemini-3.5-flash-lite</option>
-                    <option value="gemini-2.5-flash" className="bg-popover text-popover-foreground">gemini-2.5-flash</option>
-                    <option value="gemini-2.5-pro" className="bg-popover text-popover-foreground">gemini-2.5-pro</option>
+                    {(profileDefaults.aiProvider === 'Groq'
+                      ? GROQ_MODELS
+                      : profileDefaults.aiProvider === 'DeepSeek'
+                      ? DEEPSEEK_MODELS
+                      : GEMINI_MODELS
+                    ).map((m) => (
+                      <option key={m.id} value={m.id} className="bg-popover text-popover-foreground">
+                        {m.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                Gemma models share your Google key but have a separate, larger free quota. If the selected Google model hits its rate limit, the remaining models are tried automatically.
-              </p>
+              {/* Provider API Key fields */}
+              <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {profileDefaults.aiProvider} Configuration
+                  </p>
+                </div>
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-ai"
-                  checked={profileDefaults.enableAi}
-                  onCheckedChange={(c) => setProfileDefault('enableAi', Boolean(c))}
-                />
-                <Label htmlFor="default-ai" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Enable AI recommendations</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Turn on AI-powered recommendations for new profiles (requires an AI provider key).
-                  </span>
-                </Label>
+                {profileDefaults.aiProvider === 'Google Gemini' && (
+                  <IntegrationKeyField
+                    id="ai-gemini"
+                    serviceId="gemini"
+                    label="Gemini API key"
+                    value={apiKeys.gemini}
+                    onChange={(val) => {
+                      setApiKey('gemini', val)
+                      setApiKeyStatus('gemini', val.trim() ? 'idle' : 'idle')
+                    }}
+                    status={apiKeysStatus.gemini || (apiKeys.gemini ? 'valid' : 'idle')}
+                    onStatusChange={(st) => setApiKeyStatus('gemini', st)}
+                    onVerifiedChange={(isValid) => setApiKeyStatus('gemini', isValid ? 'valid' : 'invalid')}
+                    placeholder="AIzaSy..."
+                    getKeyUrl="https://aistudio.google.com/apikey"
+                  />
+                )}
+
+                {profileDefaults.aiProvider === 'Groq' && (
+                  <IntegrationKeyField
+                    id="ai-groq"
+                    serviceId="groq"
+                    label="Groq API key"
+                    value={apiKeys.groq}
+                    onChange={(val) => {
+                      setApiKey('groq', val)
+                      setApiKeyStatus('groq', val.trim() ? 'idle' : 'idle')
+                    }}
+                    status={apiKeysStatus.groq || (apiKeys.groq ? 'valid' : 'idle')}
+                    onStatusChange={(st) => setApiKeyStatus('groq', st)}
+                    onVerifiedChange={(isValid) => setApiKeyStatus('groq', isValid ? 'valid' : 'invalid')}
+                    placeholder="gsk_..."
+                    getKeyUrl="https://console.groq.com/keys"
+                  />
+                )}
+
+                {profileDefaults.aiProvider === 'DeepSeek' && (
+                  <IntegrationKeyField
+                    id="ai-deepseek"
+                    serviceId="deepseek"
+                    label="DeepSeek API key"
+                    value={apiKeys.deepseek}
+                    onChange={(val) => {
+                      setApiKey('deepseek', val)
+                      setApiKeyStatus('deepseek', val.trim() ? 'idle' : 'idle')
+                    }}
+                    status={apiKeysStatus.deepseek || (apiKeys.deepseek ? 'valid' : 'idle')}
+                    onStatusChange={(st) => setApiKeyStatus('deepseek', st)}
+                    onVerifiedChange={(isValid) => setApiKeyStatus('deepseek', isValid ? 'valid' : 'invalid')}
+                    placeholder="sk-..."
+                    getKeyUrl="https://platform.deepseek.com/api_keys"
+                  />
+                )}
+
+                {profileDefaults.aiProvider === 'Google Gemini' && (
+                  <p className="text-[11px] leading-relaxed text-muted-foreground mt-1">
+                    Gemma models share your Google key but have a separate, larger free quota. If the selected Google model hits its rate limit, the remaining models are tried automatically.
+                  </p>
+                )}
               </div>
 
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="default-ai-search"
-                  checked={profileDefaults.enableAiSearch}
-                  onCheckedChange={(c) => setProfileDefault('enableAiSearch', Boolean(c))}
-                />
-                <Label htmlFor="default-ai-search" className="cursor-pointer text-sm leading-tight">
-                  <span className="font-medium text-foreground">Enable AI-powered search</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Search by description or vibe, not just exact titles. No API key needed. Your own AI provider key adds more results.
-                  </span>
-                </Label>
+              {/* Feature Checkboxes */}
+              <div className="flex flex-col gap-3 border-t pt-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="ai-recs-toggle"
+                    checked={profileDefaults.enableAi}
+                    onCheckedChange={(c) => setProfileDefault('enableAi', Boolean(c))}
+                  />
+                  <Label htmlFor="ai-recs-toggle" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Enable AI recommendations</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Generates dynamic personalized recommendation rows based on your viewing history and preferences (requires an active AI key).
+                    </span>
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="ai-search-toggle"
+                    checked={profileDefaults.enableAiSearch}
+                    onCheckedChange={(c) => setProfileDefault('enableAiSearch', Boolean(c))}
+                  />
+                  <Label htmlFor="ai-search-toggle" className="cursor-pointer text-sm leading-tight">
+                    <span className="font-medium text-foreground">Enable AI-powered search</span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
+                      Search catalog by descriptive themes, plot vibe, or mood rather than strict titles only.
+                    </span>
+                  </Label>
+                </div>
               </div>
 
               <div className="flex items-center justify-between gap-3 border-t pt-4">
                 <p className="min-w-0 text-xs text-muted-foreground">
-                  Apply this section to your existing profiles.
+                  Apply AI configurations to your existing profiles.
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleApplyToAll('Profile defaults')}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
+                  onClick={() => handleApplyToAll('AI settings')}
+                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
                 >
                   <RefreshCw className="size-4" /> Apply to all profiles
                 </Button>
               </div>
             </section>
 
-            {/* 4. Appearance & language */}
-            <section className="flex flex-col gap-5 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <h2 className="text-sm font-semibold text-foreground">Appearance &amp; language</h2>
-
-              {/* Theme toggle */}
-              <div className="flex items-center justify-between gap-4">
-                <Label htmlFor="theme-switch" className="cursor-pointer text-sm leading-tight">
-                  <span className="inline-flex items-center gap-2 font-medium text-foreground">
-                    {theme === 'dark' ? <Moon className="size-4" /> : <Sun className="size-4" />} Dark mode
-                  </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Switch between the dark and light theme.
-                  </span>
-                </Label>
-                <Switch
-                  id="theme-switch"
-                  checked={theme === 'dark'}
-                  onCheckedChange={toggleTheme}
-                  aria-label="Dark mode"
-                />
-              </div>
-
-              {/* App Language */}
-              <div className="flex items-center justify-between gap-4 border-t pt-5">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground">App language</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    The language of the interface.
-                  </p>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button variant="outline" size="sm" className="h-8 gap-1 rounded-lg px-3 text-xs font-medium">
-                        <Globe className="size-3.5 mr-1 text-muted-foreground" />
-                        {appLanguage}
-                      </Button>
-                    }
-                  />
-                  <DropdownMenuContent align="end" className="w-36">
-                    {['English', 'Spanish', 'French', 'German', 'Japanese'].map((lang) => (
-                      <DropdownMenuItem
-                        key={lang}
-                        onClick={() => {
-                          setAppLanguage(lang)
-                          toast.success(`Language set to ${lang}`)
-                        }}
-                      >
-                        {lang}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </section>
-
-            {/* 5. Nuvio account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <NuvioLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">Nuvio account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Link your Nuvio account to assign avatars and push collections to your profiles.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
-                    <CircleCheck className="size-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.nuvio.email}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {connections.nuvio.profilesCount} profiles
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/nuvio/collections/push', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ profileIndex: 0, mode: 'merge' }),
-                        })
-                        if (res.ok) toast.success('Collections pushed to Nuvio TV!')
-                        else toast.error('Failed to push collections')
-                      } catch {
-                        toast.error('Could not reach Nuvio Sync service')
-                      }
-                    }}
-                    className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                  >
-                    <Send className="size-3.5" /> Push to TV
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      window.open('/fusion/widgets.json', '_blank')
-                    }}
-                    className="h-8 shrink-0 gap-1.5 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                  >
-                    <Download className="size-3.5" /> Fusion Export
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setConnection('nuvio', { connected: false })
-                      toast.info('Nuvio account unlinked')
-                    }}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium text-muted-foreground hover:text-destructive cursor-pointer"
-                  >
-                    <Link2Off className="size-4" /> Unlink
-                  </Button>
-                </div>
-              </div>
-            </section>
-
-            {/* 6. TMDB account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <TmdbLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">TMDB account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Connect once to add your TMDB Watchlist, Favorites, Rated, and lists as home rows. New profiles inherit this connection.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.tmdb.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.tmdb.connected ? <CircleCheck className="size-5" /> : <Link2 className="size-5" />}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.tmdb.connected ? connections.tmdb.username || 'Connected' : 'Not connected'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {connections.tmdb.connected ? 'Connected to TMDB API' : 'Connect your TMDB account.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  {connections.tmdb.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        await fetch('/api/integrations/tmdb/disconnect', { method: 'DELETE' }).catch(() => {})
-                        setConnection('tmdb', { connected: false, username: '' })
-                        toast.info('TMDB account disconnected')
-                      }}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                    >
-                      <Link2Off className="size-4" /> Disconnect
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => setTmdbDialogOpen(true)}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#01b4e4] hover:bg-[#01b4e4]/90 text-slate-900 cursor-pointer font-semibold"
-                    >
-                      <Link2 className="size-4" /> Connect TMDB
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <TmdbConnectDialog
-                open={tmdbDialogOpen}
-                onOpenChange={setTmdbDialogOpen}
-                onSuccess={(res) => {
-                  setConnection('tmdb', {
-                    connected: true,
-                    username: res.username,
-                  })
-                }}
-              />
-            </section>
-
-            {/* 7. Trakt account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <TraktLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">Trakt account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Link your Trakt once and new profiles will use it automatically.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span
-                    className={`grid size-9 shrink-0 place-items-center rounded-full ${
-                      connections.trakt.connected
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {connections.trakt.connected ? (
-                      <CircleCheck className="size-5" />
-                    ) : (
-                      <Link2 className="size-5" />
-                    )}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.trakt.connected
-                        ? connections.trakt.username || 'Connected'
-                        : 'Not connected'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      {connections.trakt.connected
-                        ? 'New profiles will use this Trakt account by default.'
-                        : 'Link your Trakt account with official device code pairing.'}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  {connections.trakt.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        await fetch('/api/integrations/trakt/disconnect', { method: 'DELETE' }).catch(() => {})
-                        setConnection('trakt', { connected: false, username: '' })
-                        toast.info('Trakt account disconnected')
-                      }}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                    >
-                      <Link2Off className="size-4" /> Disconnect
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        startOAuthFlow('trakt', (profile) => {
-                          setConnection('trakt', {
-                            connected: true,
-                            username: profile.username,
-                            scrobble: true,
-                          })
-                        })
-                      }}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#ed1c24] hover:bg-[#d0131a] text-white cursor-pointer"
-                    >
-                      <Link2 className="size-4" /> Connect Trakt
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <p className="min-w-0 text-xs text-muted-foreground">
-                  Use this Trakt account on your existing profiles too.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleApplyToAll('Trakt account')}
-                  className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                >
-                  <RefreshCw className="size-4" /> Apply to existing profiles
-                </Button>
-              </div>
-
-              <div className="flex flex-col gap-3 border-t pt-4">
-                <div className="flex items-start gap-3">
-                  <Switch
-                    checked={connections.trakt.scrobble}
-                    onCheckedChange={(c) => setConnection('trakt', { scrobble: Boolean(c) })}
-                    aria-label="Scrobble now watching to Trakt"
-                  />
-                  <div className="min-w-0 text-sm leading-tight">
-                    <span className="font-medium text-foreground">Scrobble now watching to Trakt</span>
-                    <span className="mt-0.5 block text-xs text-muted-foreground">
-                      When you press play in Stremio or Nuvio, mark the title as watching (and watched when it finishes) on Trakt.
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                  <p className="min-w-0 text-xs text-muted-foreground">
-                    Apply this scrobble default to all your existing profiles.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleApplyToAll('Trakt scrobble')}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium"
-                  >
-                    <RefreshCw className="size-4" /> Apply to profiles
-                  </Button>
-                </div>
-              </div>
-            </section>
-
-            {/* 8. Simkl account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <SimklLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">Simkl account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Link your Simkl once and new profiles will use it automatically.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.simkl.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.simkl.connected ? <CircleCheck className="size-5" /> : <Link2 className="size-5" />}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.simkl.connected ? connections.simkl.username : 'Not connected'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      Connect Simkl to bring your Plan to Watch list and watch history into new profiles.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  {connections.simkl.connected ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={async () => {
-                        await fetch('/api/integrations/simkl/disconnect', { method: 'DELETE' }).catch(() => {})
-                        setConnection('simkl', { connected: false, username: '' })
-                        toast.info('Simkl account disconnected')
-                      }}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                    >
-                      <Link2Off className="size-4" /> Disconnect
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        startOAuthFlow('simkl', (profile) => {
-                          setConnection('simkl', {
-                            connected: true,
-                            username: profile.username,
-                          })
-                        })
-                      }}
-                      className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-sky-600 hover:bg-sky-500 text-white cursor-pointer font-semibold"
-                    >
-                      <Link2 className="size-4" /> Connect Simkl
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            {/* 9. AniList account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <AniListLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">AniList account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Link your AniList once and new profiles will use it automatically.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.anilist.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.anilist.connected ? <CircleCheck className="size-5 text-emerald-500" /> : <Link2 className="size-5" />}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.anilist.connected ? `@${connections.anilist.username}` : 'Not connected'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      Connect to bring your anime lists and history into new profiles.
-                    </p>
-                  </div>
-                </div>
-
-                {connections.anilist.connected ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      await fetch('/api/integrations/anilist/disconnect', { method: 'DELETE' }).catch(() => {})
-                      setConnection('anilist', { connected: false, username: '' })
-                      toast.info('AniList account disconnected')
-                    }}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                  >
-                    <Link2Off className="size-4" /> Disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => setAnilistDialogOpen(true)}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#02A9FF] hover:bg-[#0295e0] text-white cursor-pointer font-semibold"
-                  >
-                    <Link2 className="size-4" /> Connect AniList
-                  </Button>
-                )}
-              </div>
-
-              <AniListConnectDialog
-                open={anilistDialogOpen}
-                onOpenChange={setAnilistDialogOpen}
-                onSuccess={(res) => {
-                  setConnection('anilist', {
-                    connected: true,
-                    username: res.username,
-                  })
-                }}
-              />
-            </section>
-
-            {/* 10. MyAnimeList account */}
-            <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
-              <div className="flex items-center gap-3">
-                <MalLogo />
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold text-foreground">MyAnimeList account</h2>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Link your MyAnimeList once and new profiles will use it automatically.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 border-t pt-4">
-                <div className="flex min-w-0 items-center gap-2.5">
-                  <span className={`grid size-9 shrink-0 place-items-center rounded-full ${connections.myanimelist.connected ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    {connections.myanimelist.connected ? <CircleCheck className="size-5 text-emerald-500" /> : <Link2 className="size-5" />}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.myanimelist.connected ? `@${connections.myanimelist.username}` : 'Not connected'}
-                    </p>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                      Connect to bring your anime lists and history into new profiles.
-                    </p>
-                  </div>
-                </div>
-
-                {connections.myanimelist.connected ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={async () => {
-                      await fetch('/api/integrations/myanimelist/disconnect', { method: 'DELETE' }).catch(() => {})
-                      setConnection('myanimelist', { connected: false, username: '' })
-                      toast.info('MyAnimeList account disconnected')
-                    }}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
-                  >
-                    <Link2Off className="size-4" /> Disconnect
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    onClick={() => setMalDialogOpen(true)}
-                    className="h-8 shrink-0 gap-2 rounded-lg px-3 text-xs font-medium bg-[#2e51a2] hover:bg-[#254285] text-white cursor-pointer font-semibold"
-                  >
-                    <Link2 className="size-4" /> Connect MyAnimeList
-                  </Button>
-                )}
-              </div>
-
-              <MyAnimeListConnectDialog
-                open={malDialogOpen}
-                onOpenChange={setMalDialogOpen}
-                onSuccess={(res) => {
-                  setConnection('myanimelist', {
-                    connected: true,
-                    username: res.username,
-                  })
-                }}
-              />
-            </section>
-
-            {/* 11. When playback ends */}
+            {/* When playback ends */}
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
               <div className="flex flex-col gap-3">
                 <p className="text-sm font-medium text-foreground">When playback ends</p>
@@ -1633,26 +1445,49 @@ function SettingsPage() {
               </div>
             </section>
 
-            {/* 12. Account */}
+            {/* Account */}
             <section className="flex flex-col gap-5 rounded-xl border bg-card p-4 sm:p-6 shadow-xs">
               <h2 className="text-sm font-semibold text-foreground">Account</h2>
               <div className="flex items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="relative grid size-8 shrink-0 place-items-center rounded-full bg-primary/15 text-primary text-xs font-semibold">
-                    N
-                  </span>
+                  {user?.avatar ? (
+                    <img
+                      src={user.avatar}
+                      alt={user.name || 'User avatar'}
+                      className="size-10 rounded-full object-cover border border-border/50 shadow-xs"
+                    />
+                  ) : (
+                    <span className="relative grid size-10 shrink-0 place-items-center rounded-full bg-primary/15 text-primary text-sm font-bold">
+                      {user?.name?.[0]?.toUpperCase() || 'N'}
+                    </span>
+                  )}
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground">Signed in as</p>
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {connections.nuvio.email || 'user@example.com'}
+                    <p className="truncate text-sm font-semibold text-foreground">
+                      {user?.name || 'Nuvio User'}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {user?.email || connections.nuvio.email || 'user@example.com'}
+                      {connections.nuvio.profilesCount > 0 && (
+                        <span> • {connections.nuvio.profilesCount} profiles</span>
+                      )}
                     </p>
                   </div>
                 </div>
+
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => toast.success('Signed out successfully')}
-                  className="h-8 gap-2 rounded-lg px-2.5 text-xs font-medium"
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/nuvio/auth/logout', { method: 'POST' })
+                      setUser(null)
+                      toast.success('Signed out successfully')
+                      navigate({ to: '/login' })
+                    } catch {
+                      toast.error('Logout failed')
+                    }
+                  }}
+                  className="h-8 gap-2 rounded-lg px-2.5 text-xs font-medium cursor-pointer"
                 >
                   <LogOut className="size-4" /> Sign out
                 </Button>
@@ -1669,7 +1504,7 @@ function SettingsPage() {
                   variant="destructive"
                   size="sm"
                   onClick={() => setDeleteDialogOpen(true)}
-                  className="h-8 gap-2 rounded-lg px-2.5 text-xs font-medium shrink-0"
+                  className="h-8 gap-2 rounded-lg px-2.5 text-xs font-medium shrink-0 cursor-pointer"
                 >
                   <Trash2 className="size-4" /> Delete account
                 </Button>
